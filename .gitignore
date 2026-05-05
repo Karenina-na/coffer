@@ -1,0 +1,118 @@
+# ============================================================
+# GWP .gitignore (Flutter local-first project)
+# ============================================================
+
+# -------- Miscellaneous / OS --------
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+Thumbs.db
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# -------- Editors / IDE --------
+*.iml
+*.ipr
+*.iws
+.idea/
+# VSCode 的 launch.json/tasks.json 一般可提交，这里保留默认忽略策略
+.vscode/
+*.code-workspace
+
+# -------- Flutter / Dart / Pub --------
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+**/build/
+/coverage/
+coverage/
+pubspec.lock.bak
+
+# 代码生成产物（本项目使用 freezed / json_serializable / drift）
+# 说明：Dart 社区惯例是提交生成文件以便无 codegen 环境也能构建。
+# 如需改为不提交，取消下面两行注释：
+# **/*.g.dart
+# **/*.freezed.dart
+
+# -------- Symbolication / Obfuscation --------
+app.*.symbols
+app.*.map.json
+
+# -------- Android --------
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/android/.gradle/
+/android/captures/
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/key.properties
+**/*.keystore
+**/*.jks
+/android/app/google-services.json
+
+# -------- iOS --------
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Podfile.lock
+**/ios/Runner.xcworkspace/xcuserdata/
+**/ios/Runner.xcodeproj/xcuserdata/
+**/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+**/ios/Runner/GoogleService-Info.plist
+
+# -------- macOS (若后续 flutter create --platforms=macos 添加) --------
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral/
+**/macos/Pods/
+**/macos/Podfile.lock
+
+# -------- 本地敏感 / 运行时数据（本项目是 local-first + 加密） --------
+# 千万不要提交用户的本地数据库、密钥、备份
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+/data/
+/backup/
+/backups/
+*.gwp.backup
+*.gwp.json
+secrets/
+.env
+.env.*
+!.env.example
+
+# -------- Comate / 临时产物 --------
+.comate/
+*.tmp
+*.tmp.*
+tmp/

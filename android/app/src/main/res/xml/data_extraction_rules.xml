@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ 数据提取规则：全面禁止云备份与跨设备迁移，确保：
+  - SecureStorage（EncryptedSharedPreferences，内含 PIN 哈希、生物识别开关等）
+    不会在"卸载 → 重装"或"换机恢复"时被带回来，避免应用进入早已失效的锁屏态。
+  - 加密数据库 `gwp.db` 同样不走备份，密钥随设备 Keystore 绑定，跨设备本就无法解密。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
