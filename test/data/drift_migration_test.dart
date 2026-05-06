@@ -7,7 +7,7 @@ import 'package:gwp/data/db/database.dart';
 ///
 /// 历史版本表结构无法完整重建（旧列已删除），因此不尝试 v1→v12 串行；
 /// 而是覆盖三个最易在未来回归里破的面：
-/// 1. `onCreate` 必须拉起 10 张表 + 所有命名索引（partial/unique 一个都不能漏）。
+/// 1. `onCreate` 必须拉起全部业务表 + 所有命名索引（partial/unique 一个都不能漏）。
 /// 2. `v7→v8` 从 `events` 迁移到 `asset_price_history` 的 JSON SQL，
 ///    必须能被真实 sqlite3 引擎解析并正确剥离 `ASSET_VALUATED:` 前缀。
 /// 3. `v11→v12` 的阈值 REAL→TEXT CAST 必须对已有行幂等改写。
@@ -23,6 +23,7 @@ void main() {
     'dict_entries',
     'events',
     'exchange_rates',
+    'search_history_entries',
     'watched_pairs',
   };
 
@@ -34,6 +35,7 @@ void main() {
     'idx_exchange_rates_pair_date',
     'idx_asset_cost_history_asset_time',
     'idx_dict_entries_type_code',
+    'idx_search_history_unique_key',
   };
 
   late AppDatabase db;
@@ -54,7 +56,7 @@ void main() {
     return rows.map((r) => r.read<String>('name')).toSet();
   }
 
-  test('onCreate 建出全部 11 张表', () async {
+  test('onCreate 建出全部 12 张表', () async {
     await db.customSelect('SELECT 1').get();
     final tables = await namedObjects('table');
     for (final name in expectedTables) {

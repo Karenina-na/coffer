@@ -93,7 +93,7 @@ lib/
 
 ## 5. 数据层规范
 
-- 一个 Drift `Database`（当前 `schemaVersion = 18`），11 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs`；字段约束对齐 `doc/data-definitions.md`
+- 一个 Drift `Database`（当前 `schemaVersion = 19`），12 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs / SearchHistoryEntries`；字段约束对齐 `doc/data-definitions.md`
 - JSON 字段（`ext_info`、`sovereignty_region_rule`、`raw_payload`）以 `TEXT` 存储，DAO 层负责 `fromJson/toJson`
 - `DECIMAL(28,8)` / `DECIMAL(28,10)` 及阈值类字段（含 `watched_pairs.threshold_high / threshold_low / alert_change_pct`，v12 起）在 SQLite 无原生支持，统一以 `TEXT` 存储，应用层使用 `Decimal`，**禁止使用 `REAL`**
 - 软删除：带 `is_deleted` 的表建立 partial index，查询统一 `where is_deleted = 0`
@@ -131,7 +131,7 @@ lib/
 
 ## 9. 实施路线
 
-1. ✅ 初始化 Flutter 工程 + Drift schema（11 张表）+ migration
+1. ✅ 初始化 Flutter 工程 + Drift schema（12 张表）+ migration
 2. ✅ 落地 `core/crypto`、`core/money`、`Result` 基础设施
 3. ✅ 实现 Account / Card / Asset 三个 feature 的 CRUD 与列表
 4. ✅ 接入 ExchangeRate 的手动导入（CSV / JSON）+ `PriceProvider` 抽象（Frankfurter）

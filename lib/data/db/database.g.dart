@@ -7884,6 +7884,605 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   }
 }
 
+class $SearchHistoryEntriesTable extends SearchHistoryEntries
+    with TableInfo<$SearchHistoryEntriesTable, SearchHistoryEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SearchHistoryEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _uniqueKeyMeta = const VerificationMeta(
+    'uniqueKey',
+  );
+  @override
+  late final GeneratedColumn<String> uniqueKey = GeneratedColumn<String>(
+    'unique_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _queryMeta = const VerificationMeta('query');
+  @override
+  late final GeneratedColumn<String> query = GeneratedColumn<String>(
+    'query',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _featureMeta = const VerificationMeta(
+    'feature',
+  );
+  @override
+  late final GeneratedColumn<String> feature = GeneratedColumn<String>(
+    'feature',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetIdMeta = const VerificationMeta(
+    'targetId',
+  );
+  @override
+  late final GeneratedColumn<String> targetId = GeneratedColumn<String>(
+    'target_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sublabelMeta = const VerificationMeta(
+    'sublabel',
+  );
+  @override
+  late final GeneratedColumn<String> sublabel = GeneratedColumn<String>(
+    'sublabel',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _visitedAtMeta = const VerificationMeta(
+    'visitedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> visitedAt = GeneratedColumn<DateTime>(
+    'visited_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kind,
+    uniqueKey,
+    query,
+    feature,
+    targetId,
+    label,
+    sublabel,
+    visitedAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'search_history_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SearchHistoryEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('unique_key')) {
+      context.handle(
+        _uniqueKeyMeta,
+        uniqueKey.isAcceptableOrUnknown(data['unique_key']!, _uniqueKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uniqueKeyMeta);
+    }
+    if (data.containsKey('query')) {
+      context.handle(
+        _queryMeta,
+        query.isAcceptableOrUnknown(data['query']!, _queryMeta),
+      );
+    }
+    if (data.containsKey('feature')) {
+      context.handle(
+        _featureMeta,
+        feature.isAcceptableOrUnknown(data['feature']!, _featureMeta),
+      );
+    }
+    if (data.containsKey('target_id')) {
+      context.handle(
+        _targetIdMeta,
+        targetId.isAcceptableOrUnknown(data['target_id']!, _targetIdMeta),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('sublabel')) {
+      context.handle(
+        _sublabelMeta,
+        sublabel.isAcceptableOrUnknown(data['sublabel']!, _sublabelMeta),
+      );
+    }
+    if (data.containsKey('visited_at')) {
+      context.handle(
+        _visitedAtMeta,
+        visitedAt.isAcceptableOrUnknown(data['visited_at']!, _visitedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_visitedAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SearchHistoryEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SearchHistoryEntryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      uniqueKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unique_key'],
+      )!,
+      query: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}query'],
+      ),
+      feature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}feature'],
+      ),
+      targetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_id'],
+      ),
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
+      sublabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sublabel'],
+      ),
+      visitedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}visited_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SearchHistoryEntriesTable createAlias(String alias) {
+    return $SearchHistoryEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class SearchHistoryEntryRow extends DataClass
+    implements Insertable<SearchHistoryEntryRow> {
+  final int id;
+  final String kind;
+  final String uniqueKey;
+  final String? query;
+  final String? feature;
+  final String? targetId;
+  final String? label;
+  final String? sublabel;
+  final DateTime visitedAt;
+  final DateTime updatedAt;
+  const SearchHistoryEntryRow({
+    required this.id,
+    required this.kind,
+    required this.uniqueKey,
+    this.query,
+    this.feature,
+    this.targetId,
+    this.label,
+    this.sublabel,
+    required this.visitedAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['kind'] = Variable<String>(kind);
+    map['unique_key'] = Variable<String>(uniqueKey);
+    if (!nullToAbsent || query != null) {
+      map['query'] = Variable<String>(query);
+    }
+    if (!nullToAbsent || feature != null) {
+      map['feature'] = Variable<String>(feature);
+    }
+    if (!nullToAbsent || targetId != null) {
+      map['target_id'] = Variable<String>(targetId);
+    }
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
+    if (!nullToAbsent || sublabel != null) {
+      map['sublabel'] = Variable<String>(sublabel);
+    }
+    map['visited_at'] = Variable<DateTime>(visitedAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SearchHistoryEntriesCompanion toCompanion(bool nullToAbsent) {
+    return SearchHistoryEntriesCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      uniqueKey: Value(uniqueKey),
+      query: query == null && nullToAbsent
+          ? const Value.absent()
+          : Value(query),
+      feature: feature == null && nullToAbsent
+          ? const Value.absent()
+          : Value(feature),
+      targetId: targetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetId),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
+      sublabel: sublabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sublabel),
+      visitedAt: Value(visitedAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SearchHistoryEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SearchHistoryEntryRow(
+      id: serializer.fromJson<int>(json['id']),
+      kind: serializer.fromJson<String>(json['kind']),
+      uniqueKey: serializer.fromJson<String>(json['uniqueKey']),
+      query: serializer.fromJson<String?>(json['query']),
+      feature: serializer.fromJson<String?>(json['feature']),
+      targetId: serializer.fromJson<String?>(json['targetId']),
+      label: serializer.fromJson<String?>(json['label']),
+      sublabel: serializer.fromJson<String?>(json['sublabel']),
+      visitedAt: serializer.fromJson<DateTime>(json['visitedAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'kind': serializer.toJson<String>(kind),
+      'uniqueKey': serializer.toJson<String>(uniqueKey),
+      'query': serializer.toJson<String?>(query),
+      'feature': serializer.toJson<String?>(feature),
+      'targetId': serializer.toJson<String?>(targetId),
+      'label': serializer.toJson<String?>(label),
+      'sublabel': serializer.toJson<String?>(sublabel),
+      'visitedAt': serializer.toJson<DateTime>(visitedAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SearchHistoryEntryRow copyWith({
+    int? id,
+    String? kind,
+    String? uniqueKey,
+    Value<String?> query = const Value.absent(),
+    Value<String?> feature = const Value.absent(),
+    Value<String?> targetId = const Value.absent(),
+    Value<String?> label = const Value.absent(),
+    Value<String?> sublabel = const Value.absent(),
+    DateTime? visitedAt,
+    DateTime? updatedAt,
+  }) => SearchHistoryEntryRow(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    uniqueKey: uniqueKey ?? this.uniqueKey,
+    query: query.present ? query.value : this.query,
+    feature: feature.present ? feature.value : this.feature,
+    targetId: targetId.present ? targetId.value : this.targetId,
+    label: label.present ? label.value : this.label,
+    sublabel: sublabel.present ? sublabel.value : this.sublabel,
+    visitedAt: visitedAt ?? this.visitedAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  SearchHistoryEntryRow copyWithCompanion(SearchHistoryEntriesCompanion data) {
+    return SearchHistoryEntryRow(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      uniqueKey: data.uniqueKey.present ? data.uniqueKey.value : this.uniqueKey,
+      query: data.query.present ? data.query.value : this.query,
+      feature: data.feature.present ? data.feature.value : this.feature,
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
+      label: data.label.present ? data.label.value : this.label,
+      sublabel: data.sublabel.present ? data.sublabel.value : this.sublabel,
+      visitedAt: data.visitedAt.present ? data.visitedAt.value : this.visitedAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SearchHistoryEntryRow(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('uniqueKey: $uniqueKey, ')
+          ..write('query: $query, ')
+          ..write('feature: $feature, ')
+          ..write('targetId: $targetId, ')
+          ..write('label: $label, ')
+          ..write('sublabel: $sublabel, ')
+          ..write('visitedAt: $visitedAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    kind,
+    uniqueKey,
+    query,
+    feature,
+    targetId,
+    label,
+    sublabel,
+    visitedAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SearchHistoryEntryRow &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.uniqueKey == this.uniqueKey &&
+          other.query == this.query &&
+          other.feature == this.feature &&
+          other.targetId == this.targetId &&
+          other.label == this.label &&
+          other.sublabel == this.sublabel &&
+          other.visitedAt == this.visitedAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SearchHistoryEntriesCompanion
+    extends UpdateCompanion<SearchHistoryEntryRow> {
+  final Value<int> id;
+  final Value<String> kind;
+  final Value<String> uniqueKey;
+  final Value<String?> query;
+  final Value<String?> feature;
+  final Value<String?> targetId;
+  final Value<String?> label;
+  final Value<String?> sublabel;
+  final Value<DateTime> visitedAt;
+  final Value<DateTime> updatedAt;
+  const SearchHistoryEntriesCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.uniqueKey = const Value.absent(),
+    this.query = const Value.absent(),
+    this.feature = const Value.absent(),
+    this.targetId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.sublabel = const Value.absent(),
+    this.visitedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  SearchHistoryEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String kind,
+    required String uniqueKey,
+    this.query = const Value.absent(),
+    this.feature = const Value.absent(),
+    this.targetId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.sublabel = const Value.absent(),
+    required DateTime visitedAt,
+    required DateTime updatedAt,
+  }) : kind = Value(kind),
+       uniqueKey = Value(uniqueKey),
+       visitedAt = Value(visitedAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<SearchHistoryEntryRow> custom({
+    Expression<int>? id,
+    Expression<String>? kind,
+    Expression<String>? uniqueKey,
+    Expression<String>? query,
+    Expression<String>? feature,
+    Expression<String>? targetId,
+    Expression<String>? label,
+    Expression<String>? sublabel,
+    Expression<DateTime>? visitedAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (uniqueKey != null) 'unique_key': uniqueKey,
+      if (query != null) 'query': query,
+      if (feature != null) 'feature': feature,
+      if (targetId != null) 'target_id': targetId,
+      if (label != null) 'label': label,
+      if (sublabel != null) 'sublabel': sublabel,
+      if (visitedAt != null) 'visited_at': visitedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  SearchHistoryEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? kind,
+    Value<String>? uniqueKey,
+    Value<String?>? query,
+    Value<String?>? feature,
+    Value<String?>? targetId,
+    Value<String?>? label,
+    Value<String?>? sublabel,
+    Value<DateTime>? visitedAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return SearchHistoryEntriesCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      uniqueKey: uniqueKey ?? this.uniqueKey,
+      query: query ?? this.query,
+      feature: feature ?? this.feature,
+      targetId: targetId ?? this.targetId,
+      label: label ?? this.label,
+      sublabel: sublabel ?? this.sublabel,
+      visitedAt: visitedAt ?? this.visitedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (uniqueKey.present) {
+      map['unique_key'] = Variable<String>(uniqueKey.value);
+    }
+    if (query.present) {
+      map['query'] = Variable<String>(query.value);
+    }
+    if (feature.present) {
+      map['feature'] = Variable<String>(feature.value);
+    }
+    if (targetId.present) {
+      map['target_id'] = Variable<String>(targetId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (sublabel.present) {
+      map['sublabel'] = Variable<String>(sublabel.value);
+    }
+    if (visitedAt.present) {
+      map['visited_at'] = Variable<DateTime>(visitedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SearchHistoryEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('uniqueKey: $uniqueKey, ')
+          ..write('query: $query, ')
+          ..write('feature: $feature, ')
+          ..write('targetId: $targetId, ')
+          ..write('label: $label, ')
+          ..write('sublabel: $sublabel, ')
+          ..write('visitedAt: $visitedAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $WatchedPairsTable extends WatchedPairs
     with TableInfo<$WatchedPairsTable, WatchedPairRow> {
   @override
@@ -8403,6 +9002,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DictEntriesTable dictEntries = $DictEntriesTable(this);
   late final $ExchangeRatesTable exchangeRates = $ExchangeRatesTable(this);
   late final $EventsTable events = $EventsTable(this);
+  late final $SearchHistoryEntriesTable searchHistoryEntries =
+      $SearchHistoryEntriesTable(this);
   late final $WatchedPairsTable watchedPairs = $WatchedPairsTable(this);
   late final AccountDao accountDao = AccountDao(this as AppDatabase);
   late final AccountChannelDao accountChannelDao = AccountChannelDao(
@@ -8420,6 +9021,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final DictEntryDao dictEntryDao = DictEntryDao(this as AppDatabase);
   late final EventDao eventDao = EventDao(this as AppDatabase);
   late final ExchangeRateDao exchangeRateDao = ExchangeRateDao(
+    this as AppDatabase,
+  );
+  late final SearchHistoryDao searchHistoryDao = SearchHistoryDao(
     this as AppDatabase,
   );
   late final WatchedPairDao watchedPairDao = WatchedPairDao(
@@ -8440,6 +9044,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     dictEntries,
     exchangeRates,
     events,
+    searchHistoryEntries,
     watchedPairs,
   ];
   @override
@@ -13424,6 +14029,311 @@ typedef $$EventsTableProcessedTableManager =
       EventRow,
       PrefetchHooks Function()
     >;
+typedef $$SearchHistoryEntriesTableCreateCompanionBuilder =
+    SearchHistoryEntriesCompanion Function({
+      Value<int> id,
+      required String kind,
+      required String uniqueKey,
+      Value<String?> query,
+      Value<String?> feature,
+      Value<String?> targetId,
+      Value<String?> label,
+      Value<String?> sublabel,
+      required DateTime visitedAt,
+      required DateTime updatedAt,
+    });
+typedef $$SearchHistoryEntriesTableUpdateCompanionBuilder =
+    SearchHistoryEntriesCompanion Function({
+      Value<int> id,
+      Value<String> kind,
+      Value<String> uniqueKey,
+      Value<String?> query,
+      Value<String?> feature,
+      Value<String?> targetId,
+      Value<String?> label,
+      Value<String?> sublabel,
+      Value<DateTime> visitedAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$SearchHistoryEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $SearchHistoryEntriesTable> {
+  $$SearchHistoryEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uniqueKey => $composableBuilder(
+    column: $table.uniqueKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get query => $composableBuilder(
+    column: $table.query,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get feature => $composableBuilder(
+    column: $table.feature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetId => $composableBuilder(
+    column: $table.targetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sublabel => $composableBuilder(
+    column: $table.sublabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get visitedAt => $composableBuilder(
+    column: $table.visitedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SearchHistoryEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SearchHistoryEntriesTable> {
+  $$SearchHistoryEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uniqueKey => $composableBuilder(
+    column: $table.uniqueKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get query => $composableBuilder(
+    column: $table.query,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get feature => $composableBuilder(
+    column: $table.feature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetId => $composableBuilder(
+    column: $table.targetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sublabel => $composableBuilder(
+    column: $table.sublabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get visitedAt => $composableBuilder(
+    column: $table.visitedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SearchHistoryEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SearchHistoryEntriesTable> {
+  $$SearchHistoryEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get uniqueKey =>
+      $composableBuilder(column: $table.uniqueKey, builder: (column) => column);
+
+  GeneratedColumn<String> get query =>
+      $composableBuilder(column: $table.query, builder: (column) => column);
+
+  GeneratedColumn<String> get feature =>
+      $composableBuilder(column: $table.feature, builder: (column) => column);
+
+  GeneratedColumn<String> get targetId =>
+      $composableBuilder(column: $table.targetId, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get sublabel =>
+      $composableBuilder(column: $table.sublabel, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get visitedAt =>
+      $composableBuilder(column: $table.visitedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SearchHistoryEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SearchHistoryEntriesTable,
+          SearchHistoryEntryRow,
+          $$SearchHistoryEntriesTableFilterComposer,
+          $$SearchHistoryEntriesTableOrderingComposer,
+          $$SearchHistoryEntriesTableAnnotationComposer,
+          $$SearchHistoryEntriesTableCreateCompanionBuilder,
+          $$SearchHistoryEntriesTableUpdateCompanionBuilder,
+          (
+            SearchHistoryEntryRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SearchHistoryEntriesTable,
+              SearchHistoryEntryRow
+            >,
+          ),
+          SearchHistoryEntryRow,
+          PrefetchHooks Function()
+        > {
+  $$SearchHistoryEntriesTableTableManager(
+    _$AppDatabase db,
+    $SearchHistoryEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SearchHistoryEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SearchHistoryEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SearchHistoryEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> uniqueKey = const Value.absent(),
+                Value<String?> query = const Value.absent(),
+                Value<String?> feature = const Value.absent(),
+                Value<String?> targetId = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<String?> sublabel = const Value.absent(),
+                Value<DateTime> visitedAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => SearchHistoryEntriesCompanion(
+                id: id,
+                kind: kind,
+                uniqueKey: uniqueKey,
+                query: query,
+                feature: feature,
+                targetId: targetId,
+                label: label,
+                sublabel: sublabel,
+                visitedAt: visitedAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String kind,
+                required String uniqueKey,
+                Value<String?> query = const Value.absent(),
+                Value<String?> feature = const Value.absent(),
+                Value<String?> targetId = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<String?> sublabel = const Value.absent(),
+                required DateTime visitedAt,
+                required DateTime updatedAt,
+              }) => SearchHistoryEntriesCompanion.insert(
+                id: id,
+                kind: kind,
+                uniqueKey: uniqueKey,
+                query: query,
+                feature: feature,
+                targetId: targetId,
+                label: label,
+                sublabel: sublabel,
+                visitedAt: visitedAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SearchHistoryEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SearchHistoryEntriesTable,
+      SearchHistoryEntryRow,
+      $$SearchHistoryEntriesTableFilterComposer,
+      $$SearchHistoryEntriesTableOrderingComposer,
+      $$SearchHistoryEntriesTableAnnotationComposer,
+      $$SearchHistoryEntriesTableCreateCompanionBuilder,
+      $$SearchHistoryEntriesTableUpdateCompanionBuilder,
+      (
+        SearchHistoryEntryRow,
+        BaseReferences<
+          _$AppDatabase,
+          $SearchHistoryEntriesTable,
+          SearchHistoryEntryRow
+        >,
+      ),
+      SearchHistoryEntryRow,
+      PrefetchHooks Function()
+    >;
 typedef $$WatchedPairsTableCreateCompanionBuilder =
     WatchedPairsCompanion Function({
       required String pairKey,
@@ -13696,6 +14606,8 @@ class $AppDatabaseManager {
       $$ExchangeRatesTableTableManager(_db, _db.exchangeRates);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db, _db.events);
+  $$SearchHistoryEntriesTableTableManager get searchHistoryEntries =>
+      $$SearchHistoryEntriesTableTableManager(_db, _db.searchHistoryEntries);
   $$WatchedPairsTableTableManager get watchedPairs =>
       $$WatchedPairsTableTableManager(_db, _db.watchedPairs);
 }

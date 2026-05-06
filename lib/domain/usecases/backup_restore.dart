@@ -58,8 +58,7 @@ class ExportBackupUseCase {
       return Err(passwordError);
     }
     try {
-      final snap = await _snapshot.export();
-      final plaintext = jsonEncode(snap);
+      final plaintext = await _snapshot.exportJson();
       final salt = _random(16);
       final derived = await _kdf.derive(password: password, salt: salt);
       if (derived.isErr) return Err(derived.errorOrNull!);

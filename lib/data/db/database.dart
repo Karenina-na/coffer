@@ -17,6 +17,7 @@ import 'tables/channels.dart';
 import 'tables/dict_entries.dart';
 import 'tables/events.dart';
 import 'tables/exchange_rates.dart';
+import 'tables/search_history_entries.dart';
 import 'tables/watched_pairs.dart';
 import 'daos/account_dao.dart';
 import 'daos/account_channel_dao.dart';
@@ -28,6 +29,7 @@ import 'daos/channel_dao.dart';
 import 'daos/dict_entry_dao.dart';
 import 'daos/event_dao.dart';
 import 'daos/exchange_rate_dao.dart';
+import 'daos/search_history_dao.dart';
 import 'daos/watched_pair_dao.dart';
 
 part 'database.g.dart';
@@ -48,6 +50,7 @@ part 'database.g.dart';
     DictEntries,
     ExchangeRates,
     Events,
+    SearchHistoryEntries,
     WatchedPairs,
   ],
   daos: [
@@ -61,6 +64,7 @@ part 'database.g.dart';
     DictEntryDao,
     EventDao,
     ExchangeRateDao,
+    SearchHistoryDao,
     WatchedPairDao,
   ],
 )
@@ -70,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -111,6 +115,10 @@ class AppDatabase extends _$AppDatabase {
       await customStatement(
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_dict_entries_type_code '
         'ON dict_entries (type, code)',
+      );
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_search_history_unique_key '
+        'ON search_history_entries (unique_key)',
       );
       await _seedBuiltinDictEntries(this);
     },
@@ -380,6 +388,13 @@ class AppDatabase extends _$AppDatabase {
           );
           // 回填其余 5 个内置地区的 UI 元数据（只写 NULL 列，不覆盖用户改动）。
           await _backfillRegionMeta(this);
+        }
+        if (from < 19) {
+          await m.createTable(searchHistoryEntries);
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_search_history_unique_key '
+            'ON search_history_entries (unique_key)',
+          );
         }
       }); // end transaction
     },

@@ -2,10 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import '../../data/providers/account_providers.dart';
+import '../crypto/field_cipher.dart';
+import '../crypto/key_derivation.dart';
+import '../crypto/secure_key_store.dart';
 
 /// 一条历史访问项：搜索命中后被点开的实体快照。
 ///
@@ -76,12 +82,59 @@ class SearchHistory {
 const int _kMaxQueries = 8;
 const int _kMaxVisits = 10;
 
+class SearchHistoryProtector {
+  SearchHistoryProtector({
+    SecureKeyStore? keyStore,
+    KeyDerivation? keyDerivation,
+    FieldCipher? fieldCipher,
+    Future<SecretKey> Function()? masterKeyLoader,
+  })  : _keyStore = keyStore ?? SecureKeyStore(),
+        _kdf = keyDerivation ?? KeyDerivation(),
+        _cipher = fieldCipher ?? FieldCipher(),
+        _masterKeyLoader = masterKeyLoader;
+
+  static const purpose = 'app.search_history';
+
+  final SecureKeyStore _keyStore;
+  final KeyDerivation _kdf;
+  final FieldCipher _cipher;
+  final Future<SecretKey> Function()? _masterKeyLoader;
+
+  SecretKey? _derived;
+
+  Future<SecretKey> _key() async {
+    final cached = _derived;
+    if (cached != null) return cached;
+    final master = await (_masterKeyLoader?.call() ?? _keyStore.loadOrCreateMaster());
+    final derived = await _kdf.derive(master: master, purpose: purpose);
+    _derived = derived;
+    return derived;
+  }
+
+  Future<String?> encode(Map<String, dynamic> payload) async {
+    final key = await _key();
+    final encoded = jsonEncode(payload);
+    final result = await _cipher.encryptString(encoded, key);
+    return result.valueOrNull;
+  }
+
+  Future<Map<String, dynamic>?> decode(String ciphertext) async {
+    final key = await _key();
+    final result = await _cipher.decryptString(ciphertext, key);
+    final plain = result.valueOrNull;
+    if (plain == null) return null;
+    final decoded = jsonDecode(plain);
+    return decoded is Map<String, dynamic> ? decoded : null;
+  }
+}
+
 /// 跨会话持久化的搜索历史（最近查询 + 最近访问）。
 ///
-/// 落地：应用 Documents 目录下的 `search_history.json`；非敏感数据，
-/// 与 SQLCipher 主库分离，避免牵涉 schema 迁移。
+/// 落地：应用 Documents 目录下的 `search_history.dat`；内容用主密钥派生子密钥
+/// 做 AES-GCM 加密，避免暴露访问轨迹与搜索词。
 class SearchHistoryNotifier extends Notifier<SearchHistory> {
   File? _file;
+  final SearchHistoryProtector _protector = SearchHistoryProtector();
 
   @override
   SearchHistory build() {
@@ -92,49 +145,99 @@ class SearchHistoryNotifier extends Notifier<SearchHistory> {
 
   Future<File> _resolveFile() async {
     final dir = await getApplicationDocumentsDirectory();
+    return File(p.join(dir.path, 'search_history.dat'));
+  }
+
+  Future<File> _resolveLegacyJsonFile() async {
+    final dir = await getApplicationDocumentsDirectory();
     return File(p.join(dir.path, 'search_history.json'));
+  }
+
+  Map<String, dynamic>? _decodePlainJson(String txt) {
+    try {
+      final decoded = jsonDecode(txt);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _migrateLegacyFileIfNeeded() async {
+    final dao = ref.read(appDatabaseProvider).searchHistoryDao;
+    final existingQueries = await dao.listQueries(limit: 1);
+    final existingVisits = await dao.listVisits(limit: 1);
+    if (existingQueries.isNotEmpty || existingVisits.isNotEmpty) return;
+
+    _file ??= await _resolveFile();
+    final legacyJson = await _resolveLegacyJsonFile();
+    final candidates = <File>[_file!, legacyJson];
+    for (final file in candidates) {
+      if (!await file.exists()) continue;
+      try {
+        final txt = await file.readAsString();
+        Map<String, dynamic>? decoded = await _protector.decode(txt);
+        decoded ??= _decodePlainJson(txt);
+        if (decoded == null) continue;
+
+        final qs = (decoded['queries'] as List? ?? const [])
+            .whereType<String>()
+            .toList(growable: false);
+        final vs = (decoded['visits'] as List? ?? const [])
+            .whereType<Map>()
+            .map((m) => SearchVisit.fromJson(m.cast<String, dynamic>()))
+            .whereType<SearchVisit>()
+            .toList(growable: false);
+
+        for (final q in qs.reversed) {
+          final trimmed = q.trim();
+          if (trimmed.isEmpty || trimmed.startsWith('>')) continue;
+          await dao.upsertQuery(
+            query: trimmed,
+            normalized: trimmed.toLowerCase(),
+            now: DateTime.now(),
+          );
+        }
+        for (final v in vs.reversed) {
+          await dao.upsertVisit(
+            feature: v.feature,
+            targetId: v.targetId,
+            label: v.label,
+            sublabel: v.sublabel,
+            visitedAt: v.visitedAt,
+          );
+        }
+        await file.delete();
+        return;
+      } catch (_) {
+        // Try next legacy format.
+      }
+    }
   }
 
   Future<void> _load() async {
     try {
-      _file ??= await _resolveFile();
-      if (!await _file!.exists()) {
-        state = state.copyWith(loaded: true);
-        return;
-      }
-      final txt = await _file!.readAsString();
-      final decoded = jsonDecode(txt);
-      if (decoded is! Map<String, dynamic>) {
-        if (kDebugMode) debugPrint('SearchHistory load failed: unexpected JSON root type');
-        state = state.copyWith(loaded: true);
-        return;
-      }
-      final j = decoded;
-      final qs = (j['queries'] as List? ?? const [])
+      await _migrateLegacyFileIfNeeded();
+      final dao = ref.read(appDatabaseProvider).searchHistoryDao;
+      final queryRows = await dao.listQueries(limit: _kMaxQueries);
+      final visitRows = await dao.listVisits(limit: _kMaxVisits);
+      final qs = queryRows
+          .map((r) => r.query)
           .whereType<String>()
           .toList(growable: false);
-      final vs = (j['visits'] as List? ?? const [])
-          .whereType<Map>()
-          .map((m) => SearchVisit.fromJson(m.cast<String, dynamic>()))
-          .whereType<SearchVisit>()
+      final vs = visitRows
+          .where((r) => r.feature != null && r.targetId != null && r.label != null)
+          .map((r) => SearchVisit(
+                feature: r.feature!,
+                targetId: r.targetId!,
+                label: r.label!,
+                sublabel: r.sublabel,
+                visitedAt: r.visitedAt,
+              ))
           .toList(growable: false);
       state = SearchHistory(queries: qs, visits: vs, loaded: true);
     } catch (e) {
       if (kDebugMode) debugPrint('SearchHistory load failed: $e');
       state = state.copyWith(loaded: true);
-    }
-  }
-
-  Future<void> _persist() async {
-    try {
-      _file ??= await _resolveFile();
-      final j = {
-        'queries': state.queries,
-        'visits': state.visits.map((v) => v.toJson()).toList(),
-      };
-      await _file!.writeAsString(jsonEncode(j), flush: false);
-    } catch (e) {
-      if (kDebugMode) debugPrint('SearchHistory persist failed: $e');
     }
   }
 
@@ -146,7 +249,12 @@ class SearchHistoryNotifier extends Notifier<SearchHistory> {
     cur.insert(0, q);
     if (cur.length > _kMaxQueries) cur.removeRange(_kMaxQueries, cur.length);
     state = state.copyWith(queries: cur);
-    unawaited(_persist());
+    final dao = ref.read(appDatabaseProvider).searchHistoryDao;
+    unawaited(dao.upsertQuery(
+      query: q,
+      normalized: q.toLowerCase(),
+      now: DateTime.now(),
+    ));
   }
 
   void recordVisit(SearchVisit v) {
@@ -156,12 +264,20 @@ class SearchHistoryNotifier extends Notifier<SearchHistory> {
     cur.insert(0, v);
     if (cur.length > _kMaxVisits) cur.removeRange(_kMaxVisits, cur.length);
     state = state.copyWith(visits: cur);
-    unawaited(_persist());
+    final dao = ref.read(appDatabaseProvider).searchHistoryDao;
+    unawaited(dao.upsertVisit(
+      feature: v.feature,
+      targetId: v.targetId,
+      label: v.label,
+      sublabel: v.sublabel,
+      visitedAt: v.visitedAt,
+    ));
   }
 
   void clearQueries() {
     state = state.copyWith(queries: const []);
-    unawaited(_persist());
+    final dao = ref.read(appDatabaseProvider).searchHistoryDao;
+    unawaited(dao.clearQueries());
   }
 }
 

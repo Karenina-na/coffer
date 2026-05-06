@@ -108,6 +108,7 @@ void main() {
       'account_channels',
       'channels',
       'cards',
+      'search_history_entries',
     ]) {
       expect(snap.containsKey(table), isTrue, reason: 'Table $table missing from snapshot');
     }

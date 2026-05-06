@@ -258,3 +258,36 @@ UI 的资产价格走势图、Dashboard 净资产趋势均从此表读取。
 
 写入方：`asset_create_page` 编辑流程自动追加（当 `costPrice` 或 `quantity` 发生变更时）。
 读取方：`assetCostHistoryProvider`（Stream，按 asset 维度 `trigger_time DESC`）。
+
+## 10. SearchHistoryEntries
+
+全局搜索的最近查询与最近访问记录。
+
+设计目标：
+
+- 不再将搜索轨迹落到明文 JSON 文件；
+- 进入 SQLCipher 主库，与其余本地数据统一加密；
+- 仍保持轻量，不引入额外 domain entity 或复杂查询模型。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| id | INTEGER | 是 | 自增主键 |
+| kind | VARCHAR(8) | 是 | `QUERY` / `VISIT` |
+| unique_key | VARCHAR(160) | 是 | 幂等键；查询为 `Q:{normalizedQuery}`，访问为 `V:{feature}:{targetId}`；UNIQUE |
+| query | TEXT | 否 | 最近搜索词，仅 `QUERY` 使用 |
+| feature | VARCHAR(32) | 否 | `SearchFeature.name`，仅 `VISIT` 使用 |
+| target_id | VARCHAR(64) | 否 | 最近访问目标 ID，仅 `VISIT` 使用 |
+| label | TEXT | 否 | 最近访问展示标题，仅 `VISIT` 使用 |
+| sublabel | TEXT | 否 | 最近访问展示副标题，仅 `VISIT` 使用 |
+| visited_at | DATETIME | 是 | 最近一次搜索/访问时间 |
+| updated_at | DATETIME | 是 | 排序/去重使用的最新更新时间 |
+
+约束与策略：
+
+- UNIQUE(`unique_key`)：相同查询 / 相同访问目标只保留最近一条；
+- 查询历史最多保留 8 条；
+- 访问历史最多保留 10 条；
+- 启动时若发现旧版 `search_history.dat` 或 `search_history.json`，会自动迁移入库并删除旧文件。
+
+写入方：`GlobalSearchDelegate`（搜索提交、搜索结果点击）。
+读取方：`searchHistoryProvider` 空态页（最近搜索 / 最近访问）。

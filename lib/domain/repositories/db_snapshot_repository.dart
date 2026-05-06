@@ -7,6 +7,9 @@ abstract class DbSnapshotRepository {
   /// 导出全部业务表为 JSON 快照。
   Future<Map<String, List<Map<String, dynamic>>>> export();
 
+  /// 以稳定顺序导出为 JSON 文本，减少中间大对象拼装。
+  Future<String> exportJson();
+
   /// 以快照覆盖当前数据库（事务保证原子性）。
   Future<void> restore(Map<String, List<Map<String, dynamic>>> snap);
 

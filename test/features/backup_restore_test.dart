@@ -207,6 +207,20 @@ void main() {
         reason: 'account_channels 必须在快照中');
     expect(snap.containsKey('watched_pairs'), isTrue,
         reason: 'watched_pairs 必须在快照中');
+    expect(snap.containsKey('search_history_entries'), isTrue,
+        reason: 'search_history_entries 必须在快照中');
+  });
+
+  test('exportJson 与 export 语义一致', () async {
+    final snap = await snapshot.export();
+    final text = await snapshot.exportJson();
+    final decoded = (jsonDecode(text) as Map).cast<String, dynamic>().map(
+      (k, v) => MapEntry(
+        k,
+        (v as List).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+      ),
+    );
+    expect(decoded, snap);
   });
 
   test('含 3 张缺失表的完整往返（Bug 14）', () async {

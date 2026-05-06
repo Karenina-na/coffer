@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../core/errors.dart';
@@ -66,7 +68,103 @@ class DbSnapshotService implements DbSnapshotRepository {
       'watched_pairs': (await _db.select(_db.watchedPairs).get())
           .map((r) => r.toJson())
           .toList(),
+      'search_history_entries': (await _db.select(_db.searchHistoryEntries).get())
+          .map((r) => r.toJson())
+          .toList(),
     };
+  }
+
+  @override
+  Future<String> exportJson() async {
+    final buffer = StringBuffer()..write('{');
+    var firstTable = true;
+
+    Future<void> appendTable(
+      String name,
+      Future<List<Map<String, dynamic>>> Function() load,
+    ) async {
+      if (!firstTable) buffer.write(',');
+      firstTable = false;
+      buffer
+        ..write(jsonEncode(name))
+        ..write(':[');
+      final rows = await load();
+      for (var i = 0; i < rows.length; i++) {
+        if (i > 0) buffer.write(',');
+        buffer.write(jsonEncode(rows[i]));
+      }
+      buffer.write(']');
+    }
+
+    await appendTable(
+      'accounts',
+      () async => (await _db.select(_db.accounts).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'assets',
+      () async => (await _db.select(_db.assets).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'asset_cost_history',
+      () async => (await _db.select(_db.assetCostHistory).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'cards',
+      () async => (await _db.select(_db.cards).get())
+          .map((r) => _stripCard(r.toJson()))
+          .toList(),
+    );
+    await appendTable(
+      'channels',
+      () async => (await _db.select(_db.channels).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'account_channels',
+      () async => (await _db.select(_db.accountChannels).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'exchange_rates',
+      () async => (await _db.select(_db.exchangeRates).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'events',
+      () async => (await _db.select(_db.events).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'asset_price_history',
+      () async => (await _db.select(_db.assetPriceHistory).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'watched_pairs',
+      () async => (await _db.select(_db.watchedPairs).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
+      'search_history_entries',
+      () async => (await _db.select(_db.searchHistoryEntries).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+
+    buffer.write('}');
+    return buffer.toString();
   }
 
   /// 以快照覆盖当前数据库；外键按 accounts → cards/assets，channels / rates 独立，
@@ -136,6 +234,11 @@ class DbSnapshotService implements DbSnapshotRepository {
         snap['watched_pairs'] ?? const [],
         WatchedPairRow.fromJson,
       );
+      await _batchInsert(
+        _db.searchHistoryEntries,
+        snap['search_history_entries'] ?? const [],
+        SearchHistoryEntryRow.fromJson,
+      );
     });
   }
 
@@ -149,6 +252,7 @@ class DbSnapshotService implements DbSnapshotRepository {
       await _db.delete(_db.accountChannels).go();
       await _db.delete(_db.exchangeRates).go();
       await _db.delete(_db.watchedPairs).go();
+      await _db.delete(_db.searchHistoryEntries).go();
       await _db.delete(_db.cards).go();
       await _db.delete(_db.assets).go();
       await _db.delete(_db.channels).go();
