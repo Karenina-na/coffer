@@ -16,6 +16,7 @@ erDiagram
     ASSET ||--o{ ASSET_COST_HISTORY : adjusted_by
     ASSET }o..o{ EXCHANGE_RATE : convert_with
     CARD }o..o{ EXCHANGE_RATE : settle_with
+    WATCHED_PAIR ||--o{ EXCHANGE_RATE : triggers
 
     ACCOUNT {
         string id PK

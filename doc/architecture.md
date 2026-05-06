@@ -24,10 +24,10 @@
 | 领域 | 选型 | 说明 |
 |---|---|---|
 | UI | Flutter 3.x + Material 3 | 跨端一套代码 |
-| 状态管理 | Riverpod 2 | 编译期安全、天然 DI |
+| 状态管理 | Riverpod 3 | 编译期安全、天然 DI |
 | 路由 | go_router | 声明式路由 |
 | 本地数据库 | Drift | 类型安全 SQL，支持 SQLCipher |
-| 库级加密 | sqlcipher_flutter_libs | 整库加密 |
+| 库级加密 | sqlite3 (SQLite3MultipleCiphers) | 整库加密，ChaCha20-Poly1305 |
 | 字段级加密 | cryptography (AES-GCM) | 卡号、CVV 等敏感字段二次封装 |
 | 密钥存储 | flutter_secure_storage | iOS Keychain / Android Keystore |
 | 序列化 | freezed + json_serializable | 不可变模型、JSON 转换 |
@@ -60,7 +60,7 @@ lib/
 │   ├── repositories/            # Repository 实现
 │   ├── providers/               # 外部数据适配器（实现 `domain/providers` 接口）
 │   │   ├── fx/                  # FrankfurterProvider（实现 FxRateProvider）
-│   │   └── asset/               # Eastmoney / Yahoo / Composite（实现 AssetPriceProvider）
+│   │   └── asset/               # Eastmoney / Yahoo / OKX / Composite（实现 AssetPriceProvider）
 │   ├── backup/                  # DbSnapshot（加密备份 / 恢复）
 │   └── crypto_service.dart
 ├── domain/
@@ -93,7 +93,7 @@ lib/
 
 ## 5. 数据层规范
 
-- 一个 Drift `Database`（当前 `schemaVersion = 14`），11 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs`；字段约束对齐 `doc/data-definitions.md`
+- 一个 Drift `Database`（当前 `schemaVersion = 18`），11 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs`；字段约束对齐 `doc/data-definitions.md`
 - JSON 字段（`ext_info`、`sovereignty_region_rule`、`raw_payload`）以 `TEXT` 存储，DAO 层负责 `fromJson/toJson`
 - `DECIMAL(28,8)` / `DECIMAL(28,10)` 及阈值类字段（含 `watched_pairs.threshold_high / threshold_low / alert_change_pct`，v12 起）在 SQLite 无原生支持，统一以 `TEXT` 存储，应用层使用 `Decimal`，**禁止使用 `REAL`**
 - 软删除：带 `is_deleted` 的表建立 partial index，查询统一 `where is_deleted = 0`
@@ -104,10 +104,10 @@ lib/
 ## 6. 领域层规范
 
 - UseCase 单一职责，典型用例：
-  - `ValuateAssetUseCase`：读 Asset + ExchangeRate → 计算 `market_value` → 写回 + 写入 `AssetPriceHistoryPoint`（成功估值不进事件表，只记审计日志）
-  - 资产编辑流程：用户调整 `cost_price` / `quantity` 时自动追加 `AssetCostHistoryPoint`（见 data-definitions.md §9），与价格历史解耦
-  - `CheckChannelLimitUseCase`：按 Channel 的日限、单笔、地区规则校验
-  - `RecordEventUseCase`：统一事件落库入口
+  - `ValuateAssetUseCase`：读 Asset + ExchangeRate → 计算 `market_value` → 写回 + 写入 `AssetPriceHistoryPoint`
+  - 资产编辑流程：用户调整 `cost_price` / `quantity` 时自动追加 `AssetCostHistoryPoint`
+  - `ChannelRuleEngine`：按 Channel 的日限、单笔、地区规则校验
+  - `PlanTransferRouteUseCase`：以 Account.id 为图节点 Dijkstra 多跳路径规划
 - **事件驱动估值**：价格或汇率更新触发事件，订阅者异步重算受影响的 `Asset.market_value`，避免查询时实时计算
 - **Channel 规则引擎**：`sovereignty_region_rule` 采用 JSON Schema + 谓词列表实现，避免 if-else 蔓延
 - **多跳路径规划**：`PlanTransferRouteUseCase` 以 Account.id 为图节点，按 `AccountChannel` 聚合同一通道的成员账户并在两两之间生成双向边，规则引擎按 (from, to) 的 `sovereignty_region` 逐边评估；Dijkstra 支持 minFee / minHops 两种目标

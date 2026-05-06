@@ -223,7 +223,7 @@ UI 的资产价格走势图、Dashboard 净资产趋势均从此表读取。
 | price | DECIMAL / TEXT | 是 | 该时刻单价（asset.currency 下） |
 | market_value | DECIMAL / TEXT | 否 | 持仓市值 = quantity × price |
 | currency | VARCHAR(3) | 是 | ISO-4217；冗余一份便于查询 |
-| source | VARCHAR(32) | 是 | `manual` / `yahoo` / `eastmoney` / `fixed_income` … |
+| source | VARCHAR(32) | 是 | `manual` / `yahoo` / `eastmoney` / `okx` / `fixed_income` … |
 | batch_id | UUID | 否 | 同 §7 `batch_id` 语义，用于聚合 |
 | trigger_time | DATETIME | 是 | 估值时间 |
 | source_key | VARCHAR(128) | 否 | 幂等键，形如 `{assetId}:{yyyymmdd}:{source}`；UNIQUE |

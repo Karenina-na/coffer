@@ -35,12 +35,15 @@
   - 写一行数据 → 落盘文件前 16 字节 **不是** 明文 "SQLite format 3" 头
   - 相同 key 重开能读出数据
   - 错误 key 抛 `SqliteException`
-- [x] 全量测试套件（138 tests）全部通过
-- [x] `flutter build apk --debug` 通过（Android 原生资源钩子自动拉取 `libsqlite3mc.so`）
-- [x] `adb install -r` 安装并启动成功，无 sqlite3 相关链接错误
+- [x] `flutter build apk --debug` 通过
+- [x] `adb install -r` 安装并启动成功
 
 ### 字段级加密（保留）
 `FieldCipher` 对卡号 / CVV 的 AES-GCM 加密继续保留，作为「数据库密钥泄漏」场景下的二次防线（depth in defense）。
+
+### BankCard.toString() 密文泄露修复（2026-05-06）
+freezed 自动生成的 `toString()` 会暴露 `cardNoCiphertext` / `cvvCiphertext` 字段。
+已在 `card.dart` 源文件添加显式 `toString()` 重写掩码这些敏感字段；新增敏感字段需同步更新重写方法。
 
 ### 数据迁移说明
 用户在切换前已明确表示**不保留**切换前的明文业务数据。首次启动加密版会自动清掉旧 `gwp.db`（含 WAL/SHM），用户体验等同于全新安装。
