@@ -77,7 +77,7 @@ lib/
     ├── channel/
     ├── exchange_rate/
     ├── event/
-    ├── holdings/                # 资金总览（账户 / 资产 / 转账 三 Tab）
+    ├── holdings/                # 资金总览（账户 / 资产 / 转账 / 分析 四 Tab）
     ├── dashboard/               # 总览仪表盘
     ├── topology/                # 全景关系图
     ├── backup/                  # 备份 / 恢复页
@@ -111,7 +111,7 @@ lib/
 - **事件驱动估值**：价格或汇率更新触发事件，订阅者异步重算受影响的 `Asset.market_value`，避免查询时实时计算
 - **Channel 规则引擎**：`sovereignty_region_rule` 采用 JSON Schema + 谓词列表实现，避免 if-else 蔓延
 - **多跳路径规划**：`PlanTransferRouteUseCase` 以 Account.id 为图节点，按 `AccountChannel` 聚合同一通道的成员账户并在两两之间生成双向边，规则引擎按 (from, to) 的 `sovereignty_region` 逐边评估；Dijkstra 支持 minFee / minHops 两种目标
-- **ExchangeRate 抽象**：定义 `PriceProvider` 接口，REALTIME / HOURLY / DAILY 三种快照类型对应不同实现，便于替换与离线兜底
+- **ExchangeRate 抽象**：定义 `AssetPriceProvider`（行情源）和 `PriceProvider`（汇率源）接口，REALTIME / HOURLY / DAILY 三种快照类型对应不同实现，便于替换与离线兜底
 
 ## 7. 表现层规范
 
@@ -131,16 +131,16 @@ lib/
 
 ## 9. 实施路线
 
-1. 初始化 Flutter 工程 + Drift schema（6 张表）+ migration
-2. 落地 `core/crypto`、`core/money`、`Result` 基础设施
-3. 实现 Account / Card / Asset 三个 feature 的 CRUD 与列表
-4. 接入 ExchangeRate 的手动导入（CSV / JSON）+ `PriceProvider` 抽象（Frankfurter）
-5. 实现 Asset 估值 UseCase + 事件总线 + Event 持久化
-6. 构建 Channel 规则引擎与多跳路径规划（`PlanTransferRouteUseCase`，Dijkstra on Account.id graph，边由 `AccountChannel` 关联派生；支持 minFee / minHops 目标；不做账务变动，仅报价）
-7. 接入生物识别、备份导入导出
-8. 外部资产行情（Yahoo Finance `/v8/finance/chart`）+ 统一同步按钮 + 缓存覆盖提示
-9. 统一搜索（AppBar 按钮 + `EntitySearchDelegate` + 预设过滤 Chip + 实时结果）
-10. 全量实体 CRUD 闭环：账户 / 资产 / 卡片 / 通道 / 事件 的编辑路由 + 软/硬删除；卡片 `update()` 允许选择性替换卡号 / CVV，对应字段重新加密，其余字段保留原密文
-11. 仪表盘深度优化：多维度 KPI（含信用利用率、事件紧急度、缺失汇率）、趋势区间切换（7D / 1M / 3M / 1Y / ALL）+ delta、资产配置 segmented donut、信用卡账单 45 天预警、近期活动 feed
-12. 体验与可维护性补齐：事件中心快捷操作、本地通知（flutter_local_notifications，默认关闭）、资产成本历史审计（`AssetCostHistory`，schema v11 + 索引）
-13. UI 打磨：主题、空状态、错误态、国际化
+1. ✅ 初始化 Flutter 工程 + Drift schema（11 张表）+ migration
+2. ✅ 落地 `core/crypto`、`core/money`、`Result` 基础设施
+3. ✅ 实现 Account / Card / Asset 三个 feature 的 CRUD 与列表
+4. ✅ 接入 ExchangeRate 的手动导入（CSV / JSON）+ `PriceProvider` 抽象（Frankfurter）
+5. ✅ 实现 Asset 估值 UseCase + 事件总线 + Event 持久化
+6. ✅ 构建 Channel 规则引擎与多跳路径规划（`PlanTransferRouteUseCase`，Dijkstra on Account.id graph）
+7. ✅ 接入生物识别、备份导入导出
+8. ✅ 外部资产行情（Yahoo / 东方财富 / OKX / Composite）+ 统一同步按钮 + 缓存覆盖
+9. ✅ 统一搜索（AppBar 按钮 + `GlobalSearchDelegate` + 预设过滤 Chip + 实时结果）
+10. ✅ 全量实体 CRUD 闭环：账户 / 资产 / 卡片 / 通道 / 事件 的编辑路由 + 软/硬删除；卡片 `update()` 允许选择性替换卡号 / CVV
+11. ✅ 仪表盘深度优化：多维度 KPI、趋势区间切换、资产配置 donut、信用卡账单预警、近期活动 feed
+12. ✅ 体验与可维护性：事件中心快捷操作、本地通知（默认关闭）、资产成本历史审计
+13. ⬜ UI 打磨：多语言、深色模式优化、空状态与错误态细节（持续进行中）

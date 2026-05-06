@@ -56,6 +56,7 @@ erDiagram
         string transfer_protocol
         decimal fee_rate
         decimal fixed_fee
+        json sovereignty_region_rule
         string limit_currency
         decimal daily_limit
         decimal single_limit
@@ -78,11 +79,15 @@ erDiagram
         string account_id FK
         string card_organization
         string card_no_masked
+        string card_no_ciphertext
         string card_type
         int expire_month
         int expire_year
+        string cvv_ciphertext
         string issuer_name
         string currency
+        boolean supports_all_currencies
+        string supported_currencies
         decimal credit_limit
         decimal available_credit
         int billing_cycle_day
@@ -104,6 +109,7 @@ erDiagram
         datetime updated_at
         string source
         string snapshot_type
+        json raw_payload
     }
 
     EVENT {
@@ -111,12 +117,21 @@ erDiagram
         string event_type
         string related_model
         string related_id
+        json refs
+        string batch_id
+        string source_key
         datetime trigger_time
+        datetime due_at
         string priority
         string status
         string handling_status
         string handler
         string handling_note
+        string ack_requirement
+        string ack_status
+        datetime ack_at
+        string ack_note
+        boolean is_deleted
         datetime created_at
         datetime updated_at
     }
@@ -147,6 +162,35 @@ erDiagram
         string source_key
         datetime created_at
     }
+
+    WATCHED_PAIR {
+        string pair_key PK
+        string base_currency
+        string quote_currency
+        datetime created_at
+        decimal threshold_high
+        decimal threshold_low
+        decimal alert_change_pct
+    }
+
+    DICT_ENTRY {
+        string id PK
+        string type
+        string code
+        string name
+        string name_en
+        int sort_order
+        boolean is_builtin
+        string flag_emoji
+        string continent
+        string color_hex
+        float map_lon
+        float map_lat
+        string parent_region
+        boolean is_deleted
+        datetime created_at
+        datetime updated_at
+    }
 ```
 
 ## 3. 关系说明
@@ -158,3 +202,5 @@ erDiagram
 - ASSET -> ASSET_COST_HISTORY: 一对多；用户手动调整 cost_price / quantity 时写入一条审计记录
 - EXCHANGE_RATE: 独立汇率服务，被资产估值和卡结算调用
 - EVENT: 跨模型通用事件记录（操作型告警：失败、到期、同步过期等），**不再承载成功估值**
+- WATCHED_PAIR: 用户关注的币对，触发汇率告警的阈值管理
+- DICT_ENTRY: 字典表（转账协议 / 主权地区 / 货币），`is_builtin` 标记内置项

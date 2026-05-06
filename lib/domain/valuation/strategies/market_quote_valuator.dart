@@ -7,7 +7,8 @@ import '../asset_valuator.dart';
 
 /// 适用于市场行情类资产：股票、基金、加密、贵金属、期货 / 期权 / 合约等。
 ///
-/// 数据来源：注入的 [AssetPriceProvider]（默认 Yahoo Finance）。
+/// 数据来源：注入的 [AssetPriceProvider]（通常为 CompositeAssetPriceProvider，
+/// 按顺序尝试 Yahoo / 东方财富 / OKX / 基金净值，内置熔断机制）。
 /// 缓存：进程内 TTL，避免短时间内连续刷新打爆远端。
 /// - 最新价：`latestTtl` 默认 5 分钟
 /// - 历史序列：按 `(symbol, fromDay, toDay)` 粒度缓存 `historyTtl` 默认 6 小时
