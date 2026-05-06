@@ -4,16 +4,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../mock_seeder.dart';
 import '../../../domain/entities/dict_type.dart';
+import '../../../domain/repositories/api_diagnostics_repository.dart';
 import '../../../domain/usecases/reset_all_data.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../auth/presentation/auth_gate.dart';
 import '../../backup/presentation/backup_providers.dart';
+import '../../../data/providers/settings_providers.dart';
 import 'dict_manage_page.dart';
 import 'security_settings_page.dart';
 
@@ -498,6 +499,13 @@ class _ApiEndpoint {
   final Uri testUri;
   final String description;
   final IconData icon;
+
+  ApiDiagnosticEndpoint toDomain() => ApiDiagnosticEndpoint(
+        label: label,
+        host: host,
+        testUri: testUri,
+        description: description,
+      );
 }
 
 final _kApiEndpoints = [
@@ -572,14 +580,14 @@ final _kApiEndpoints = [
 
 enum _TestStatus { idle, testing, ok, error }
 
-class _ApiDiagSection extends StatefulWidget {
+class _ApiDiagSection extends ConsumerStatefulWidget {
   const _ApiDiagSection();
 
   @override
-  State<_ApiDiagSection> createState() => _ApiDiagSectionState();
+  ConsumerState<_ApiDiagSection> createState() => _ApiDiagSectionState();
 }
 
-class _ApiDiagSectionState extends State<_ApiDiagSection> {
+class _ApiDiagSectionState extends ConsumerState<_ApiDiagSection> {
   final _statuses = List.filled(_kApiEndpoints.length, _TestStatus.idle);
   final _messages = List<String?>.filled(_kApiEndpoints.length, null);
   final _latencies = List<int?>.filled(_kApiEndpoints.length, null);
@@ -593,37 +601,16 @@ class _ApiDiagSectionState extends State<_ApiDiagSection> {
       _latencies[i] = null;
     });
     final ep = _kApiEndpoints[i];
-    final sw = Stopwatch()..start();
-    try {
-      final client = http.Client();
-      try {
-        final resp = await client
-            .get(ep.testUri, headers: const {'User-Agent': 'Coffer/1 (diag)'})
-            .timeout(const Duration(seconds: 10));
-        sw.stop();
-        if (!mounted) return;
-        setState(() {
-          _latencies[i] = sw.elapsedMilliseconds;
-          if (resp.statusCode < 400) {
-            _statuses[i] = _TestStatus.ok;
-            _messages[i] = 'HTTP ${resp.statusCode}';
-          } else {
-            _statuses[i] = _TestStatus.error;
-            _messages[i] = 'HTTP ${resp.statusCode}';
-          }
-        });
-      } finally {
-        client.close();
-      }
-    } catch (e) {
-      sw.stop();
-      if (!mounted) return;
-      setState(() {
-        _statuses[i] = _TestStatus.error;
-        _messages[i] = _shortError(e);
-        _latencies[i] = sw.elapsedMilliseconds;
-      });
-    }
+    final repo = ref.read(apiDiagnosticsRepositoryProvider);
+    final result = await repo.probe(ep.toDomain());
+    if (!mounted) return;
+    setState(() {
+      _latencies[i] = result.latencyMs;
+      _statuses[i] = result.ok ? _TestStatus.ok : _TestStatus.error;
+      _messages[i] = result.ok
+          ? (result.statusCode == null ? '连通' : 'HTTP ${result.statusCode}')
+          : result.errorMessage;
+    });
   }
 
   Future<void> _testAll() async {
@@ -634,16 +621,6 @@ class _ApiDiagSectionState extends State<_ApiDiagSection> {
     ]);
     if (mounted) setState(() => _testingAll = false);
   }
-
-  String _shortError(Object e) {
-    final s = e.toString();
-    if (s.contains('TimeoutException')) return '超时';
-    if (s.contains('SocketException')) return '无法连接';
-    if (s.contains('HandshakeException')) return 'TLS 握手失败';
-    if (s.length > 40) return '${s.substring(0, 40)}…';
-    return s;
-  }
-
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
