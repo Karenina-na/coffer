@@ -436,24 +436,13 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
   // 回填 UI 元数据（onCreate 走这里；onUpgrade from<15 走 _backfillRegionMeta）
   await _backfillRegionMeta(db);
 
-  // 货币：ISO 4217 三位代码；覆盖常见计价货币 + 加密资产常用稳定币/主流币。
+  // 货币：ISO 4217 三位代码。
   await seed('CURRENCY', const [
     ['CNY', '人民币', 'Chinese Yuan'],
     ['USD', '美元', 'US Dollar'],
-    ['HKD', '港币', 'Hong Kong Dollar'],
-    ['EUR', '欧元', 'Euro'],
-    ['JPY', '日元', 'Japanese Yen'],
-    ['SGD', '新加坡元', 'Singapore Dollar'],
     ['GBP', '英镑', 'British Pound'],
-    ['AUD', '澳元', 'Australian Dollar'],
-    ['CAD', '加元', 'Canadian Dollar'],
-    ['CHF', '瑞士法郎', 'Swiss Franc'],
-    ['KRW', '韩元', 'Korean Won'],
-    ['TWD', '新台币', 'Taiwan Dollar'],
-    ['USDT', '泰达币', 'Tether'],
-    ['USDC', '美元币', 'USD Coin'],
-    ['BTC', '比特币', 'Bitcoin'],
-    ['ETH', '以太坊', 'Ethereum'],
+    ['EUR', '欧元', 'Euro'],
+    ['HKD', '港币', 'Hong Kong Dollar'],
   ]);
 }
 
