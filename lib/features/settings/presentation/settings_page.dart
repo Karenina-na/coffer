@@ -546,14 +546,14 @@ final _kApiEndpoints = [
   ),
   // ── 加密货币 ──────────────────────────────────────────────
   _ApiEndpoint(
-    label: 'CoinGecko',
-    host: 'api.coingecko.com',
+    label: 'OKX',
+    host: 'www.okx.com',
     testUri: Uri.https(
-      'api.coingecko.com',
-      '/api/v3/simple/price',
-      {'ids': 'bitcoin,ethereum', 'vs_currencies': 'usd'},
+      'www.okx.com',
+      '/api/v5/market/ticker',
+      {'instId': 'BTC-USDT'},
     ),
-    description: '加密货币实时报价（BTC/ETH/SOL 等，免认证）',
+    description: '加密货币现货+衍生品实时行情（免认证公开 API）',
     icon: Icons.currency_bitcoin_outlined,
   ),
   // ── 法币汇率 ──────────────────────────────────────────────
@@ -909,6 +909,7 @@ class _EntryRow extends StatelessWidget {
   const _EntryRow({
     required this.icon,
     required this.title,
+    // ignore: unused_element_parameter
     this.subtitle,
     this.trailing,
     this.onTap,
