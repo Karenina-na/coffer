@@ -269,11 +269,16 @@ class _FloatingNavBar extends StatelessWidget {
   static const _pillRadius = 24.0;
   static const _barHeight = 64.0;
   static const _itemRadius = 20.0;
+  static const _innerHorizontalInset = 4.0;
+  static const _indicatorVerticalInset = 8.0;
+
+  double _alignmentXForIndex(int index, int count) {
+    if (count <= 1) return 0;
+    return -1 + (2 * index / (count - 1));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final itemWidth = (MediaQuery.sizeOf(context).width - 32 - 8) / 5;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(_pillRadius),
       child: BackdropFilter(
@@ -282,16 +287,16 @@ class _FloatingNavBar extends StatelessWidget {
           height: _barHeight,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: GwpColors.surface1.withValues(alpha: 0.22),
+            color: GwpColors.surface1.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(_pillRadius),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.16),
+              color: Colors.white.withValues(alpha: 0.14),
               width: 0.6,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.14),
-                blurRadius: 24,
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 22,
                 offset: const Offset(0, 10),
               ),
             ],
@@ -305,8 +310,8 @@ class _FloatingNavBar extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.white.withValues(alpha: 0.12),
-                        Colors.white.withValues(alpha: 0.03),
+                        Colors.white.withValues(alpha: 0.07),
+                        Colors.white.withValues(alpha: 0.015),
                       ],
                     ),
                   ),
@@ -319,40 +324,52 @@ class _FloatingNavBar extends StatelessWidget {
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: [
-                        Colors.white.withValues(alpha: 0.035),
-                        Colors.white.withValues(alpha: 0.01),
-                        Colors.white.withValues(alpha: 0.035),
+                        Colors.white.withValues(alpha: 0.02),
+                        Colors.white.withValues(alpha: 0.006),
+                        Colors.white.withValues(alpha: 0.02),
                       ],
                     ),
                   ),
                 ),
               ),
               // Active indicator — slides between items
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                left: selectedIndex * itemWidth + 4,
-                top: 8,
-                child: Container(
-                  width: itemWidth - 8,
-                  height: _barHeight - 16,
-                  decoration: BoxDecoration(
-                    color: GwpColors.actionPrimary.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(_itemRadius),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _innerHorizontalInset,
+                  vertical: _indicatorVerticalInset,
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment(
+                    _alignmentXForIndex(selectedIndex, tabs.length),
+                    0,
+                  ),
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / tabs.length,
+                    heightFactor: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: GwpColors.actionPrimary.withValues(alpha: 0.13),
+                          borderRadius: BorderRadius.circular(_itemRadius),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.045),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
               // Tab items
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: _innerHorizontalInset),
                 child: Row(
                   children: [
                     for (var i = 0; i < tabs.length; i++)
-                      SizedBox(
-                        width: itemWidth,
+                      Expanded(
                         child: _NavItem(
                           icon: tabs[i].$2,
                           label: tabs[i].$3,

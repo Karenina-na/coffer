@@ -68,14 +68,11 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.only(left: 12),
                 child: Opacity(
                   opacity: 0.7,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: Image.asset(
-                      'assets/branding/app_icon_gold.png',
-                      width: 20,
-                      height: 20,
-                      fit: BoxFit.contain,
-                    ),
+                  child: Image.asset(
+                    'assets/branding/app_icon_gold.png',
+                    width: 20,
+                    height: 20,
+                    fit: BoxFit.contain,
                   ),
                 ),
               )
