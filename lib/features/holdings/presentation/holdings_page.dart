@@ -79,7 +79,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
           ],
         ),
       ),
-      floatingActionButton: _fabFor(context, idx),
+      floatingActionButton: _shellFabFor(context, idx),
       body: TabBarView(
         controller: _tab,
         children: const [
@@ -205,5 +205,14 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
       default:
         return null; // transfer tab: 无 FAB（页面内有 "模拟报价" 按钮）
     }
+  }
+
+  Widget? _shellFabFor(BuildContext context, int idx) {
+    final fab = _fabFor(context, idx);
+    if (fab == null) return null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 88),
+      child: fab,
+    );
   }
 }

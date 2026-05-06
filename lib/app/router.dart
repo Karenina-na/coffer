@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/errors.dart';
 import '../core/result.dart';
+import '../core/ui/design_tokens.dart';
 import '../core/ui/global_search_delegate.dart';
 import '../core/ui/gwp_empty_state.dart';
 import '../core/ui/top_search_action.dart';
@@ -175,6 +178,9 @@ GoRouter buildRouter() => GoRouter(
 class _HomeShell extends ConsumerWidget {
   const _HomeShell({required this.location, required this.child});
 
+  static const _navHorizontalMargin = 16.0;
+  static const _navBottomGap = 12.0;
+
   final String location;
   final Widget child;
 
@@ -194,8 +200,8 @@ class _HomeShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadEventCountProvider);
-    // 顶部不再由壳提供 AppBar —— 各 Tab 页使用 `AppTopBar`，在同一条栏里
-    // 同时承载「页面专有动作」和「App 级固定动作（搜索 / 设置）」。
+    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
+
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
@@ -206,21 +212,21 @@ class _HomeShell extends ConsumerWidget {
       child: Focus(
         autofocus: true,
         child: Scaffold(
-          body: child,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => context.go(_tabs[i].$1),
-            destinations: [
-              for (final t in _tabs)
-                NavigationDestination(
-                  icon: t.$1 == '/events' && unread > 0
-                      ? Badge.count(count: unread, child: Icon(t.$2))
-                      : Icon(t.$2),
-                  selectedIcon: t.$1 == '/events' && unread > 0
-                      ? Badge.count(count: unread, child: Icon(t.$2))
-                      : Icon(t.$2),
-                  label: t.$3,
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              child,
+              Positioned(
+                left: _navHorizontalMargin,
+                right: _navHorizontalMargin,
+                bottom: bottomSafeArea + _navBottomGap,
+                child: _FloatingNavBar(
+                  selectedIndex: _index,
+                  tabs: _tabs,
+                  unreadBadge: unread > 0,
+                  onTap: (i) => context.go(_tabs[i].$1),
                 ),
+              ),
             ],
           ),
         ),
@@ -244,6 +250,185 @@ class _HomeShell extends ConsumerWidget {
       _ => SearchFeature.dashboard,
     };
     openGlobalSearch(context: context, ref: ref, current: f);
+  }
+}
+
+class _FloatingNavBar extends StatelessWidget {
+  const _FloatingNavBar({
+    required this.selectedIndex,
+    required this.tabs,
+    required this.unreadBadge,
+    required this.onTap,
+  });
+
+  final int selectedIndex;
+  final List<(String, IconData, String)> tabs;
+  final bool unreadBadge;
+  final ValueChanged<int> onTap;
+
+  static const _pillRadius = 24.0;
+  static const _barHeight = 64.0;
+  static const _itemRadius = 20.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final itemWidth = (MediaQuery.sizeOf(context).width - 32 - 8) / 5;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(_pillRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          height: _barHeight,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: GwpColors.surface1.withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(_pillRadius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.16),
+              width: 0.6,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.12),
+                        Colors.white.withValues(alpha: 0.03),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.035),
+                        Colors.white.withValues(alpha: 0.01),
+                        Colors.white.withValues(alpha: 0.035),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Active indicator — slides between items
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                left: selectedIndex * itemWidth + 4,
+                top: 8,
+                child: Container(
+                  width: itemWidth - 8,
+                  height: _barHeight - 16,
+                  decoration: BoxDecoration(
+                    color: GwpColors.actionPrimary.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(_itemRadius),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
+                  ),
+                ),
+              ),
+              // Tab items
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < tabs.length; i++)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _NavItem(
+                          icon: tabs[i].$2,
+                          label: tabs[i].$3,
+                          isSelected: i == selectedIndex,
+                          showBadge: unreadBadge && tabs[i].$1 == '/events',
+                          onTap: () => onTap(i),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.showBadge = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final bool showBadge;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 200),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+          color: isSelected ? GwpColors.textSecondary : GwpColors.textMuted,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 8),
+            showBadge
+                ? Badge(
+                    backgroundColor: GwpColors.negative,
+                    child: Icon(
+                      icon,
+                      size: 22,
+                      color: isSelected
+                          ? GwpColors.actionPrimaryHover
+                          : GwpColors.textMuted,
+                    ),
+                  )
+                : Icon(
+                    icon,
+                    size: 22,
+                    color: isSelected
+                        ? GwpColors.actionPrimaryHover
+                        : GwpColors.textMuted,
+                  ),
+            const SizedBox(height: 4),
+            Text(label, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 }
 

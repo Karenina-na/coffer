@@ -137,7 +137,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
               // F. Recent activity（最多 3 条 + 查看全部）
               const _RecentActivitySection(),
-              const SizedBox(height: GwpSpacing.xxl),
+              const SizedBox(height: 112),
             ],
           ),
         ),

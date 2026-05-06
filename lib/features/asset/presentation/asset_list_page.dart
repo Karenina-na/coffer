@@ -184,7 +184,7 @@ class _AssetListViewState extends State<_AssetListView> {
     }
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 80),
+      padding: const EdgeInsets.only(bottom: 112),
       children: [
         _PortfolioHero(
           totalValue: totalValue,

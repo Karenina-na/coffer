@@ -167,16 +167,19 @@ class _EventListPageState extends ConsumerState<EventListPage>
         ),
       ),
       floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                String two(int n) => n.toString().padLeft(2, '0');
-                final d = _calendarKey.currentState?.selectedDay ?? _fabDay;
-                final iso =
-                    '${d.year}-${two(d.month)}-${two(d.day)}';
-                context.push('/events/new?day=$iso');
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('新建事件'),
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 88),
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  String two(int n) => n.toString().padLeft(2, '0');
+                  final d = _calendarKey.currentState?.selectedDay ?? _fabDay;
+                  final iso =
+                      '${d.year}-${two(d.month)}-${two(d.day)}';
+                  context.push('/events/new?day=$iso');
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('新建事件'),
+              ),
             )
           : null,
       body: TabBarView(
@@ -379,7 +382,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                   },
                 ),
               ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: SizedBox(height: 112)),
           ],
         );
       },
@@ -636,7 +639,12 @@ class _GroupList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.base),
+      padding: const EdgeInsets.fromLTRB(
+        GwpSpacing.base,
+        0,
+        GwpSpacing.base,
+        112,
+      ),
       itemCount: groups.length,
       itemBuilder: (_, i) {
         final g = groups[i];

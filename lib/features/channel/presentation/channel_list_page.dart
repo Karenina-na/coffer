@@ -47,7 +47,7 @@ class ChannelListPage extends ConsumerWidget {
               left: GwpSpacing.base,
               right: GwpSpacing.base,
               top: GwpSpacing.md,
-              bottom: 80,
+              bottom: 16,
             ),
             children: [
               _SummaryHeader(

@@ -169,7 +169,7 @@ class _AccountListViewState extends State<_AccountListView> {
     final totalD = totalNetWorth.toDouble();
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 80),
+      padding: const EdgeInsets.only(bottom: 112),
       children: [
         // Hero summary with donut charts
         _HeroCard(

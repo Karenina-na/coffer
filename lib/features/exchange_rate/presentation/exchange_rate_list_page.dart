@@ -82,10 +82,13 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openEditor,
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('录入'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 88),
+        child: FloatingActionButton.extended(
+          onPressed: _openEditor,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('录入'),
+        ),
       ),
       body: pairs.when(
         loading: () => const Center(
@@ -104,7 +107,7 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
             );
           }
           return ListView(
-            padding: const EdgeInsets.only(bottom: 80),
+            padding: const EdgeInsets.only(bottom: 112),
             children: [
               // Heat strip overview card
               _HeatStripCard(pairs: list),
@@ -694,7 +697,7 @@ class _WatchedPairsPage extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
+            padding: const EdgeInsets.only(bottom: 16),
             itemCount: list.length,
             itemBuilder: (_, i) => _PairTile(pair: list[i]),
           );
