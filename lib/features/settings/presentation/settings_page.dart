@@ -381,7 +381,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
 
 /// 「清除所有数据」的完整交互：两步确认 → 执行 → 锁屏 → 反馈。
 ///
-/// 只需输入"清除"一词即可执行；单步确认，避免误触。
+/// 需输入"CLEAR"（全大写）以确认；单步确认，避免误触。
 Future<void> _resetAllData(BuildContext context, WidgetRef ref) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -425,7 +425,7 @@ class _ResetConfirmDialog extends StatefulWidget {
 }
 
 class _ResetConfirmDialogState extends State<_ResetConfirmDialog> {
-  static const _magic = '清除';
+  static const _magic = 'CLEAR';
   final _controller = TextEditingController();
 
   @override
@@ -448,13 +448,13 @@ class _ResetConfirmDialogState extends State<_ResetConfirmDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('输入"清除"以确认：'),
+          const Text('输入"CLEAR"以确认：'),
           const SizedBox(height: GwpSpacing.md),
           TextField(
             controller: _controller,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: '清除',
+              hintText: 'CLEAR',
               border: OutlineInputBorder(),
               isDense: true,
             ),
