@@ -252,7 +252,7 @@ class RefreshAssetPriceUseCase {
           since: from,
         );
         for (final r in allRates) {
-          fxRateMap[utcDayKey(r.updatedAt)] = r.rate;
+          fxRateMap[utcDayKey(r.asOfTime)] = r.rate;
         }
       } catch (_) {
         // 批量查询失败时退回到逐点 spot rate，不阻塞写入。

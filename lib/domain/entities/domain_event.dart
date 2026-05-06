@@ -5,8 +5,10 @@ import 'event_enums.dart';
 part 'domain_event.freezed.dart';
 
 /// 持久化事件记录，字段对齐 doc/data-definitions.md §7。
-@freezed
+@Freezed(toStringOverride: false)
 abstract class DomainEvent with _$DomainEvent {
+  const DomainEvent._();
+
   const factory DomainEvent({
     required String id,
     required String eventType,
@@ -42,4 +44,26 @@ abstract class DomainEvent with _$DomainEvent {
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _DomainEvent;
+
+  @override
+  String toString() => 'DomainEvent('
+      'id: $id, '
+      'eventType: $eventType, '
+      'relatedModel: $relatedModel, '
+      'relatedId: $relatedId, '
+      'triggerTime: $triggerTime, '
+      'priority: $priority, '
+      'status: $status, '
+      'handlingStatus: $handlingStatus, '
+      'handler: $handler, '
+      'sourceKey: $sourceKey, '
+      'batchId: $batchId, '
+      'dueAt: $dueAt, '
+      'ackRequirement: $ackRequirement, '
+      'ackStatus: $ackStatus, '
+      'ackAt: $ackAt, '
+      'isDeleted: $isDeleted, '
+      'createdAt: $createdAt, '
+      'updatedAt: $updatedAt'
+      ')';
 }

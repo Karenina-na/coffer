@@ -80,7 +80,7 @@ class CheckAssetSyncOutdatedUseCase {
       status: EventStatus.triggered,
       handlingStatus: HandlingStatus.unhandled,
       sourceKey: '${DomainEventTypes.assetSyncOutdated}:$dayKey',
-      ackRequirement: AckRequirement.notApplicable,
+      ackRequirement: AckRequirement.optional,
       handlingNote: jsonEncode({
         'thresholdDays': _threshold.inDays,
         'count': outdated.length,

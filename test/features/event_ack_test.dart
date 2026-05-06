@@ -133,6 +133,30 @@ void main() {
     expect(found.ackNote, '误报');
   });
 
+  test('已 CONFIRMED 的事件不可再改为 DISMISSED', () async {
+    await repo.record(mkEvent(id: 'e-final', ack: AckStatus.confirmed));
+    final useCase = AckEventUseCase(repo);
+    final r = await useCase.dismiss('e-final', note: 'second thought');
+    expect(r.isErr, isTrue);
+
+    final list = await repo.watchRecent().first;
+    final found = list.firstWhere((x) => x.id == 'e-final');
+    expect(found.ackStatus, AckStatus.confirmed);
+    expect(found.ackNote, isNull);
+  });
+
+  test('已 DISMISSED 的事件不可再改为 CONFIRMED', () async {
+    await repo.record(mkEvent(id: 'e-final-2', ack: AckStatus.dismissed));
+    final useCase = AckEventUseCase(repo);
+    final r = await useCase.confirm('e-final-2', note: 'undo');
+    expect(r.isErr, isTrue);
+
+    final list = await repo.watchRecent().first;
+    final found = list.firstWhere((x) => x.id == 'e-final-2');
+    expect(found.ackStatus, AckStatus.dismissed);
+    expect(found.ackNote, isNull);
+  });
+
   test('softDelete 事件从 watchPendingAck 中隐藏', () async {
     await repo.record(mkEvent(id: 'pa'));
     var list = await repo.watchPendingAck().first;

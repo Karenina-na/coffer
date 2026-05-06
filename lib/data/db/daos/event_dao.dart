@@ -123,7 +123,7 @@ class EventDao extends DatabaseAccessor<AppDatabase> with _$EventDaoMixin {
     );
   }
 
-  /// 原子版 updateAck：仅当 ack_requirement != NOT_APPLICABLE 时才更新。
+  /// 原子版 updateAck：仅当事件支持 ack 且当前仍为 PENDING 时才更新。
   /// 通过 WHERE 条件把守卫合并进 SQL，消除应用层 TOCTOU 竞态。
   Future<int> updateAckIfApplicable({
     required String id,
@@ -136,7 +136,8 @@ class EventDao extends DatabaseAccessor<AppDatabase> with _$EventDaoMixin {
           ..where(
             (t) =>
                 t.id.equals(id) &
-                t.ackRequirement.equals(AckRequirement.notApplicable.code).not(),
+                t.ackRequirement.equals(AckRequirement.notApplicable.code).not() &
+                t.ackStatus.equals(AckStatus.pending.code),
           ))
         .write(
       EventsCompanion(

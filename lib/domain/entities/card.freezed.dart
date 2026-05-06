@@ -32,10 +32,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => Object.hashAll([runtimeType,id,accountId,cardOrganization,cardNoMasked,cardNoCiphertext,cardType,expireMonth,expireYear,cvvCiphertext,issuerName,currency,supportsAllCurrencies,const DeepCollectionEquality().hash(supportedCurrencies),creditLimit,availableCredit,billingCycleDay,paymentDueDay,billingAddress,isVirtual,status,createdAt,updatedAt]);
 
-@override
-String toString() {
-  return 'BankCard(id: $id, accountId: $accountId, cardOrganization: $cardOrganization, cardNoMasked: $cardNoMasked, cardNoCiphertext: $cardNoCiphertext, cardType: $cardType, expireMonth: $expireMonth, expireYear: $expireYear, cvvCiphertext: $cvvCiphertext, issuerName: $issuerName, currency: $currency, supportsAllCurrencies: $supportsAllCurrencies, supportedCurrencies: $supportedCurrencies, creditLimit: $creditLimit, availableCredit: $availableCredit, billingCycleDay: $billingCycleDay, paymentDueDay: $paymentDueDay, billingAddress: $billingAddress, isVirtual: $isVirtual, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
-}
 
 
 }
@@ -226,8 +222,8 @@ return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMask
 /// @nodoc
 
 
-class _BankCard implements BankCard {
-  const _BankCard({required this.id, required this.accountId, required this.cardOrganization, required this.cardNoMasked, this.cardNoCiphertext, required this.cardType, required this.expireMonth, required this.expireYear, this.cvvCiphertext, required this.issuerName, this.currency, this.supportsAllCurrencies = false, final  List<String> supportedCurrencies = const <String>[], this.creditLimit, this.availableCredit, this.billingCycleDay, this.paymentDueDay, this.billingAddress, this.isVirtual = false, required this.status, required this.createdAt, required this.updatedAt}): _supportedCurrencies = supportedCurrencies;
+class _BankCard extends BankCard {
+  const _BankCard({required this.id, required this.accountId, required this.cardOrganization, required this.cardNoMasked, this.cardNoCiphertext, required this.cardType, required this.expireMonth, required this.expireYear, this.cvvCiphertext, required this.issuerName, this.currency, this.supportsAllCurrencies = false, final  List<String> supportedCurrencies = const <String>[], this.creditLimit, this.availableCredit, this.billingCycleDay, this.paymentDueDay, this.billingAddress, this.isVirtual = false, required this.status, required this.createdAt, required this.updatedAt}): _supportedCurrencies = supportedCurrencies,super._();
   
 
 @override final  String id;
@@ -276,10 +272,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => Object.hashAll([runtimeType,id,accountId,cardOrganization,cardNoMasked,cardNoCiphertext,cardType,expireMonth,expireYear,cvvCiphertext,issuerName,currency,supportsAllCurrencies,const DeepCollectionEquality().hash(_supportedCurrencies),creditLimit,availableCredit,billingCycleDay,paymentDueDay,billingAddress,isVirtual,status,createdAt,updatedAt]);
 
-@override
-String toString() {
-  return 'BankCard(id: $id, accountId: $accountId, cardOrganization: $cardOrganization, cardNoMasked: $cardNoMasked, cardNoCiphertext: $cardNoCiphertext, cardType: $cardType, expireMonth: $expireMonth, expireYear: $expireYear, cvvCiphertext: $cvvCiphertext, issuerName: $issuerName, currency: $currency, supportsAllCurrencies: $supportsAllCurrencies, supportedCurrencies: $supportedCurrencies, creditLimit: $creditLimit, availableCredit: $availableCredit, billingCycleDay: $billingCycleDay, paymentDueDay: $paymentDueDay, billingAddress: $billingAddress, isVirtual: $isVirtual, status: $status, createdAt: $createdAt, updatedAt: $updatedAt)';
-}
 
 
 }

@@ -6,6 +6,7 @@ import 'package:gwp/data/repositories/drift_asset_repository.dart';
 import 'package:gwp/data/repositories/drift_event_repository.dart';
 import 'package:gwp/domain/entities/asset.dart';
 import 'package:gwp/domain/entities/asset_enums.dart';
+import 'package:gwp/domain/entities/event_enums.dart';
 import 'package:gwp/domain/events/event_bus.dart';
 import 'package:gwp/domain/usecases/check_asset_sync_outdated.dart';
 
@@ -91,6 +92,7 @@ void main() {
     final events = await eventRepo.watchRecent().first;
     expect(events, hasLength(1));
     expect(events.single.eventType, 'ASSET_SYNC_OUTDATED');
+    expect(events.single.ackRequirement, AckRequirement.optional);
   });
 
   test('软删资产被忽略', () async {

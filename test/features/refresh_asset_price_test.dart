@@ -304,6 +304,46 @@ void main() {
       expect(prices.length, 2, reason: '每天应使用不同汇率换算出不同价格');
     });
 
+    test('历史 FX 使用 asOfTime，而不是 updatedAt 建索引', () async {
+      final fxRepo = DriftExchangeRateRepository(db.exchangeRateDao);
+      final day1 = DateTime.utc(2025, 6, 13);
+      final day2 = DateTime.utc(2025, 6, 14);
+      await fxRepo.upsert(ExchangeRate(
+        id: 'r1-late',
+        pairKey: pairKeyOf('USD', 'CNY'),
+        baseCurrency: 'USD',
+        quoteCurrency: 'CNY',
+        rate: Decimal.parse('7.1'),
+        asOfTime: day1.add(const Duration(hours: 12)),
+        updatedAt: day2.add(const Duration(hours: 6)),
+        source: 'test',
+        snapshotType: SnapshotType.daily,
+      ));
+
+      final asset = await seedAsset(id: 'ast-fx-asof', currency: 'CNY');
+      final provider = FakeAssetPriceProvider(
+        series: AssetPriceSeries(
+          symbol: asset.assetCode ?? '',
+          currency: 'USD',
+          source: 'test',
+          points: [
+            AssetPricePoint(t: day1, price: Decimal.parse('100'), currency: 'USD'),
+          ],
+        ),
+      );
+      final useCase = buildWithFxRepo(provider, fxRepo);
+
+      final r = await useCase.refreshHistory(
+        assetId: 'ast-fx-asof',
+        from: day1,
+        to: day1,
+      );
+      expect(r.isOk, isTrue);
+
+      final history = await historyRepo.watchByAsset('ast-fx-asof').first;
+      expect(history.single.price, Decimal.parse('710'));
+    });
+
     test('同币种资产不做 FX 换算', () async {
       final fxRepo = DriftExchangeRateRepository(db.exchangeRateDao);
       final day = DateTime.utc(2025, 6, 14);

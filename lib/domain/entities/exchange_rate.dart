@@ -6,8 +6,10 @@ import 'exchange_rate_enums.dart';
 part 'exchange_rate.freezed.dart';
 
 /// 汇率快照，字段对齐 doc/data-definitions.md §6。
-@freezed
+@Freezed(toStringOverride: false)
 abstract class ExchangeRate with _$ExchangeRate {
+  const ExchangeRate._();
+
   const factory ExchangeRate({
     required String id,
     required String pairKey,
@@ -20,4 +22,17 @@ abstract class ExchangeRate with _$ExchangeRate {
     required SnapshotType snapshotType,
     String? rawPayload,
   }) = _ExchangeRate;
+
+  @override
+  String toString() => 'ExchangeRate('
+      'id: $id, '
+      'pairKey: $pairKey, '
+      'baseCurrency: $baseCurrency, '
+      'quoteCurrency: $quoteCurrency, '
+      'rate: $rate, '
+      'asOfTime: $asOfTime, '
+      'updatedAt: $updatedAt, '
+      'source: $source, '
+      'snapshotType: $snapshotType'
+      ')';
 }

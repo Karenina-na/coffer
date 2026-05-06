@@ -20,8 +20,10 @@ part 'card.freezed.dart';
 ///   空列表表示「仅主币种」
 ///
 /// 字段对齐 doc/data-definitions.md §5。
-@freezed
+@Freezed(toStringOverride: false)
 abstract class BankCard with _$BankCard {
+  const BankCard._();
+
   const factory BankCard({
     required String id,
     required String accountId,

@@ -39,10 +39,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => Object.hashAll([runtimeType,id,eventType,relatedModel,relatedId,triggerTime,priority,status,handlingStatus,handler,handlingNote,sourceKey,batchId,dueAt,const DeepCollectionEquality().hash(refs),ackRequirement,ackStatus,ackAt,ackNote,isDeleted,createdAt,updatedAt]);
 
-@override
-String toString() {
-  return 'DomainEvent(id: $id, eventType: $eventType, relatedModel: $relatedModel, relatedId: $relatedId, triggerTime: $triggerTime, priority: $priority, status: $status, handlingStatus: $handlingStatus, handler: $handler, handlingNote: $handlingNote, sourceKey: $sourceKey, batchId: $batchId, dueAt: $dueAt, refs: $refs, ackRequirement: $ackRequirement, ackStatus: $ackStatus, ackAt: $ackAt, ackNote: $ackNote, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
-}
 
 
 }
@@ -232,8 +228,8 @@ return $default(_that.id,_that.eventType,_that.relatedModel,_that.relatedId,_tha
 /// @nodoc
 
 
-class _DomainEvent implements DomainEvent {
-  const _DomainEvent({required this.id, required this.eventType, required this.relatedModel, required this.relatedId, required this.triggerTime, this.priority, required this.status, this.handlingStatus, this.handler, this.handlingNote, this.sourceKey, this.batchId, this.dueAt, final  Map<String, String>? refs, this.ackRequirement = AckRequirement.notApplicable, this.ackStatus = AckStatus.pending, this.ackAt, this.ackNote, this.isDeleted = false, required this.createdAt, required this.updatedAt}): _refs = refs;
+class _DomainEvent extends DomainEvent {
+  const _DomainEvent({required this.id, required this.eventType, required this.relatedModel, required this.relatedId, required this.triggerTime, this.priority, required this.status, this.handlingStatus, this.handler, this.handlingNote, this.sourceKey, this.batchId, this.dueAt, final  Map<String, String>? refs, this.ackRequirement = AckRequirement.notApplicable, this.ackStatus = AckStatus.pending, this.ackAt, this.ackNote, this.isDeleted = false, required this.createdAt, required this.updatedAt}): _refs = refs,super._();
   
 
 @override final  String id;
@@ -291,10 +287,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => Object.hashAll([runtimeType,id,eventType,relatedModel,relatedId,triggerTime,priority,status,handlingStatus,handler,handlingNote,sourceKey,batchId,dueAt,const DeepCollectionEquality().hash(_refs),ackRequirement,ackStatus,ackAt,ackNote,isDeleted,createdAt,updatedAt]);
 
-@override
-String toString() {
-  return 'DomainEvent(id: $id, eventType: $eventType, relatedModel: $relatedModel, relatedId: $relatedId, triggerTime: $triggerTime, priority: $priority, status: $status, handlingStatus: $handlingStatus, handler: $handler, handlingNote: $handlingNote, sourceKey: $sourceKey, batchId: $batchId, dueAt: $dueAt, refs: $refs, ackRequirement: $ackRequirement, ackStatus: $ackStatus, ackAt: $ackAt, ackNote: $ackNote, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
-}
 
 
 }

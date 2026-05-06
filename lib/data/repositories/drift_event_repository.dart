@@ -93,12 +93,15 @@ class DriftEventRepository implements EventRepository {
         updatedAt: now,
       );
       if (n == 0) {
-        // 行不存在 或 ack_requirement = NOT_APPLICABLE → 查一下原因
+        // 行不存在 / 不支持 ack / 已进入终态 → 查一下原因
         final existing = await _dao.findById(id);
         if (existing == null) {
           return Err(NotFoundError('event not found: $id'));
         }
-        return const Err(ValidationError('NOT_APPLICABLE 事件不支持 ack'));
+        if (existing.ackRequirement == AckRequirement.notApplicable.code) {
+          return const Err(ValidationError('NOT_APPLICABLE 事件不支持 ack'));
+        }
+        return const Err(ValidationError('事件 ack 已进入终态，不可重复修改'));
       }
       return const Ok(null);
     } catch (e) {

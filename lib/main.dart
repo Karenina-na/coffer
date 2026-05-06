@@ -12,14 +12,18 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 全局错误捕获：避免未处理异常直接把应用打挂。
-  // 本地优先应用没有远端上报通道，此处仅做结构化日志，供开发期排查。
+  // 本地优先应用没有远端上报通道：debug 保留详细日志，release 仅避免崩溃。
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint('[FlutterError] ${details.exceptionAsString()}');
+    if (kDebugMode) {
+      debugPrint('[FlutterError] ${details.exceptionAsString()}');
+    }
   };
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('[PlatformError] $error');
-    debugPrintStack(stackTrace: stack);
+    if (kDebugMode) {
+      debugPrint('[PlatformError] $error');
+      debugPrintStack(stackTrace: stack);
+    }
     return true;
   };
 

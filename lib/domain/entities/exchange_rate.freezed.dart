@@ -32,10 +32,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => Object.hash(runtimeType,id,pairKey,baseCurrency,quoteCurrency,rate,asOfTime,updatedAt,source,snapshotType,rawPayload);
 
-@override
-String toString() {
-  return 'ExchangeRate(id: $id, pairKey: $pairKey, baseCurrency: $baseCurrency, quoteCurrency: $quoteCurrency, rate: $rate, asOfTime: $asOfTime, updatedAt: $updatedAt, source: $source, snapshotType: $snapshotType, rawPayload: $rawPayload)';
-}
 
 
 }
@@ -214,8 +210,8 @@ return $default(_that.id,_that.pairKey,_that.baseCurrency,_that.quoteCurrency,_t
 /// @nodoc
 
 
-class _ExchangeRate implements ExchangeRate {
-  const _ExchangeRate({required this.id, required this.pairKey, required this.baseCurrency, required this.quoteCurrency, required this.rate, required this.asOfTime, required this.updatedAt, required this.source, required this.snapshotType, this.rawPayload});
+class _ExchangeRate extends ExchangeRate {
+  const _ExchangeRate({required this.id, required this.pairKey, required this.baseCurrency, required this.quoteCurrency, required this.rate, required this.asOfTime, required this.updatedAt, required this.source, required this.snapshotType, this.rawPayload}): super._();
   
 
 @override final  String id;
@@ -246,10 +242,6 @@ bool operator ==(Object other) {
 @override
 int get hashCode => Object.hash(runtimeType,id,pairKey,baseCurrency,quoteCurrency,rate,asOfTime,updatedAt,source,snapshotType,rawPayload);
 
-@override
-String toString() {
-  return 'ExchangeRate(id: $id, pairKey: $pairKey, baseCurrency: $baseCurrency, quoteCurrency: $quoteCurrency, rate: $rate, asOfTime: $asOfTime, updatedAt: $updatedAt, source: $source, snapshotType: $snapshotType, rawPayload: $rawPayload)';
-}
 
 
 }
