@@ -201,4 +201,26 @@ void main() {
     // Should use the 2-hop path, not the disabled direct
     expect(route.legs.map((l) => l.channel.id).toList(), containsAll(['ch-a', 'ch-b']));
   });
+
+  test('不可达目标不会返回指向第三方账户的阻断 fallback', () async {
+    final blockedRule = {
+      'requireSameRegion': true,
+    };
+    // acc-1 和 acc-3 可见，但规则阻断；acc-2 完全不可达。
+    await seedChannel(_ch(id: 'ch-blocked', rule: blockedRule), ['acc-1', 'acc-3']);
+
+    // 把 acc-3 改成不同 region，使 1 -> 3 被规则拒绝。
+    await db.customStatement(
+      "UPDATE accounts SET sovereignty_region = 'SG' WHERE id = 'acc-3'",
+    );
+
+    final r = await useCase(
+      sourceAccountId: 'acc-1',
+      targetAccountId: 'acc-2',
+      amount: Decimal.parse('100'),
+      currency: 'USD',
+    );
+    expect(r.isErr, isTrue);
+    expect(r.errorOrNull, isA<NotFoundError>());
+  });
 }

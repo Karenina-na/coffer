@@ -204,7 +204,10 @@ class PlanTransferRouteUseCase {
         : null;
 
     if (path == null) {
-      if (firstRejectEdge != null && firstReject != null) {
+      if (firstRejectEdge != null &&
+          firstReject != null &&
+          firstRejectEdge.from.id == sourceAccountId &&
+          firstRejectEdge.to.id == targetAccountId) {
         final leg = _legOf(firstRejectEdge, amount);
         return Ok(TransferRoute(
           legs: [leg],
