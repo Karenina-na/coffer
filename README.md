@@ -5,7 +5,7 @@
 
 本地优先的多账户 / 多资产 / 多卡种管理 App（Flutter，Android 主要验证，iOS 兼容构建）。
 
-数据全部保存在设备本地，不依赖任何远端服务；敏感字段走 AES-GCM 字段级加密，主密钥托管于 Keychain / Keystore。外部行情（Frankfurter 汇率、Yahoo Finance 行情）仅用于拉取公开报价，不回传任何用户数据。
+数据全部保存在设备本地，不依赖任何业务后端；敏感字段走 AES-GCM 字段级加密，主密钥托管于 Keychain / Keystore。外部网络调用仅用于公开元数据与行情拉取（Frankfurter 汇率、东方财富 / Yahoo / OKX 行情、REST Countries 国家地区元数据），不回传任何用户资产数据。
 
 ## 项目背景
 
