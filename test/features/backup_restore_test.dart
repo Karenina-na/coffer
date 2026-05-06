@@ -209,6 +209,8 @@ void main() {
         reason: 'watched_pairs 必须在快照中');
     expect(snap.containsKey('search_history_entries'), isTrue,
         reason: 'search_history_entries 必须在快照中');
+    expect(snap.containsKey('dict_entries'), isTrue,
+        reason: 'dict_entries 必须在快照中');
   });
 
   test('exportJson 与 export 语义一致', () async {
@@ -251,6 +253,38 @@ void main() {
     final pairs = await db.select(db.watchedPairs).get();
     expect(pairs, hasLength(1));
     expect(pairs.single.pairKey, 'USD/CNY');
+  });
+
+  test('restore 会清空旧的 search_history_entries', () async {
+    await db.customStatement(
+      "INSERT INTO search_history_entries "
+      "(kind, unique_key, query, visited_at, updated_at) "
+      "VALUES ('QUERY', 'Q:legacy', 'legacy', 1749988800, 1749988800)",
+    );
+
+    final snap = await snapshot.export();
+    snap['search_history_entries'] = const [];
+
+    await snapshot.restore(snap);
+
+    final rows = await db.select(db.searchHistoryEntries).get();
+    expect(rows, isEmpty);
+  });
+
+  test('restore preserves dict_entries', () async {
+    await db.customStatement(
+      "INSERT INTO dict_entries "
+      "(type, code, name, sort_order, is_builtin, created_at, updated_at) "
+      "VALUES ('CURRENCY', 'ZZZ', '测试币种', 999, 0, 1749988800, 1749988800)",
+    );
+
+    final snap = await snapshot.export();
+
+    await db.delete(db.dictEntries).go();
+    await snapshot.restore(snap);
+
+    final dicts = await db.select(db.dictEntries).get();
+    expect(dicts.where((e) => e.code == 'ZZZ'), isNotEmpty);
   });
 
   // ── DEFECT-1 修复验证：恶意备份包 KDF 参数范围校验 ──────────────────────

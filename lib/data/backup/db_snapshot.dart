@@ -54,6 +54,9 @@ class DbSnapshotService implements DbSnapshotRepository {
       'channels': (await _db.select(_db.channels).get())
           .map((r) => r.toJson())
           .toList(),
+      'dict_entries': (await _db.select(_db.dictEntries).get())
+          .map((r) => r.toJson())
+          .toList(),
       'account_channels': (await _db.select(_db.accountChannels).get())
           .map((r) => r.toJson())
           .toList(),
@@ -127,6 +130,12 @@ class DbSnapshotService implements DbSnapshotRepository {
           .toList(),
     );
     await appendTable(
+      'dict_entries',
+      () async => (await _db.select(_db.dictEntries).get())
+          .map((r) => r.toJson())
+          .toList(),
+    );
+    await appendTable(
       'account_channels',
       () async => (await _db.select(_db.accountChannels).get())
           .map((r) => r.toJson())
@@ -178,8 +187,10 @@ class DbSnapshotService implements DbSnapshotRepository {
       await _db.delete(_db.events).go();
       await _db.delete(_db.exchangeRates).go();
       await _db.delete(_db.watchedPairs).go();
+      await _db.delete(_db.searchHistoryEntries).go();
       await _db.delete(_db.accountChannels).go();
       await _db.delete(_db.channels).go();
+      await _db.delete(_db.dictEntries).go();
       await _db.delete(_db.cards).go();
       await _db.delete(_db.assets).go();
       await _db.delete(_db.accounts).go();
@@ -208,6 +219,11 @@ class DbSnapshotService implements DbSnapshotRepository {
         _db.channels,
         snap['channels'] ?? const [],
         ChannelRow.fromJson,
+      );
+      await _batchInsert(
+        _db.dictEntries,
+        snap['dict_entries'] ?? const [],
+        DictEntryRow.fromJson,
       );
       await _batchInsert(
         _db.accountChannels,
@@ -253,6 +269,7 @@ class DbSnapshotService implements DbSnapshotRepository {
       await _db.delete(_db.exchangeRates).go();
       await _db.delete(_db.watchedPairs).go();
       await _db.delete(_db.searchHistoryEntries).go();
+      await _db.delete(_db.dictEntries).go();
       await _db.delete(_db.cards).go();
       await _db.delete(_db.assets).go();
       await _db.delete(_db.channels).go();
