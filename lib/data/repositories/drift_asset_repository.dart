@@ -45,6 +45,23 @@ class DriftAssetRepository implements AssetRepository {
   }
 
   @override
+  Future<List<Result<Asset, AppError>>> findByIds(List<String> ids) async {
+    try {
+      final rows = await _dao.findByIds(ids);
+      final found = rows.map((r) => r.id).toSet();
+      return [
+        for (final id in ids)
+          if (found.contains(id))
+            Ok(_mapper.toDomain(rows.firstWhere((r) => r.id == id)))
+          else
+            Err(NotFoundError('asset not found: $id')),
+      ];
+    } catch (e) {
+      return ids.map((id) => Err<Asset, AppError>(StorageError('findByIds failed: $e'))).toList();
+    }
+  }
+
+  @override
   Future<Result<Asset, AppError>> create(Asset asset) async {
     try {
       await _dao.insertRow(_mapper.toInsert(asset));

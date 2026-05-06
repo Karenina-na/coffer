@@ -50,6 +50,14 @@ class AssetDao extends DatabaseAccessor<AppDatabase> with _$AssetDaoMixin {
         .getSingleOrNull();
   }
 
+  /// 批量按 ID 查询未软删除的资产。
+  Future<List<AssetRow>> findByIds(List<String> ids) {
+    if (ids.isEmpty) return Future.value([]);
+    return (select(assets)
+          ..where((t) => t.isDeleted.equals(false) & t.id.isIn(ids)))
+        .get();
+  }
+
   Future<void> insertRow(AssetsCompanion row) async {
     await into(assets).insert(row);
   }

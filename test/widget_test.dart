@@ -1,13 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/main.dart';
+import 'package:gwp/core/auth/pin_store.dart';
+import 'package:gwp/core/crypto/password_kdf.dart';
+import 'package:gwp/features/auth/presentation/auth_gate.dart';
+
+PinStore _fastPinStore() => PinStore(
+      storage: InMemoryPinKv(),
+      kdf: PasswordKdf(memoryKib: 8, iterations: 1, hashLength: 16),
+    );
 
 void main() {
-  testWidgets('Coffer app boots', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+  testWidgets('AuthGate builds without crash when no PIN is set', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          pinStoreProvider.overrideWithValue(_fastPinStore()),
+        ],
+        child: const MaterialApp(
+          home: AuthGate(child: Scaffold(body: Text('inside'))),
+        ),
+      ),
+    );
+
     expect(find.byType(MaterialApp), findsOneWidget);
-    // Sanity check that main library symbol is referenced.
-    expect(CofferApp, isNotNull);
+    expect(find.byType(AuthGate), findsOneWidget);
   });
 }

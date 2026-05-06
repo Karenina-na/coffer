@@ -622,15 +622,15 @@ class _AssetHero extends StatelessWidget {
     final title = asset.assetCode ?? asset.assetType.labelZh;
 
     // Calculate change from previous valuation point
-    double? changeAbs;
-    double? changePct;
+    Decimal? changeAbs;
+    Decimal? changePct;
     if (points.length >= 2 && currentPrice != null) {
-      final prev = points[points.length - 2].price.toDouble();
-      final curr = currentPrice.toDouble();
+      final prev = points[points.length - 2].price;
+      final curr = currentPrice;
       changeAbs = curr - prev;
-      if (prev != 0) changePct = changeAbs / prev * 100;
+      if (prev != Decimal.zero) changePct = (changeAbs * Decimal.fromInt(100) / prev).toDecimal();
     }
-    final isUp = (changeAbs ?? 0) >= 0;
+    final isUp = changeAbs == null || changeAbs >= Decimal.zero;
     final changeColor = changeAbs == null
         ? GwpColors.textMuted
         : (isUp ? GwpColors.positive : GwpColors.negative);
@@ -1344,13 +1344,12 @@ class _HoldingAnalysis extends StatelessWidget {
     Decimal? totalCost;
     if (cost != null) totalCost = qty * cost;
     Decimal? pnl;
-    double? pnlPct;
+    Decimal? pnlPct;
     if (totalCost != null && mv != null) {
       pnl = mv - totalCost;
-      final tc = totalCost.toDouble();
-      if (tc != 0) pnlPct = pnl.toDouble() / tc * 100;
+      if (totalCost != Decimal.zero) pnlPct = (pnl * Decimal.fromInt(100) / totalCost).toDecimal();
     }
-    final isUp = (pnl?.toDouble() ?? 0) >= 0;
+    final isUp = pnl == null || pnl >= Decimal.zero;
     final pnlColor = pnl == null
         ? GwpColors.textSecondary
         : (isUp ? GwpColors.positive : GwpColors.negative);

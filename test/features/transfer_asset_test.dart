@@ -264,6 +264,10 @@ class _FailOnSoftDeleteAssetRepo implements AssetRepository {
   Future<Result<Asset, AppError>> findById(String id) => _inner.findById(id);
 
   @override
+  Future<List<Result<Asset, AppError>>> findByIds(List<String> ids) =>
+      _inner.findByIds(ids);
+
+  @override
   Future<Result<Asset, AppError>> create(Asset asset) {
     createCalled = true;
     return _inner.create(asset);

@@ -196,7 +196,6 @@ class FundNavProvider implements AssetPriceProvider {
           kind: NetworkErrorKind.malformedResponse,
         ));
       }
-      final name = data['name'] as String? ?? code;
       final gzTime = data['gztime'] as String?;
       final asOf = _parseCnFundTime(gzTime) ?? DateTime.now().toUtc();
       return Ok(AssetQuote(

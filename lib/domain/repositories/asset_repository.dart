@@ -15,6 +15,8 @@ abstract interface class AssetRepository {
 
   Future<Result<Asset, AppError>> findById(String id);
 
+  Future<List<Result<Asset, AppError>>> findByIds(List<String> ids);
+
   Future<Result<Asset, AppError>> create(Asset asset);
 
   Future<Result<Asset, AppError>> update(Asset asset);

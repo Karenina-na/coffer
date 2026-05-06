@@ -285,13 +285,13 @@ class _PairRateCard extends ConsumerWidget {
     final points =
         series.map((e) => e.rate.toDouble()).toList(growable: false);
 
-    double? changePct;
+    Decimal? changePct;
     if (hasData && series.length >= 2) {
-      final a = first!.rate.toDouble();
-      final b = latest!.rate.toDouble();
-      if (a != 0) changePct = (b - a) / a * 100;
+      final a = first!.rate;
+      final b = latest!.rate;
+      if (a != Decimal.zero) changePct = ((b - a) * Decimal.fromInt(100) / a).toDecimal();
     }
-    final isUp = (changePct ?? 0) >= 0;
+    final isUp = changePct == null || changePct >= Decimal.zero;
     final sign = changePct == null
         ? ValueSign.neutral
         : (isUp ? ValueSign.positive : ValueSign.negative);

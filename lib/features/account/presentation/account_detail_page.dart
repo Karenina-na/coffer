@@ -985,17 +985,16 @@ class _CostBasisSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Only show if at least one asset has costPrice
-    double totalCost = 0;
-    double totalMarket = 0;
+    Decimal totalCost = Decimal.zero;
+    Decimal totalMarket = Decimal.zero;
     int withCost = 0;
 
     for (final a in assets) {
-      final mv = a.marketValue?.toDouble() ?? 0;
-      final cp = a.costPrice?.toDouble();
-      final qty = a.quantity.toDouble();
-      if (mv > 0) totalMarket += mv;
-      if (cp != null && cp > 0 && qty > 0) {
-        totalCost += cp * qty;
+      final mv = a.marketValue ?? Decimal.zero;
+      final cp = a.costPrice;
+      if (mv > Decimal.zero) totalMarket += mv;
+      if (cp != null && cp > Decimal.zero && a.quantity > Decimal.zero) {
+        totalCost += cp * a.quantity;
         withCost++;
       }
     }
@@ -1003,8 +1002,10 @@ class _CostBasisSection extends StatelessWidget {
     if (withCost == 0) return const SizedBox.shrink();
 
     final pnl = totalMarket - totalCost;
-    final pnlPct = totalCost > 0 ? pnl / totalCost * 100 : 0.0;
-    final isProfit = pnl >= 0;
+    final pnlPct = totalCost > Decimal.zero
+        ? (pnl * Decimal.fromInt(100) / totalCost).toDecimal()
+        : Decimal.zero;
+    final isProfit = pnl >= Decimal.zero;
     final pnlColor = isProfit ? GwpColors.positive : GwpColors.negative;
 
     return _SectionCard(
@@ -1018,7 +1019,7 @@ class _CostBasisSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isProfit ? '+' : ''}${heroFormat(Decimal.parse(pnl.toStringAsFixed(2)))}',
+                '${isProfit ? '+' : ''}${heroFormat(pnl)}',
                 style: TextStyle(
                   fontFamily: GwpTypo.monoFont,
                   fontFeatures: GwpTypo.tabularFigures,
@@ -1043,9 +1044,9 @@ class _CostBasisSection extends StatelessWidget {
           // Cost vs Market bar
           _CompareBar(
             label1: '总成本',
-            value1: totalCost,
+            value1: totalCost.toDouble(),
             label2: '总市值',
-            value2: totalMarket,
+            value2: totalMarket.toDouble(),
             color1: GwpColors.textMuted,
             color2: pnlColor,
           ),
@@ -1519,17 +1520,17 @@ class _AssetRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(assetValuationHistoryProvider(asset.id));
-    final points = historyAsync.maybeWhen(
-      data: _extractPrices,
-      orElse: () => const <double>[],
+    final rawPoints = historyAsync.maybeWhen(
+      data: (p) => p,
+      orElse: () => const <AssetPriceHistoryPoint>[],
     );
-    double? changePct;
-    if (points.length >= 2) {
-      final a = points.first;
-      final b = points.last;
-      if (a != 0) changePct = (b - a) / a * 100;
+    Decimal? changePct;
+    if (rawPoints.length >= 2) {
+      final a = rawPoints.first.price;
+      final b = rawPoints.last.price;
+      if (a != Decimal.zero) changePct = ((b - a) * Decimal.fromInt(100) / a).toDecimal();
     }
-    final isUp = (changePct ?? 0) >= 0;
+    final isUp = changePct == null || changePct >= Decimal.zero;
     final changeColor = changePct == null
         ? GwpColors.textMuted
         : (isUp ? GwpColors.positive : GwpColors.negative);
@@ -1588,7 +1589,10 @@ class _AssetRow extends ConsumerWidget {
             Expanded(
               flex: 3,
               child: Center(
-                child: RateSparkline(points: points, isUp: isUp),
+                child: RateSparkline(
+                  points: rawPoints.map((p) => p.price.toDouble()).toList(),
+                  isUp: isUp,
+                ),
               ),
             ),
             // Right: market value + change
@@ -1628,10 +1632,6 @@ class _AssetRow extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  static List<double> _extractPrices(List<AssetPriceHistoryPoint> points) {
-    return [for (final p in points) p.price.toDouble()];
   }
 }
 

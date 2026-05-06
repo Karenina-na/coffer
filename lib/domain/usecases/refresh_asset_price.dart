@@ -14,6 +14,7 @@ import '../repositories/asset_price_history_repository.dart';
 import '../repositories/asset_repository.dart';
 import '../repositories/event_repository.dart';
 import '../repositories/exchange_rate_repository.dart';
+import '../utils/pair_key.dart';
 import '../valuation/asset_valuator.dart';
 import 'valuate_asset.dart';
 
@@ -131,7 +132,7 @@ class RefreshAssetPriceUseCase {
     SyncMode mode = SyncMode.incremental,
   }) async {
     final ids = assetIds;
-    List<Asset> targets;
+    List<Asset> targets = [];
     final failed = <String, String>{};
     if (ids == null || ids.isEmpty) {
       try {
@@ -141,10 +142,9 @@ class RefreshAssetPriceUseCase {
         return Err(StorageError('读取资产列表失败: $e'));
       }
     } else {
-      targets = [];
-      for (final id in ids) {
-        final r = await _assets.findById(id);
-        r.when(ok: (a) => targets.add(a), err: (e) => failed[id] = e.message);
+      final results = await _assets.findByIds(ids);
+      for (var i = 0; i < ids.length; i++) {
+        results[i].when(ok: (a) => targets.add(a), err: (e) => failed[ids[i]] = e.message);
       }
     }
 
@@ -241,26 +241,34 @@ class RefreshAssetPriceUseCase {
 
     var written = 0;
     final batchId = _idGen();
+
+    // 批量预取全部历史汇率，避免逐点 N+1 查询。
+    final fxRateMap = <String, Decimal>{};
+    if (needsFx && _fxRepo != null) {
+      try {
+        final pairKey = pairKeyOf(series.currency, asset.currency);
+        final allRates = await _fxRepo.querySeriesForPair(
+          pairKey: pairKey,
+          since: from,
+        );
+        for (final r in allRates) {
+          fxRateMap[utcDayKey(r.updatedAt)] = r.rate;
+        }
+      } catch (_) {
+        // 批量查询失败时退回到逐点 spot rate，不阻塞写入。
+      }
+    }
+
     // 采用容错写入：单点失败不中断整批，避免因中途失败导致
     // 已写点被 sourceKey 去重锁死而形成永久空洞。
     // 若全部点均写入失败，则返回最后一次错误。
     AppError? lastErr;
     for (final p in series.points) {
-      // 逐点尝试使用历史汇率（Bug 8 修复）：先查该交易日的本地快照，
-      // 查不到则降级到 spot rate（可能失真，但不阻塞写入）。
+      // 逐点使用历史汇率：优先从预取缓存取值，查不到则降级到 spot rate。
       Decimal? fxRate;
       if (needsFx) {
-        if (_fxRepo != null) {
-          final hist = await _fxRepo.queryForDate(
-            baseCurrency: series.currency,
-            quoteCurrency: asset.currency,
-            date: p.t,
-          );
-          // 若有历史快照则用之；否则回退到 spot rate。
-          fxRate = hist?.rate ?? spotFxRate;
-        } else {
-          fxRate = spotFxRate;
-        }
+        final dayKey = utcDayKey(p.t);
+        fxRate = fxRateMap[dayKey] ?? spotFxRate;
       }
       final priceInAssetCcy = fxRate == null ? p.price : p.price * fxRate;
       final marketValue = asset.quantity * priceInAssetCcy;

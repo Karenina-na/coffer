@@ -11,7 +11,7 @@ import '../repositories/db_snapshot_repository.dart';
 /// 加密备份包的结构版本。
 ///
 /// - v1（旧）：密文未绑定 KDF 元数据，攻击者可改 `kdf.params` 降低迭代数后
-///   对密文做离线爆破。仅保留读取兼容。
+///   对密文做离线爆破。由于存在安全漏洞，v1 已不再支持导入。
 /// - v2（当前）：导出时把 `kdf` 子对象的规范化 JSON 作为 AAD 传入 AES-GCM，
 ///   任何对元数据的篡改都会导致 MAC 校验失败。
 const int backupFormatVersion = 2;

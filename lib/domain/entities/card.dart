@@ -46,4 +46,16 @@ abstract class BankCard with _$BankCard {
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _BankCard;
+
+  @override
+  String toString() => 'BankCard('
+      'id: $id, '
+      'accountId: $accountId, '
+      'cardNoMasked: $cardNoMasked, '
+      'cardType: $cardType, '
+      'cardOrganization: $cardOrganization, '
+      'issuerName: $issuerName, '
+      'currency: $currency, '
+      'status: $status'
+      ')';
 }
