@@ -3,12 +3,60 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/gwp_bar_rank.dart';
 import '../../../core/ui/gwp_radar_chart.dart';
+import '../../../domain/entities/account.dart';
+import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
 import '../../channel/presentation/channel_providers.dart';
 import '../../dashboard/presentation/dashboard_providers.dart';
+
+class _PortfolioInputs {
+  const _PortfolioInputs({
+    required this.accounts,
+    required this.assets,
+    required this.baseCurrency,
+    required this.netWorth,
+    required this.missingRateCount,
+    this.accountChannels = const [],
+  });
+
+  final List<Account> accounts;
+  final List<Asset> assets;
+  final String baseCurrency;
+  final Decimal netWorth;
+  final int missingRateCount;
+  final List<AccountChannel> accountChannels;
+}
+
+final _portfolioInputsProvider =
+    FutureProvider.autoDispose<_PortfolioInputs>((ref) async {
+  final summary = await ref.watch(dashboardSummaryProvider.future);
+  final accounts = await ref.watch(accountListProvider.future);
+  final assets = await ref.watch(assetListProvider.future);
+  return _PortfolioInputs(
+    accounts: accounts,
+    assets: assets,
+    baseCurrency: summary.baseCurrency,
+    netWorth: summary.total,
+    missingRateCount: summary.missingAssetIds.length,
+  );
+});
+
+final _portfolioInputsWithChannelsProvider =
+    FutureProvider.autoDispose<_PortfolioInputs>((ref) async {
+  final base = await ref.watch(_portfolioInputsProvider.future);
+  final accountChannels = await ref.watch(accountChannelListProvider.future);
+  return _PortfolioInputs(
+    accounts: base.accounts,
+    assets: base.assets,
+    baseCurrency: base.baseCurrency,
+    netWorth: base.netWorth,
+    missingRateCount: base.missingRateCount,
+    accountChannels: accountChannels,
+  );
+});
 
 // ──────────────────────────────────────────────────────────────
 // Portfolio snapshot (hero card)
@@ -38,23 +86,23 @@ class PortfolioSnapshot {
 
 final portfolioSnapshotProvider =
     FutureProvider.autoDispose<PortfolioSnapshot>((ref) async {
-  final summary = await ref.watch(dashboardSummaryProvider.future);
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final accounts = inputs.accounts;
+  final assets = inputs.assets;
 
   final currencies = assets.map((a) => a.currency).toSet();
   final regions = accounts.map((a) => a.sovereigntyRegion).toSet();
   final institutions = accounts.map((a) => a.institutionName).toSet();
 
   return PortfolioSnapshot(
-    netWorth: summary.total,
-    baseCurrency: summary.baseCurrency,
+    netWorth: inputs.netWorth,
+    baseCurrency: inputs.baseCurrency,
     accountCount: accounts.length,
     assetCount: assets.length,
     currencyCount: currencies.length,
     regionCount: regions.length,
     institutionCount: institutions.length,
-    missingRateCount: summary.missingAssetIds.length,
+    missingRateCount: inputs.missingRateCount,
   );
 });
 
@@ -103,22 +151,23 @@ List<AllocationSlice> _groupAndSlice(
 /// Asset allocation grouped by asset type.
 final portfolioByTypeProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final assets = await ref.watch(assetListProvider.future);
-  return _groupAndSlice(assets, (a) => a.assetType.name);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  return _groupAndSlice(inputs.assets, (a) => a.assetType.name);
 });
 
 /// Asset allocation grouped by currency.
 final portfolioByCurrencyProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final assets = await ref.watch(assetListProvider.future);
-  return _groupAndSlice(assets, (a) => a.currency);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  return _groupAndSlice(inputs.assets, (a) => a.currency);
 });
 
 /// Asset allocation grouped by sovereignty region (via account join).
 final portfolioByRegionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final accounts = inputs.accounts;
+  final assets = inputs.assets;
   final map = {for (final a in accounts) a.id: a.sovereigntyRegion};
   return _groupAndSlice(assets, (a) => map[a.accountId] ?? '未知');
 });
@@ -126,8 +175,9 @@ final portfolioByRegionProvider =
 /// Asset allocation grouped by institution (via account join).
 final portfolioByInstitutionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final accounts = inputs.accounts;
+  final assets = inputs.assets;
   final map = {for (final a in accounts) a.id: a.institutionName};
   return _groupAndSlice(assets, (a) => map[a.accountId] ?? '未知');
 });
@@ -139,7 +189,8 @@ final portfolioByInstitutionProvider =
 /// Top 10 assets by market value, for the horizontal bar chart.
 final assetTop10Provider =
     FutureProvider.autoDispose<List<RankItem>>((ref) async {
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final assets = inputs.assets;
 
   final ranked = assets
       .where((a) => a.marketValue != null && a.marketValue! > Decimal.zero)
@@ -174,8 +225,9 @@ class StackedSegment {
 /// Per-account asset composition for the stacked bar chart.
 final accountStackedProvider =
     FutureProvider.autoDispose<List<StackedBarGroup>>((ref) async {
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final accounts = inputs.accounts;
+  final assets = inputs.assets;
 
   final accountAssets = <String, Map<String, double>>{};
   for (final asset in assets) {
@@ -229,8 +281,9 @@ class HeatMatrixData {
 /// Currency exposure matrix: accounts × currencies.
 final currencyExposureProvider =
     FutureProvider.autoDispose<HeatMatrixData>((ref) async {
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final accounts = inputs.accounts;
+  final assets = inputs.assets;
 
   final accountMap = {for (final a in accounts) a.id: a.institutionName};
   final cells = <(String, String), double>{};
@@ -283,8 +336,9 @@ class ConcentrationMetrics {
 
 final concentrationProvider =
     FutureProvider.autoDispose<ConcentrationMetrics>((ref) async {
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final accounts = inputs.accounts.cast<dynamic>();
+  final assets = inputs.assets;
   final accountMap = {for (final a in accounts) a.id: a};
 
   var grandTotal = 0.0;
@@ -357,7 +411,8 @@ const _medLiquidityTypes = {AssetType.stock, AssetType.fund, AssetType.crypto};
 
 final liquidityProvider =
     FutureProvider.autoDispose<LiquidityProfile>((ref) async {
-  final assets = await ref.watch(assetListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsProvider.future);
+  final assets = inputs.assets;
   double high = 0, med = 0, low = 0;
   for (final a in assets) {
     final mv = a.marketValue?.toDouble() ?? 0;
@@ -385,9 +440,10 @@ final liquidityProvider =
 /// Computes the 5-dimension financial health radar scores.
 final healthScoreProvider =
     FutureProvider.autoDispose<List<RadarDimension>>((ref) async {
-  final accounts = await ref.watch(accountListProvider.future);
-  final assets = await ref.watch(assetListProvider.future);
-  final acLinks = await ref.watch(accountChannelListProvider.future);
+  final inputs = await ref.watch(_portfolioInputsWithChannelsProvider.future);
+  final accounts = inputs.accounts;
+  final assets = inputs.assets;
+  final acLinks = inputs.accountChannels;
 
   if (assets.isEmpty) return [];
 

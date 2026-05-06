@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1655,8 +1656,10 @@ class _EventDetailSheet extends ConsumerWidget {
     try {
       final decoded = jsonDecode(raw);
       return const JsonEncoder.withIndent('  ').convert(decoded);
-    } catch (e, st) {
-      debugPrint('[event] payload JSON 解析失败，按原文展示: $e\n$st');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[event] payload JSON parse failed: ${e.runtimeType}');
+      }
       return raw;
     }
   }
@@ -1739,7 +1742,9 @@ class _RefChips extends StatelessWidget {
     try {
       return (RelatedModel.fromCode(mcode), id);
     } catch (e) {
-      debugPrint('[event] 未知 RelatedModel code: $mcode ($e)');
+      if (kDebugMode) {
+        debugPrint('[event] unknown RelatedModel code: $mcode');
+      }
       return null;
     }
   }

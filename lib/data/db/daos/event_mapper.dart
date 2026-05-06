@@ -68,9 +68,11 @@ class EventMapper {
     try {
       final m = jsonDecode(raw);
       if (m is Map) return m.map((k, v) => MapEntry(k.toString(), v.toString()));
-    } catch (e, st) {
-      // 行损坏不能阻塞读流程，但必须留痕便于排查。
-      debugPrint('[event_mapper] failed to decode refs: $e\n$st');
+    } catch (e) {
+      // 行损坏不能阻塞读流程，但日志不应回显原始 payload。
+      if (kDebugMode) {
+        debugPrint('[event_mapper] failed to decode refs: ${e.runtimeType}');
+      }
     }
     return null;
   }

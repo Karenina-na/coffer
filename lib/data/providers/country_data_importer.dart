@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../core/errors.dart';
 import '../../core/result.dart';
+import '../../domain/entities/dict_entry.dart';
 import '../../domain/entities/dict_type.dart';
 import '../../domain/repositories/dict_repository.dart';
 
@@ -40,9 +41,11 @@ class CountryData {
 ///   mapLon / mapLat 仅对已知为空的行回填）
 /// - 货币代码同步写入 `CURRENCY` 字典
 class CountryDataImporter {
-  CountryDataImporter(this._repo);
+  CountryDataImporter(this._repo, {http.Client? client})
+      : _client = client ?? http.Client();
 
   final DictRepository _repo;
+  final http.Client _client;
 
   static const _apiUrl = 'https://restcountries.com/v3.1/all';
 
@@ -73,9 +76,8 @@ class CountryDataImporter {
   };
 
   Future<Result<int, AppError>> import() async {
-    final client = http.Client();
     try {
-      final response = await client.get(Uri.parse(_apiUrl))
+      final response = await _client.get(Uri.parse(_apiUrl))
           .timeout(const Duration(seconds: 30));
       if (response.statusCode != 200) {
         return Err(UnknownError('API returned ${response.statusCode}'));
@@ -87,8 +89,8 @@ class CountryDataImporter {
 
       final countries = <CountryData>[];
       for (final raw in list) {
-        if (raw is! Map<String, dynamic>) continue;
-        final c = _parseCountry(raw);
+        if (raw is! Map) continue;
+        final c = _parseCountry(raw.cast<String, dynamic>());
         if (c != null) countries.add(c);
       }
 
@@ -96,30 +98,40 @@ class CountryDataImporter {
         return const Err(UnknownError('No countries parsed from API'));
       }
 
+      final existingRegions = {
+        for (final e in await _repo.listByType(DictType.sovereigntyRegion))
+          e.code: e,
+      };
+      final existingCurrencies = {
+        for (final e in await _repo.listByType(DictType.currency)) e.code,
+      };
+
       var written = 0;
       for (final c in countries) {
         try {
           // Upsert country region entry
-          await _upsertRegionEntry(c);
+          await _upsertRegionEntry(c, existingRegions);
           written++;
 
           // Also seed currency entries
           for (final currency in c.currencies) {
-            await _seedCurrency(currency);
+            await _seedCurrency(currency, existingCurrencies);
           }
-        } catch (e, st) {
-          // Best-effort per country — log to aid debugging
-          if (kDebugMode) debugPrint('country_data_importer: failed for ${c.code}: $e\n$st');
+        } catch (e) {
+          // Best-effort per country — 仅保留国家代码和异常类型，避免把远端原始内容打到日志。
+          if (kDebugMode) {
+            debugPrint('country_data_importer: failed for ${c.code}: ${e.runtimeType}');
+          }
         }
       }
 
       return Ok(written);
     } catch (e) {
       return Err(UnknownError('Country import failed: $e'));
-    } finally {
-      client.close();
     }
   }
+
+  void dispose() => _client.close();
 
   CountryData? _parseCountry(Map<String, dynamic> raw) {
     final cca2 = raw['cca2'] as String?;
@@ -167,12 +179,28 @@ class CountryDataImporter {
     );
   }
 
-  Future<void> _upsertRegionEntry(CountryData c) async {
+  Future<void> _upsertRegionEntry(CountryData c, Map<String, DictEntry> existingRegions) async {
     final color = _regionColor[c.continentZh] ?? '0xFF94A3B8';
     final parent = _euMembers.contains(c.code) ? 'EU' : null;
+    final existing = existingRegions[c.code];
+
+    if (existing != null) {
+      await _repo.updateEntry(
+        id: existing.id,
+        name: c.nameZh,
+        nameEn: c.nameEn,
+        flagEmoji: c.flagEmoji,
+        continent: c.continentZh,
+        colorHex: color,
+        mapLon: c.lon,
+        mapLat: c.lat,
+        parentRegion: parent,
+      );
+      return;
+    }
 
     try {
-      await _repo.addCustom(
+      final added = await _repo.addCustom(
         type: DictType.sovereigntyRegion,
         code: c.code,
         name: c.nameZh,
@@ -185,10 +213,13 @@ class CountryDataImporter {
         mapLat: c.lat,
         parentRegion: parent,
       );
+      final saved = added.valueOrNull;
+      if (saved != null) {
+        existingRegions[c.code] = saved;
+      }
     } on Exception catch (_) {
       // Code already exists — update the existing entry.
-      final existing = await _repo.listByType(DictType.sovereigntyRegion);
-      final match = existing.where((e) => e.code == c.code).firstOrNull;
+      final match = existingRegions[c.code];
       if (match != null) {
         await _repo.updateEntry(
           id: match.id,
@@ -205,14 +236,17 @@ class CountryDataImporter {
     }
   }
 
-  Future<void> _seedCurrency(String code) async {
+  Future<void> _seedCurrency(String code, Set<String> existingCurrencies) async {
+    final normalized = code.toUpperCase();
+    if (existingCurrencies.contains(normalized)) return;
     try {
-      await _repo.addCustom(
+      final result = await _repo.addCustom(
         type: DictType.currency,
-        code: code.toUpperCase(),
-        name: code.toUpperCase(),
+        code: normalized,
+        name: normalized,
         sortOrder: 1000,
       );
+      if (result.isOk) existingCurrencies.add(normalized);
     } on Exception catch (_) {
       // Currency already exists, skip
     }

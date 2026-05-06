@@ -168,6 +168,33 @@ class _LayoutModeNotifier extends Notifier<_LayoutMode> {
 
 final _layoutModeProvider = NotifierProvider<_LayoutModeNotifier, _LayoutMode>(_LayoutModeNotifier.new);
 
+final _visibleTopologyModelProvider =
+    Provider.autoDispose<({List<_TopoNode> nodes, List<_TopoEdge> edges})?>((ref) {
+  final model = ref.watch(_topologyModelProvider).asData?.value;
+  if (model == null) return null;
+  final filters = ref.watch(_filtersProvider);
+
+  final visibleKinds = <_NodeKind>{};
+  for (final f in filters) {
+    visibleKinds.add(switch (f) {
+      _EntityFilter.account => _NodeKind.account,
+      _EntityFilter.asset => _NodeKind.asset,
+      _EntityFilter.channel => _NodeKind.channel,
+      _EntityFilter.card => _NodeKind.card,
+    });
+  }
+  visibleKinds.add(_NodeKind.account);
+
+  final visibleNodes = model.nodes
+      .where((n) => visibleKinds.contains(n.kind))
+      .toList(growable: false);
+  final visibleIds = visibleNodes.map((n) => n.id).toSet();
+  final visibleEdges = model.edges
+      .where((e) => visibleIds.contains(e.fromId) && visibleIds.contains(e.toId))
+      .toList(growable: false);
+  return (nodes: visibleNodes, edges: visibleEdges);
+});
+
 // ---------------------------------------------------------------------------
 // Styles (using design token fonts)
 // ---------------------------------------------------------------------------
@@ -316,7 +343,7 @@ class _GraphBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final modelAsync = ref.watch(_topologyModelProvider);
-    final filters = ref.watch(_filtersProvider);
+    final visible = ref.watch(_visibleTopologyModelProvider);
     final layoutMode = ref.watch(_layoutModeProvider);
 
     return modelAsync.when(
@@ -325,23 +352,8 @@ class _GraphBody extends ConsumerWidget {
         message: '加载失败: ${errorToMessage(e)}',
         onRetry: () => ref.invalidate(_topologyModelProvider),
       ),
-      data: (model) {
-        final visibleKinds = <_NodeKind>{};
-        for (final f in filters) {
-          visibleKinds.add(switch (f) {
-            _EntityFilter.account => _NodeKind.account,
-            _EntityFilter.asset => _NodeKind.asset,
-            _EntityFilter.channel => _NodeKind.channel,
-            _EntityFilter.card => _NodeKind.card,
-          });
-        }
-        visibleKinds.add(_NodeKind.account);
-
-        final visibleNodes = model.nodes.where((n) => visibleKinds.contains(n.kind)).toList();
-        final visibleIds = visibleNodes.map((n) => n.id).toSet();
-        final visibleEdges = model.edges.where((e) => visibleIds.contains(e.fromId) && visibleIds.contains(e.toId)).toList();
-
-        if (visibleNodes.isEmpty) {
+      data: (_) {
+        if (visible == null || visible.nodes.isEmpty) {
           return const GwpEmptyState(
             icon: Icons.hub_outlined,
             title: '暂无实体',
@@ -350,8 +362,8 @@ class _GraphBody extends ConsumerWidget {
         }
 
         return _TopologyGraphView(
-          nodes: visibleNodes,
-          edges: visibleEdges,
+          nodes: visible.nodes,
+          edges: visible.edges,
           layoutMode: layoutMode,
         );
       },
@@ -363,7 +375,7 @@ class _GraphBody extends ConsumerWidget {
 // GraphView widget
 // ---------------------------------------------------------------------------
 
-class _TopologyGraphView extends StatelessWidget {
+class _TopologyGraphView extends StatefulWidget {
   const _TopologyGraphView({required this.nodes, required this.edges, required this.layoutMode});
 
   final List<_TopoNode> nodes;
@@ -371,17 +383,59 @@ class _TopologyGraphView extends StatelessWidget {
   final _LayoutMode layoutMode;
 
   @override
-  Widget build(BuildContext context) {
-    final graph = Graph()..isTree = layoutMode == _LayoutMode.tree;
+  State<_TopologyGraphView> createState() => _TopologyGraphViewState();
+}
+
+class _TopologyGraphViewState extends State<_TopologyGraphView> {
+  late Graph _graph;
+  late Algorithm _algorithm;
+  late Map<String, _TopoNode> _topoNodeMap;
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildGraph();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TopologyGraphView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.layoutMode != widget.layoutMode ||
+        !_sameNodes(oldWidget.nodes, widget.nodes) ||
+        !_sameEdges(oldWidget.edges, widget.edges)) {
+      _rebuildGraph();
+    }
+  }
+
+  bool _sameNodes(List<_TopoNode> a, List<_TopoNode> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
+  }
+
+  bool _sameEdges(List<_TopoEdge> a, List<_TopoEdge> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].fromId != b[i].fromId || a[i].toId != b[i].toId) return false;
+    }
+    return true;
+  }
+
+  void _rebuildGraph() {
+    final graph = Graph()..isTree = widget.layoutMode == _LayoutMode.tree;
     final nodeMap = <String, Node>{};
 
-    for (final n in nodes) {
+    for (final n in widget.nodes) {
       final node = Node.Id(n.id);
       graph.addNode(node);
       nodeMap[n.id] = node;
     }
 
-    for (final e in edges) {
+    for (final e in widget.edges) {
       final from = nodeMap[e.fromId];
       final to = nodeMap[e.toId];
       if (from != null && to != null) {
@@ -390,7 +444,7 @@ class _TopologyGraphView extends StatelessWidget {
     }
 
     final Algorithm algorithm;
-    if (layoutMode == _LayoutMode.tree) {
+    if (widget.layoutMode == _LayoutMode.tree) {
       algorithm = BuchheimWalkerAlgorithm(
         BuchheimWalkerConfiguration()
           ..siblingSeparation = 60
@@ -407,8 +461,13 @@ class _TopologyGraphView extends StatelessWidget {
       algorithm = FruchtermanReingoldAlgorithm(config);
     }
 
-    final topoNodeMap = {for (final n in nodes) n.id: n};
+    _graph = graph;
+    _algorithm = algorithm;
+    _topoNodeMap = {for (final n in widget.nodes) n.id: n};
+  }
 
+  @override
+  Widget build(BuildContext context) {
     final edgePaint = Paint()
       ..color = GwpColors.border
       ..strokeWidth = 1.0
@@ -420,12 +479,12 @@ class _TopologyGraphView extends StatelessWidget {
       minScale: 0.3,
       maxScale: 3.0,
       child: GraphView(
-        graph: graph,
-        algorithm: algorithm,
+        graph: _graph,
+        algorithm: _algorithm,
         paint: edgePaint,
         builder: (Node node) {
           final id = node.key!.value as String;
-          final tNode = topoNodeMap[id];
+          final tNode = _topoNodeMap[id];
           if (tNode == null) return const SizedBox.shrink();
           return _NodeWidget(node: tNode);
         },
