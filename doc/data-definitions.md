@@ -7,6 +7,7 @@
 - 账户类型范围：BANK / BROKER / INSURANCE / PAYMENT / CUSTODY / CRYPTO_EXCHANGE / CRYPTO_WALLET
 - 资产类型范围：STOCK / EQUITY / FUND / BOND / CD / OPTION / FUTURE / WARRANT / POLICY / CRYPTO / PERPETUAL / CONTRACT / PRECIOUS_METAL / FX_ASSET
 - 卡类型范围：DEBIT / CREDIT / PREPAID
+- 字典锚定：`currency` / `sovereignty_region` / `transfer_protocol` 相关业务字段在 UI 与 UseCase 层都必须锚定到 `dict_entries`，禁止自由字符串落库；可空字段以 `null` 表达“沿用默认值”
 
 ## 2. Account
 
@@ -35,7 +36,7 @@
 | quantity | DECIMAL(28,8) | 是 | 数量 |
 | cost_price | DECIMAL(28,10) | 否 | 成本价 |
 | current_price | DECIMAL(28,10) | 否 | 当前价 |
-| currency | VARCHAR(10) | 是 | 计价币种或数字资产符号 |
+| currency | VARCHAR(10) | 是 | 资产计价货币代码；加密资产本身属于 `asset_type=CRYPTO` / `asset_code`，不是货币字典项 |
 | market_value | DECIMAL(28,10) | 否 | 原币市值缓存（`quantity × current_price`，币种由 `currency` 指定）；全局计价值在查询/展示层按当前计价货币运行时换算，不单独落库 |
 | valuation_time | DATETIME | 否 | 估值时间 |
 | status | ENUM | 是 | HOLDING / FROZEN / REDEEMED / CLOSED |
@@ -65,6 +66,8 @@
 
 > Channel 不再绑定源/目账户类型；是否两个账户能通过某通道互转，由 `account_channels` 关联决定。路由规划（Dijkstra on Account id）会为同一通道内所有账户对生成双向边。
 
+> `transfer_protocol` / `limit_currency` / `sovereignty_region_rule.allowedRegions|blockedRegions` 都必须来自字典选择器；地区列表不再接受逗号分隔自由文本。
+
 ## 4a. AccountChannel（账户-通道关联）
 
 账户与通道的多对多关联，一个账户可声明支持多个通道，一个通道也可被多个账户共享。
@@ -76,7 +79,7 @@
 | channel_id | UUID / BIGINT | 是 | 外键，关联 Channel.id |
 | fee_rate_override | DECIMAL(10,6) / TEXT | 否 | 账户级比例费率覆盖；为空 = 沿用 Channel.fee_rate；`0` 合法，表示免比例费 |
 | fixed_fee_override | DECIMAL(18,6) / TEXT | 否 | 账户级固定费覆盖；为空 = 沿用 Channel.fixed_fee；`0` 合法，表示免固定费 |
-| fee_currency_override | VARCHAR(10) | 否 | 账户级费用币种覆盖；为空 = 沿用 Channel.limit_currency |
+| fee_currency_override | VARCHAR(10) | 否 | 账户级费用币种覆盖；为空 = 沿用 Channel.limit_currency；UI 必须提供明确空态而非预填默认值 |
 | created_at | DATETIME | 是 | 创建时间 |
 | updated_at | DATETIME | 否 | 最近一次修改账户级通道配置的时间 |
 
@@ -105,9 +108,9 @@
 | expire_year | SMALLINT | 是 | 有效期年 |
 | cvv_ciphertext | TEXT | 否 | CVV 密文 |
 | issuer_name | VARCHAR(128) | 是 | 发卡行 |
-| currency | VARCHAR(10) | 否 | 主记账币种（信用额度计价） |
+| currency | VARCHAR(10) | 否 | 主记账币种（信用额度计价），来自 `currency` 字典 |
 | supports_all_currencies | TINYINT(1) | 是 | 是否全币种卡；true 时忽略列表 |
-| supported_currencies | VARCHAR(256) | 否 | CSV of ISO-4217 codes，如 "USD,EUR,HKD"。空 = 仅主币种 |
+| supported_currencies | VARCHAR(256) | 否 | CSV of `currency` 字典代码，如 "USD,EUR,HKD"。空 = 仅主币种；不再允许手工录入自由 ISO 字符串 |
 | credit_limit | DECIMAL(28,8) | 否 | 信用额度（信用卡） |
 | available_credit | DECIMAL(28,8) | 否 | 可用额度（信用卡） |
 | billing_cycle_day | TINYINT | 否 | 账单日 |
@@ -124,8 +127,8 @@
 |---|---|---|---|
 | id | UUID / BIGINT | 是 | 主键 |
 | pair_key | VARCHAR(32) | 是 | 货币对唯一标识（如 USD/CNY） |
-| base_currency | VARCHAR(10) | 是 | 基础币种 |
-| quote_currency | VARCHAR(10) | 是 | 目标币种 |
+| base_currency | VARCHAR(10) | 是 | 基础币种，来自 `currency` 字典 |
+| quote_currency | VARCHAR(10) | 是 | 目标币种，来自 `currency` 字典 |
 | rate | DECIMAL(20,10) | 是 | 汇率 |
 | as_of_time | DATETIME | 是 | 生效时间 |
 | updated_at | DATETIME | 是 | 更新时间 |
@@ -138,8 +141,8 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | pair_key | VARCHAR(32) | 是 | 主键，形如 `USD/CNY` |
-| base_currency | VARCHAR(10) | 是 | 基础币种 |
-| quote_currency | VARCHAR(10) | 是 | 目标币种 |
+| base_currency | VARCHAR(10) | 是 | 基础币种，来自 `currency` 字典 |
+| quote_currency | VARCHAR(10) | 是 | 目标币种，来自 `currency` 字典 |
 | created_at | DATETIME | 是 | 加入关注的时间 |
 | threshold_high | DECIMAL(28,10) / TEXT | 否 | 上沿阈值；`rate ≥ threshold_high` 触发 high 预警 |
 | threshold_low | DECIMAL(28,10) / TEXT | 否 | 下沿阈值；`rate ≤ threshold_low` 触发 low 预警 |

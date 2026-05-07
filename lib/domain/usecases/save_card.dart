@@ -4,20 +4,25 @@ import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../entities/card.dart';
 import '../entities/card_enums.dart';
+import '../entities/dict_type.dart';
 import '../repositories/account_repository.dart';
 import '../repositories/card_repository.dart';
+import '../repositories/dict_repository.dart';
 
 class SaveCardUseCase {
   SaveCardUseCase(
     this._cards,
     this._accounts, {
+    required DictRepository dicts,
     required String Function() idGenerator,
     required DateTime Function() now,
   })  : _idGen = idGenerator,
+        _dicts = dicts,
         _now = now;
 
   final CardRepository _cards;
   final AccountRepository _accounts;
+  final DictRepository _dicts;
   final String Function() _idGen;
   final DateTime Function() _now;
 
@@ -216,6 +221,22 @@ class SaveCardUseCase {
     }
     if (!supportsAllCurrencies) {
       _normalizeCurrencies(supportedCurrencies);
+    }
+
+    final normalizedCurrency = currency?.trim().toUpperCase();
+    if (normalizedCurrency != null && normalizedCurrency.isNotEmpty) {
+      final entry = await _dicts.findByTypeAndCode(DictType.currency, normalizedCurrency);
+      if (entry == null) {
+        return Err(ValidationError('未知币种：$normalizedCurrency'));
+      }
+    }
+    if (!supportsAllCurrencies) {
+      for (final code in _normalizeCurrencies(supportedCurrencies)) {
+        final entry = await _dicts.findByTypeAndCode(DictType.currency, code);
+        if (entry == null) {
+          return Err(ValidationError('未知币种：$code'));
+        }
+      }
     }
 
     final accountCheck = await _accounts.findById(accountId);

@@ -11,6 +11,7 @@ import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_donut_chart.dart';
 import '../../../core/ui/design_tokens.dart';
+import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
@@ -22,6 +23,7 @@ import '../../../domain/entities/asset_price_history_point.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
+import '../../../domain/entities/dict_type.dart';
 import '../../../core/errors.dart';
 import '../../../core/result.dart';
 import '../../../core/ui/error_localizer.dart';
@@ -2135,15 +2137,9 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
   required Channel channel,
   AccountChannel? initial,
 }) async {
-  final feeRateCtrl = TextEditingController(
-    text: initial?.feeRateOverride?.toString() ?? '',
-  );
-  final fixedFeeCtrl = TextEditingController(
-    text: initial?.fixedFeeOverride?.toString() ?? '',
-  );
-  final feeCurrencyCtrl = TextEditingController(
-    text: initial?.feeCurrencyOverride ?? channel.limitCurrency ?? '',
-  );
+  var feeRateText = initial?.feeRateOverride?.toString() ?? '';
+  var fixedFeeText = initial?.fixedFeeOverride?.toString() ?? '';
+  String? feeCurrency = initial?.feeCurrencyOverride;
   final formKey = GlobalKey<FormState>();
 
   Decimal? parseOptional(String raw) {
@@ -2156,56 +2152,64 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text('配置通道 · ${channel.name}'),
-      content: Form(
-        key: formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '默认费率：${_feeDesc(feeRate: channel.feeRate, fixedFee: channel.fixedFee, currency: channel.limitCurrency)}',
-                style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: feeRateCtrl,
-                decoration: const InputDecoration(
-                  labelText: '账户级费率覆盖（可空）',
-                  helperText: '留空表示沿用通道默认值；0 表示免费',
+      content: StatefulBuilder(
+        builder: (context, setLocalState) => Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '默认费率：${_feeDesc(feeRate: channel.feeRate, fixedFee: channel.fixedFee, currency: channel.limitCurrency)}',
+                  style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
                 ),
-                validator: (v) {
-                  final text = v?.trim() ?? '';
-                  if (text.isEmpty) return null;
-                  final parsed = Decimal.tryParse(text);
-                  if (parsed == null) return '请输入有效数字';
-                  if (parsed < Decimal.zero) return '不能为负数';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: fixedFeeCtrl,
-                decoration: const InputDecoration(
-                  labelText: '账户级固定费覆盖（可空）',
-                  helperText: '留空表示沿用通道默认值；0 表示免费',
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: feeRateText,
+                  decoration: const InputDecoration(
+                    labelText: '账户级费率覆盖（可空）',
+                    helperText: '留空表示沿用通道默认值；0 表示免费',
+                  ),
+                  onChanged: (v) => feeRateText = v,
+                  validator: (v) {
+                    final text = v?.trim() ?? '';
+                    if (text.isEmpty) return null;
+                    final parsed = Decimal.tryParse(text);
+                    if (parsed == null) return '请输入有效数字';
+                    if (parsed < Decimal.zero) return '不能为负数';
+                    return null;
+                  },
                 ),
-                validator: (v) {
-                  final text = v?.trim() ?? '';
-                  if (text.isEmpty) return null;
-                  final parsed = Decimal.tryParse(text);
-                  if (parsed == null) return '请输入有效数字';
-                  if (parsed < Decimal.zero) return '不能为负数';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: feeCurrencyCtrl,
-                decoration: const InputDecoration(
-                  labelText: '费用币种覆盖（可空）',
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: fixedFeeText,
+                  decoration: const InputDecoration(
+                    labelText: '账户级固定费覆盖（可空）',
+                    helperText: '留空表示沿用通道默认值；0 表示免费',
+                  ),
+                  onChanged: (v) => fixedFeeText = v,
+                  validator: (v) {
+                    final text = v?.trim() ?? '';
+                    if (text.isEmpty) return null;
+                    final parsed = Decimal.tryParse(text);
+                    if (parsed == null) return '请输入有效数字';
+                    if (parsed < Decimal.zero) return '不能为负数';
+                    return null;
+                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                DictPickerField(
+                  key: const Key('account-channel-fee-currency-field'),
+                  type: DictType.currency,
+                  value: feeCurrency,
+                  label: '费用币种覆盖（可空）',
+                  helperText: '留空表示沿用通道默认值',
+                  allowEmpty: true,
+                  emptyLabel: '沿用通道默认值',
+                  onChanged: (v) => setLocalState(() => feeCurrency = v),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -2215,16 +2219,14 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
           child: const Text('取消'),
         ),
         FilledButton(
+          key: const Key('account-channel-config-save-button'),
           onPressed: () {
             if (!formKey.currentState!.validate()) return;
-            final feeCurrency = feeCurrencyCtrl.text.trim().isEmpty
-                ? null
-                : feeCurrencyCtrl.text.trim().toUpperCase();
             Navigator.pop(
               ctx,
               _AccountChannelConfigDraft(
-                feeRateOverride: parseOptional(feeRateCtrl.text),
-                fixedFeeOverride: parseOptional(fixedFeeCtrl.text),
+                feeRateOverride: parseOptional(feeRateText),
+                fixedFeeOverride: parseOptional(fixedFeeText),
                 feeCurrencyOverride: feeCurrency,
               ),
             );
@@ -2235,9 +2237,6 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
     ),
   );
 
-  feeRateCtrl.dispose();
-  fixedFeeCtrl.dispose();
-  feeCurrencyCtrl.dispose();
   return result;
 }
 

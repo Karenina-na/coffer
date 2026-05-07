@@ -468,28 +468,28 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
   );
   await addChannel(
     id: deps.idGen(),
-    name: '链上转账网络',
-    protocol: 'ONCHAIN',
+    name: '香港美元结算 CHATS',
+    protocol: 'CHATS',
     status: ChannelStatus.enabled,
     limitCurrency: 'USD',
-    accountKeys: const ['crypto_exchange', 'crypto_wallet'],
+    accountKeys: const ['hk_bank_dormant', 'us_broker'],
     feeRate: '0.0005',
   );
   await addChannel(
     id: deps.idGen(),
-    name: '内部归集通道',
-    protocol: 'INTERNAL',
+    name: '英国快速支付',
+    protocol: 'UK_FPS',
     status: ChannelStatus.enabled,
     limitCurrency: 'USD',
     accountKeys: const ['us_broker', 'us_custody', 'sg_broker_inactive'],
   );
   await addChannel(
     id: deps.idGen(),
-    name: '大额实时清算 RTGS',
-    protocol: 'RTGS',
+    name: '欧元区备用 SEPA',
+    protocol: 'SEPA',
     status: ChannelStatus.enabled,
-    limitCurrency: 'USD',
-    accountKeys: const ['hk_bank_dormant', 'us_broker'],
+    limitCurrency: 'EUR',
+    accountKeys: const ['eu_bank_closed', 'us_broker'],
     feeRate: '0.0025',
     fixedFee: '25',
   );
@@ -568,14 +568,14 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     high: Decimal.parse('1.10'),
   );
   await addPair(
-    base: 'BTC',
+    base: 'GBP',
     quote: 'USD',
     series: const [
-      (2, '60800', SnapshotType.daily),
-      (1, '59000', SnapshotType.hourly),
-      (0, '57100', SnapshotType.realtime),
+      (2, '1.268', SnapshotType.daily),
+      (1, '1.254', SnapshotType.hourly),
+      (0, '1.238', SnapshotType.realtime),
     ],
-    low: Decimal.parse('58000'),
+    low: Decimal.parse('1.24'),
     pct: Decimal.parse('5'),
   );
   await addPair(
@@ -588,13 +588,13 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     ],
   );
   await addPair(
-    base: 'SGD',
+    base: 'HKD',
     quote: 'USD',
     series: const [
-      (3, '0.736', SnapshotType.daily),
-      (2, '0.739', SnapshotType.daily),
-      (1, '0.742', SnapshotType.hourly),
-      (0, '0.741', SnapshotType.realtime),
+      (3, '0.1276', SnapshotType.daily),
+      (2, '0.1279', SnapshotType.daily),
+      (1, '0.1282', SnapshotType.hourly),
+      (0, '0.1281', SnapshotType.realtime),
     ],
   );
 
@@ -702,14 +702,14 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       id: deps.idGen(),
       eventType: DomainEventTypes.rateAlert,
       relatedModel: RelatedModel.asset,
-      relatedId: 'BTC/USD',
+        relatedId: 'GBP/USD',
       triggerTime: now.subtract(const Duration(hours: 8)),
       priority: EventPriority.high,
       status: EventStatus.resolved,
       handlingStatus: HandlingStatus.handled,
-      handlingNote: 'BTC/USD 跌破下沿 58000',
-      sourceKey: '${DomainEventTypes.rateAlert}:BTC/USD:${yyyymmdd(now)}:low',
-      refs: const {'pair': 'BTC/USD', 'kind': 'low'},
+        handlingNote: 'GBP/USD 跌破下沿 1.24',
+        sourceKey: '${DomainEventTypes.rateAlert}:GBP/USD:${yyyymmdd(now)}:low',
+        refs: const {'pair': 'GBP/USD', 'kind': 'low'},
       ackRequirement: AckRequirement.required_,
       ackStatus: AckStatus.confirmed,
       ackAt: now.subtract(const Duration(hours: 2)),

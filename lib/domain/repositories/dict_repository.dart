@@ -8,6 +8,8 @@ abstract interface class DictRepository {
 
   Future<List<DictEntry>> listByType(DictType type);
 
+  Future<DictEntry?> findByTypeAndCode(DictType type, String code);
+
   /// 新增自定义条目。返回 [ValidationError] 当：
   /// - `code` 为空或非法；
   /// - 同 `type + code` 已存在。

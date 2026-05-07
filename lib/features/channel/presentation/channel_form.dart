@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../data/providers/dict_providers.dart';
 import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
+import '../../../domain/entities/dict_entry.dart';
 import '../../../domain/entities/dict_type.dart';
 import 'channel_providers.dart';
 
@@ -36,12 +38,12 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
   late final TextEditingController _fixedFeeCtrl;
   late final TextEditingController _singleLimitCtrl;
   late final TextEditingController _dailyLimitCtrl;
-  late final TextEditingController _allowedCtrl;
-  late final TextEditingController _blockedCtrl;
 
   late String _protocol; // 转账协议 code（来自 dict_entries）
   String? _currencyCode; // 限额币种（可空）
   late bool _requireSameRegion;
+  late List<String> _allowedRegions;
+  late List<String> _blockedRegions;
   bool _submitting = false;
 
   @override
@@ -57,12 +59,8 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
     _dailyLimitCtrl =
         TextEditingController(text: c?.dailyLimit?.toString() ?? '');
     final rule = c?.sovereigntyRegionRule ?? const <String, dynamic>{};
-    _allowedCtrl = TextEditingController(
-      text: (rule['allowedRegions'] as List?)?.join(', ') ?? '',
-    );
-    _blockedCtrl = TextEditingController(
-      text: (rule['blockedRegions'] as List?)?.join(', ') ?? '',
-    );
+    _allowedRegions = _normalizeRegions(rule['allowedRegions']);
+    _blockedRegions = _normalizeRegions(rule['blockedRegions']);
     _protocol = c?.transferProtocol ?? 'INTERNAL';
     _requireSameRegion = rule['requireSameRegion'] == true;
   }
@@ -74,8 +72,6 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
     _fixedFeeCtrl.dispose();
     _singleLimitCtrl.dispose();
     _dailyLimitCtrl.dispose();
-    _allowedCtrl.dispose();
-    _blockedCtrl.dispose();
     super.dispose();
   }
 
@@ -94,21 +90,24 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
     return null;
   }
 
-  List<String> _splitRegions(String s) => s
-      .split(RegExp(r'[,\s]+'))
-      .where((e) => e.trim().isNotEmpty)
-      .map((e) => e.trim().toUpperCase())
-      .toList();
+  List<String> _normalizeRegions(Object? raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<String>()
+        .map((e) => e.trim().toUpperCase())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
     final now = DateTime.now();
-    final allowed = _splitRegions(_allowedCtrl.text);
-    final blocked = _splitRegions(_blockedCtrl.text);
     final rule = <String, dynamic>{
-      if (allowed.isNotEmpty) 'allowedRegions': allowed,
-      if (blocked.isNotEmpty) 'blockedRegions': blocked,
+      if (_allowedRegions.isNotEmpty) 'allowedRegions': _allowedRegions,
+      if (_blockedRegions.isNotEmpty) 'blockedRegions': _blockedRegions,
       if (_requireSameRegion) 'requireSameRegion': true,
     };
     final prev = widget.initial;
@@ -233,22 +232,23 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
             ),
           ]),
           const Divider(height: 32),
-          TextFormField(
-            controller: _allowedCtrl,
-            decoration: const InputDecoration(
-              labelText: '允许区域（逗号分隔，可选）',
-              helperText: '如 CN, HK, SG',
-            ),
+          _RegionMultiSelectField(
+            fieldKey: const Key('channel-allowed-regions-field'),
+            label: '允许区域（可选）',
+            helperText: '仅允许所选区域之间转账',
+            selectedCodes: _allowedRegions,
+            onChanged: (value) => setState(() => _allowedRegions = value),
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _blockedCtrl,
-            decoration: const InputDecoration(
-              labelText: '禁止区域（逗号分隔，可选）',
-              helperText: '如 KP, IR',
-            ),
+          _RegionMultiSelectField(
+            fieldKey: const Key('channel-blocked-regions-field'),
+            label: '禁止区域（可选）',
+            helperText: '命中任一源/目标区域即禁止转账',
+            selectedCodes: _blockedRegions,
+            onChanged: (value) => setState(() => _blockedRegions = value),
           ),
           SwitchListTile(
+            key: const Key('channel-require-same-region-switch'),
             value: _requireSameRegion,
             onChanged: (v) => setState(() => _requireSameRegion = v),
             title: const Text('要求源/目的在同一区域'),
@@ -266,6 +266,215 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
                 : const Text('保存'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RegionMultiSelectField extends ConsumerWidget {
+  const _RegionMultiSelectField({
+    required this.fieldKey,
+    required this.label,
+    required this.helperText,
+    required this.selectedCodes,
+    required this.onChanged,
+  });
+
+  final Key fieldKey;
+  final String label;
+  final String helperText;
+  final List<String> selectedCodes;
+  final ValueChanged<List<String>> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(dictEntriesProvider(DictType.sovereigntyRegion));
+    return async.when(
+      loading: () => InputDecorator(
+        decoration: InputDecoration(labelText: label, helperText: helperText),
+        child: const SizedBox(
+          height: 20,
+          child: LinearProgressIndicator(minHeight: 2),
+        ),
+      ),
+      error: (e, _) => InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: helperText,
+          errorText: '字典加载失败：$e',
+        ),
+        child: const SizedBox(height: 20),
+      ),
+      data: (entries) {
+        final knownCodes = entries.map((e) => e.code).toSet();
+        final effectiveEntries = [
+          ...entries,
+          for (final code in selectedCodes.where((e) => !knownCodes.contains(e)))
+            _expiredEntry(code),
+        ];
+        return InkWell(
+          key: fieldKey,
+          onTap: () async {
+            final picked = await showModalBottomSheet<List<String>>(
+              context: context,
+              isScrollControlled: true,
+              useRootNavigator: true,
+              builder: (_) => _RegionMultiSelectSheet(
+                label: label,
+                entries: effectiveEntries,
+                initialCodes: selectedCodes,
+              ),
+            );
+            if (picked != null) onChanged(picked);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: label,
+              helperText: helperText,
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+            ),
+            child: selectedCodes.isEmpty
+                ? const Text('未选择')
+                : Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final code in selectedCodes)
+                        InputChip(label: Text(_labelFor(effectiveEntries, code))),
+                    ],
+                  ),
+          ),
+        );
+      },
+    );
+  }
+
+  DictEntry _expiredEntry(String code) => DictEntry(
+        id: -code.hashCode,
+        type: DictType.sovereigntyRegion,
+        code: code,
+        name: '$code（已失效）',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+
+  String _labelFor(List<DictEntry> entries, String code) {
+    final matches = entries.where((e) => e.code == code);
+    if (matches.isEmpty) return code;
+    final match = matches.first;
+    return '${match.name}（${match.code}）';
+  }
+}
+
+class _RegionMultiSelectSheet extends StatefulWidget {
+  const _RegionMultiSelectSheet({
+    required this.label,
+    required this.entries,
+    required this.initialCodes,
+  });
+
+  final String label;
+  final List<DictEntry> entries;
+  final List<String> initialCodes;
+
+  @override
+  State<_RegionMultiSelectSheet> createState() => _RegionMultiSelectSheetState();
+}
+
+class _RegionMultiSelectSheetState extends State<_RegionMultiSelectSheet> {
+  late final TextEditingController _queryCtrl;
+  late final Set<String> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _queryCtrl = TextEditingController();
+    _selected = {...widget.initialCodes};
+  }
+
+  @override
+  void dispose() {
+    _queryCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _queryCtrl.text.trim().toLowerCase();
+    final filtered = widget.entries.where((entry) {
+      if (query.isEmpty) return true;
+      return entry.code.toLowerCase().contains(query) ||
+          entry.name.toLowerCase().contains(query) ||
+          (entry.nameEn?.toLowerCase().contains(query) ?? false);
+    }).toList()
+      ..sort((a, b) => a.code.compareTo(b.code));
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
+        child: SizedBox(
+          height: 520,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(_selected.clear),
+                    child: const Text('清空'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () {
+                      final picked = _selected.toList()..sort();
+                      Navigator.of(context).pop(picked);
+                    },
+                    child: const Text('完成'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _queryCtrl,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  labelText: '搜索区域',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final entry = filtered[index];
+                    final selected = _selected.contains(entry.code);
+                    return CheckboxListTile(
+                      value: selected,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(entry.name),
+                      subtitle: Text(entry.code),
+                      onChanged: (_) => setState(() {
+                        if (selected) {
+                          _selected.remove(entry.code);
+                        } else {
+                          _selected.add(entry.code);
+                        }
+                      }),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

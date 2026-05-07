@@ -38,6 +38,12 @@ class DriftDictRepository implements DictRepository {
   }
 
   @override
+  Future<DictEntry?> findByTypeAndCode(DictType type, String code) async {
+    final row = await _dao.findByTypeAndCode(type.code, code.trim().toUpperCase());
+    return row == null ? null : dictEntryFromRow(row);
+  }
+
+  @override
   Future<Result<DictEntry, AppError>> addCustom({
     required DictType type,
     required String code,

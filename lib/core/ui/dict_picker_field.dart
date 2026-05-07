@@ -20,6 +20,8 @@ class DictPickerField extends ConsumerWidget {
     this.label,
     this.helperText,
     this.validator,
+    this.allowEmpty = false,
+    this.emptyLabel = '未选择',
   });
 
   final DictType type;
@@ -28,6 +30,8 @@ class DictPickerField extends ConsumerWidget {
   final String? label;
   final String? helperText;
   final FormFieldValidator<String>? validator;
+  final bool allowEmpty;
+  final String emptyLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,6 +61,7 @@ class DictPickerField extends ConsumerWidget {
 
   Widget _buildDropdown(List<DictEntry> entries) {
     final items = <DropdownMenuItem<String>>[
+      if (allowEmpty) DropdownMenuItem(value: '', child: Text(emptyLabel)),
       for (final e in entries)
         DropdownMenuItem(
           value: e.code,
@@ -73,9 +78,9 @@ class DictPickerField extends ConsumerWidget {
       ));
     }
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue: (value == null || value!.isEmpty) && allowEmpty ? '' : value,
       items: items,
-      onChanged: onChanged,
+      onChanged: (v) => onChanged(allowEmpty && (v == null || v.isEmpty) ? null : v),
       decoration: InputDecoration(
         labelText: label,
         helperText: helperText,

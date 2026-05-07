@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/money/money.dart';
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
+import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
@@ -16,6 +17,7 @@ import '../../../core/ui/gwp_number_text.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/exchange_rate_enums.dart';
+import '../../../domain/entities/dict_type.dart';
 import '../../../domain/entities/watched_pair.dart';
 import 'exchange_rate_providers.dart';
 import 'pair_detail_page.dart';
@@ -30,18 +32,21 @@ class ExchangeRateListPage extends ConsumerStatefulWidget {
 }
 
 class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
+  late final TopSearchOpener _topSearchOpener;
+
   @override
   void initState() {
     super.initState();
+    _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(topSearchOpenerProvider.notifier).set(_openSearch);
+      _topSearchOpener.set(_openSearch);
     });
   }
 
   @override
   void dispose() {
-    ref.read(topSearchOpenerProvider.notifier).set(null);
+    _topSearchOpener.set(null);
     super.dispose();
   }
 
@@ -501,8 +506,8 @@ class _RateEditorSheet extends ConsumerStatefulWidget {
 }
 
 class _RateEditorSheetState extends ConsumerState<_RateEditorSheet> {
-  final _baseCtrl = TextEditingController(text: 'USD');
-  final _quoteCtrl = TextEditingController(text: 'CNY');
+  String _baseCurrency = 'USD';
+  String _quoteCurrency = 'CNY';
   final _rateCtrl = TextEditingController();
   final _sourceCtrl = TextEditingController(text: 'manual');
   SnapshotType _snapshot = SnapshotType.realtime;
@@ -511,16 +516,14 @@ class _RateEditorSheetState extends ConsumerState<_RateEditorSheet> {
 
   @override
   void dispose() {
-    _baseCtrl.dispose();
-    _quoteCtrl.dispose();
     _rateCtrl.dispose();
     _sourceCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final base = _baseCtrl.text.trim().toUpperCase();
-    final quote = _quoteCtrl.text.trim().toUpperCase();
+    final base = _baseCurrency.trim().toUpperCase();
+    final quote = _quoteCurrency.trim().toUpperCase();
     final rate = Decimal.tryParse(_rateCtrl.text.trim());
     if (base.isEmpty ||
         quote.isEmpty ||
@@ -579,10 +582,15 @@ class _RateEditorSheetState extends ConsumerState<_RateEditorSheet> {
           const SizedBox(height: 12),
           Row(children: [
             Expanded(
-              child: TextField(
-                controller: _baseCtrl,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: '基准币种'),
+              child: DictPickerField(
+                key: const Key('rate-editor-base-currency-field'),
+                type: DictType.currency,
+                value: _baseCurrency,
+                label: '基准币种',
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _baseCurrency = v);
+                },
               ),
             ),
             const Padding(
@@ -590,10 +598,15 @@ class _RateEditorSheetState extends ConsumerState<_RateEditorSheet> {
               child: Icon(Icons.swap_horiz, color: GwpColors.textMuted, size: 20),
             ),
             Expanded(
-              child: TextField(
-                controller: _quoteCtrl,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: '报价币种'),
+              child: DictPickerField(
+                key: const Key('rate-editor-quote-currency-field'),
+                type: DictType.currency,
+                value: _quoteCurrency,
+                label: '报价币种',
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _quoteCurrency = v);
+                },
               ),
             ),
           ]),
@@ -813,17 +826,10 @@ class _PairEditorSheet extends ConsumerStatefulWidget {
 }
 
 class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
-  final _baseCtrl = TextEditingController(text: 'USD');
-  final _quoteCtrl = TextEditingController(text: 'CNY');
+  String _baseCurrency = 'USD';
+  String _quoteCurrency = 'CNY';
   bool _busy = false;
   String? _errorMsg;
-
-  @override
-  void dispose() {
-    _baseCtrl.dispose();
-    _quoteCtrl.dispose();
-    super.dispose();
-  }
 
   Future<void> _submit() async {
     setState(() {
@@ -831,8 +837,8 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
       _errorMsg = null;
     });
     final r = await ref.read(manageWatchedPairUseCaseProvider).add(
-          baseCurrency: _baseCtrl.text,
-          quoteCurrency: _quoteCtrl.text,
+          baseCurrency: _baseCurrency,
+          quoteCurrency: _quoteCurrency,
         );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -875,10 +881,15 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
           const SizedBox(height: 16),
           Row(children: [
             Expanded(
-              child: TextField(
-                controller: _baseCtrl,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: '基准币种'),
+              child: DictPickerField(
+                key: const Key('pair-editor-base-currency-field'),
+                type: DictType.currency,
+                value: _baseCurrency,
+                label: '基准币种',
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _baseCurrency = v);
+                },
               ),
             ),
             const Padding(
@@ -886,10 +897,15 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
               child: Icon(Icons.swap_horiz, color: GwpColors.textMuted, size: 20),
             ),
             Expanded(
-              child: TextField(
-                controller: _quoteCtrl,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: '报价币种'),
+              child: DictPickerField(
+                key: const Key('pair-editor-quote-currency-field'),
+                type: DictType.currency,
+                value: _quoteCurrency,
+                label: '报价币种',
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _quoteCurrency = v);
+                },
               ),
             ),
           ]),

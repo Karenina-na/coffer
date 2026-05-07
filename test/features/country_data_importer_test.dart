@@ -130,6 +130,13 @@ class _FakeDictRepository implements DictRepository {
   }
 
   @override
+  Future<DictEntry?> findByTypeAndCode(DictType type, String code) async {
+    final normalized = code.trim().toUpperCase();
+    final map = type == DictType.sovereigntyRegion ? _regions : _currencies;
+    return map[normalized];
+  }
+
+  @override
   Future<Result<DictEntry, AppError>> updateEntry({
     required int id,
     String? name,

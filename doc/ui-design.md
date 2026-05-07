@@ -99,6 +99,12 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 >
 > **账户级手续费配置**：账户详情页的通道区块除维护是否接入外，还可为当前账户配置该通道的账户级费用覆盖（比例费率 / 固定费 / 费用币种）。覆盖值为空时沿用通道默认值；`0` 为有效值，表示该账户在该通道上免手续费。路径规划按源账户的覆盖值计费。
 >
+> **字典锚定约束**：地区、货币、转账协议相关输入必须优先使用字典选择器，而不是手填字符串。当前约定如下：
+>
+> - Channel 的 `transfer_protocol`、`limit_currency`、`allowedRegions`、`blockedRegions` 全部来自字典；地区规则使用多选而非 CSV 输入。
+> - 账户级 `fee_currency_override`、汇率手动录入的 `base/quote`、关注币对的 `base/quote`、卡片 `supported_currencies` 全部来自 `currency` 字典。
+> - 对于可空覆盖字段，选择器必须提供明确的“沿用默认值”空态，而不是把默认值预填成显式 override。
+>
 > **对比模式**：顶部 `SwitchListTile`「对比模式」开启后，一次点击并行跑两种目标，结果并排渲染；若二者得到同一条路径则合并为单卡并标注"两种目标一致"，否则给出 `ΔFee` / `ΔHops` 差值，便于用户权衡费用与合规/稳定性。
 
 实现要点：
@@ -121,6 +127,7 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
   - 「管理币对」→ 打开 `WatchedPairsPage`，用户维护关注的 `(base, quote)` 列表。
   - 「拉取最新」→ 调用 `RefreshWatchedRatesUseCase`，按 base 分组批量调用 Frankfurter，结果 upsert 到 `exchange_rates` 表。
 - **FAB「录入」**：保留手动录入能力作为离线兜底。
+- 手动录入与关注币对管理中的 `base_currency` / `quote_currency` 必须使用 `currency` 字典选择器，禁止手填自由字符串。
 
 **远端数据源：Frankfurter**（`api.frankfurter.dev/v1/latest`）
 
@@ -139,6 +146,7 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 
 - **列表**：`WalletCardTile` 点击 → `CardDetailSheet.show(...)` 弹出详情模态。
 - **详情弹层**：新建卡片 / 详情都走 `CardDetailSheet`（非独立路由），展示脱敏卡号、按需解密明文、基本信息、信用卡额度、账单地址、关联账户等字段。
+- **币种选择**：主记账币种与“其他支持币种”都来自 `currency` 字典；不再提供手工补录 ISO 代码入口。
 
 ### 4.6 跨实体导航矩阵
 

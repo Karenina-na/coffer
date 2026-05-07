@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../data/providers/dict_providers.dart';
 import '../../../data/providers/card_providers.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/usecases/create_card.dart';
@@ -29,6 +30,7 @@ final saveCardUseCaseProvider = Provider<SaveCardUseCase>((ref) {
   return SaveCardUseCase(
     ref.watch(cardRepositoryProvider),
     ref.watch(accountRepositoryProvider),
+    dicts: ref.watch(dictRepositoryProvider),
     idGenerator: uuid.v4,
     now: DateTime.now,
   );

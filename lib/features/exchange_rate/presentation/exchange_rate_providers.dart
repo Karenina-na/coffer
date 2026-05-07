@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/providers/dict_providers.dart';
 import '../../../data/providers/exchange_rate_providers.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/watched_pair.dart';
@@ -38,13 +39,17 @@ final refreshWatchedRatesUseCaseProvider =
 
 final manageWatchedPairUseCaseProvider =
     Provider<ManageWatchedPairUseCase>((ref) {
-  return ManageWatchedPairUseCase(ref.watch(watchedPairRepositoryProvider));
+  return ManageWatchedPairUseCase(
+    ref.watch(watchedPairRepositoryProvider),
+    ref.watch(dictRepositoryProvider),
+  );
 });
 
 final saveManualRateUseCaseProvider = Provider<SaveManualRateUseCase>((ref) {
   return SaveManualRateUseCase(
     rates: ref.watch(exchangeRateRepositoryProvider),
     watchedPairs: ref.watch(manageWatchedPairUseCaseProvider),
+    dicts: ref.watch(dictRepositoryProvider),
     idGenerator: ref.watch(uuidGeneratorProvider),
     now: DateTime.now,
   );

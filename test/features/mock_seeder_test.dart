@@ -13,6 +13,7 @@ import 'package:gwp/data/repositories/drift_asset_price_history_repository.dart'
 import 'package:gwp/data/repositories/drift_asset_repository.dart';
 import 'package:gwp/data/repositories/drift_card_repository.dart';
 import 'package:gwp/data/repositories/drift_channel_repository.dart';
+import 'package:gwp/data/repositories/drift_dict_repository.dart';
 import 'package:gwp/data/repositories/drift_exchange_rate_repository.dart';
 import 'package:gwp/data/repositories/drift_event_repository.dart';
 import 'package:gwp/data/repositories/drift_watched_pair_repository.dart';
@@ -48,6 +49,7 @@ void main() {
   late AppDatabase db;
   late SeedDeps deps;
   late DriftWatchedPairRepository watched;
+  late DriftDictRepository dicts;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -68,6 +70,7 @@ void main() {
     final costHistory = DriftAssetCostHistoryRepository(db.assetCostHistoryDao);
     final channels = DriftChannelRepository(db.channelDao);
     final accountChannels = DriftAccountChannelRepository(db.accountChannelDao);
+    dicts = DriftDictRepository(db.dictEntryDao);
     watched = DriftWatchedPairRepository(db.watchedPairDao);
     final events = DriftEventRepository(db.eventDao);
 
@@ -97,16 +100,17 @@ void main() {
         now: DateTime.now,
       ),
       cardRepo: cards,
-      saveChannel: SaveChannelUseCase(channels),
+      saveChannel: SaveChannelUseCase(channels, dicts),
       linkAccountChannel: LinkAccountChannelUseCase(
         accountChannels,
         accounts,
         channels,
       ),
-      manageWatchedPair: ManageWatchedPairUseCase(watched),
+      manageWatchedPair: ManageWatchedPairUseCase(watched, dicts),
       saveManualRate: SaveManualRateUseCase(
         rates: DriftExchangeRateRepository(db.exchangeRateDao),
-        watchedPairs: ManageWatchedPairUseCase(watched),
+        watchedPairs: ManageWatchedPairUseCase(watched, dicts),
+        dicts: dicts,
         idGenerator: uuid.v4,
         now: DateTime.now,
       ),

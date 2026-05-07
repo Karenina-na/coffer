@@ -115,6 +115,7 @@ lib/
 - **全局计价货币**：Presentation 层通过统一的 `valuationCurrencyProvider` 管理当前计价货币；金额统计不直接横向累加 `Asset.market_value`，而是先经 `ValueAssetsInCurrencyUseCase` 换算到当前计价货币，再驱动仪表盘、分析页、账户/资产列表与详情展示
 - **成本/盈亏口径**：凡使用计价值 `valuedAmount` 的收益、盈亏、成本对比，也必须同步使用换算后的成本基准（`valuedCostBasis`）；禁止把原币 `costPrice × quantity` 直接与计价值做减法
 - **趋势口径一致性**：净值趋势的历史点与“今日点”必须使用同一计价货币口径，禁止历史点已换汇而最新点仍直接累加原币 `market_value`
+- **字典成员校验**：`currency` / `sovereigntyRegion` / `transferProtocol` 相关值除了在 UI 层用字典选择器约束外，也必须在 UseCase 层通过 `DictRepository.findByTypeAndCode(...)` 做成员校验，防止脚本、seed、未来入口或历史脏数据绕过 UI 写入自由字符串
 
 ## 7. 表现层规范
 

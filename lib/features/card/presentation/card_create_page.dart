@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/providers/dict_providers.dart';
 import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
@@ -29,17 +30,6 @@ class CardCreatePage extends ConsumerStatefulWidget {
 }
 
 class _CardCreatePageState extends ConsumerState<CardCreatePage> {
-  static const _currencyPresets = <String>[
-    'CNY',
-    'USD',
-    'HKD',
-    'EUR',
-    'JPY',
-    'SGD',
-    'GBP',
-    'AUD',
-  ];
-
   final _formKey = GlobalKey<FormState>();
   CardOrganization? _organization;
   late final TextEditingController _issuerCtrl;
@@ -48,7 +38,6 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
   late final TextEditingController _mmCtrl;
   late final TextEditingController _yyyyCtrl;
   late final TextEditingController _billingAddressCtrl;
-  final _customCcyCtrl = TextEditingController();
 
   late CardType _type;
   String? _accountId;
@@ -90,7 +79,6 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
     _mmCtrl.dispose();
     _yyyyCtrl.dispose();
     _billingAddressCtrl.dispose();
-    _customCcyCtrl.dispose();
     super.dispose();
   }
 
@@ -171,21 +159,6 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
         setState(() => _submitting = false);
       }
     }
-  }
-
-  void _addCustomCurrency() {
-    final raw = _customCcyCtrl.text.trim().toUpperCase();
-    if (raw.isEmpty) return;
-    if (!RegExp(r'^[A-Z]{3}$').hasMatch(raw)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('币种需为 3 位字母的 ISO-4217 代码')),
-      );
-      return;
-    }
-    setState(() {
-      _extraCurrencies.add(raw);
-      _customCcyCtrl.clear();
-    });
   }
 
   @override
@@ -345,6 +318,7 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
 
   Widget _buildCurrencySection(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final currencyAsync = ref.watch(dictEntriesProvider(DictType.currency));
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
@@ -398,53 +372,42 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final ccy in <String>{
-                  ..._currencyPresets,
-                  ..._extraCurrencies,
-                })
-                  if (ccy != _primaryCurrency)
-                    FilterChip(
-                      label: Text(ccy),
-                      selected: _extraCurrencies.contains(ccy),
-                      onSelected: (sel) => setState(() {
-                        if (sel) {
-                          _extraCurrencies.add(ccy);
-                        } else {
-                          _extraCurrencies.remove(ccy);
-                        }
-                      }),
-                    ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _customCcyCtrl,
-                    decoration: const InputDecoration(
-                      labelText: '自定义 ISO 代码',
-                      hintText: '例如 CHF',
-                      isDense: true,
-                    ),
-                    textCapitalization: TextCapitalization.characters,
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(3),
-                      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
-                    ],
-                    onSubmitted: (_) => _addCustomCurrency(),
-                  ),
+            currencyAsync.when(
+              loading: () => const LinearProgressIndicator(minHeight: 2),
+              error: (e, _) => Text(
+                '币种字典加载失败: ${errorToMessage(e)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.error,
                 ),
-                const SizedBox(width: 8),
-                FilledButton.tonal(
-                  onPressed: _addCustomCurrency,
-                  child: const Text('添加'),
-                ),
-              ],
+              ),
+              data: (entries) {
+                final options = [
+                  for (final e in entries)
+                    if (e.code != _primaryCurrency) e.code,
+                  for (final c in _extraCurrencies)
+                    if (c != _primaryCurrency && !entries.any((e) => e.code == c)) c,
+                ];
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final ccy in options)
+                      FilterChip(
+                        key: Key('card-supported-currency-$ccy'),
+                        label: Text(ccy),
+                        selected: _extraCurrencies.contains(ccy),
+                        onSelected: (sel) => setState(() {
+                          if (sel) {
+                            _extraCurrencies.add(ccy);
+                          } else {
+                            _extraCurrencies.remove(ccy);
+                          }
+                        }),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ],
