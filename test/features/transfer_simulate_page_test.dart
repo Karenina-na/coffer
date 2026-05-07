@@ -1,0 +1,117 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:gwp/core/ui/region_meta.dart';
+import 'package:gwp/data/providers/dict_providers.dart';
+import 'package:gwp/domain/entities/account.dart';
+import 'package:gwp/domain/entities/account_channel.dart';
+import 'package:gwp/domain/entities/account_enums.dart';
+import 'package:gwp/domain/entities/channel.dart';
+import 'package:gwp/domain/entities/channel_enums.dart';
+import 'package:gwp/domain/entities/dict_entry.dart';
+import 'package:gwp/domain/entities/dict_type.dart';
+import 'package:gwp/features/account/presentation/account_providers.dart';
+import 'package:gwp/features/asset/presentation/asset_providers.dart';
+import 'package:gwp/features/channel/presentation/channel_list_page.dart';
+import 'package:gwp/features/channel/presentation/channel_providers.dart';
+import 'package:gwp/features/channel/presentation/transfer_simulate_page.dart';
+
+GoRouter _router() => GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: TransferSimulateBody()),
+        ),
+        GoRoute(
+          path: '/channels',
+          builder: (_, _) => const ChannelListPage(),
+        ),
+      ],
+    );
+
+Future<void> _pumpTransfer(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 3.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  final now = DateTime.utc(2026, 1, 1);
+  final accounts = [
+    Account(
+      id: 'acc-1',
+      accountType: AccountType.bank,
+      sovereigntyRegion: 'CN',
+      institutionName: 'ICBC',
+      status: AccountStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    ),
+    Account(
+      id: 'acc-2',
+      accountType: AccountType.broker,
+      sovereigntyRegion: 'US',
+      institutionName: 'Fidelity',
+      status: AccountStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  ];
+  final channels = [
+    Channel(
+      id: 'ch-1',
+      name: 'SWIFT Main',
+      transferProtocol: 'SWIFT',
+      status: ChannelStatus.enabled,
+      createdAt: now,
+      updatedAt: now,
+    ),
+    Channel(
+      id: 'ch-2',
+      name: 'ACH Backup',
+      transferProtocol: 'ACH',
+      status: ChannelStatus.enabled,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  ];
+  final links = [
+    AccountChannel(accountId: 'acc-1', channelId: 'ch-1', createdAt: now),
+    AccountChannel(accountId: 'acc-2', channelId: 'ch-2', createdAt: now),
+  ];
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        accountListProvider.overrideWith((ref) => Stream.value(accounts)),
+        assetListProvider.overrideWith((ref) => Stream.value(const [])),
+        accountChannelListProvider.overrideWith((ref) => Stream.value(links)),
+        channelListProvider.overrideWith((ref) => Stream.value(channels)),
+        regionMetaIndexProvider.overrideWith((ref) => Stream.value(<String, RegionMeta>{})),
+        dictEntriesProvider(DictType.currency).overrideWith(
+          (ref) => Stream.value(<DictEntry>[]),
+        ),
+      ],
+      child: MaterialApp.router(routerConfig: _router()),
+    ),
+  );
+  await tester.pump();
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  testWidgets('转账页顶部展示通道摘要并可进入通道管理', (tester) async {
+    await _pumpTransfer(tester);
+
+    expect(find.text('转账通道概览'), findsOneWidget);
+    expect(find.text('2 条通道 · 2 种协议'), findsOneWidget);
+    expect(find.text('通道管理'), findsOneWidget);
+
+    await tester.tap(find.text('通道管理'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('转账通道'), findsOneWidget);
+  });
+}

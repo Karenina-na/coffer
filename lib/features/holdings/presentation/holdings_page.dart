@@ -96,15 +96,6 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   List<Widget> _actionsFor(BuildContext context, int idx) {
     // 搜索按钮已上提至一级 Bar（由 [topSearchOpenerProvider] 动态显示）。
     // 备份 / 恢复是 App 级全局能力，统一放到「设置」，不在本页显示。
-    if (idx == 2) {
-      return [
-        IconButton(
-          tooltip: '通道管理',
-          icon: const Icon(Icons.swap_horiz_outlined),
-          onPressed: () => context.push('/channels'),
-        ),
-      ];
-    }
     // 账户 / 资产 / 分析 tab 共用「同步资产行情」入口：
     // 调 `RefreshAssetPriceUseCase.refreshAll`，与汇率页一致的增量 / 全量选择。
     return [

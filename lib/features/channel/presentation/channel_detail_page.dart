@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,8 @@ import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/gwp_status_badge.dart';
+import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
 import '../../account/presentation/account_providers.dart';
@@ -303,7 +306,7 @@ class _MembersCard extends ConsumerWidget {
             final members = [
               for (final l in links)
                 if (l.channelId == channel.id && accById[l.accountId] != null)
-                  accById[l.accountId]!,
+                  (account: accById[l.accountId]!, link: l),
             ];
             return Card(
               child: Padding(
@@ -325,16 +328,44 @@ class _MembersCard extends ConsumerWidget {
                         child: Text('暂无账户接入此通道，可在账户详情页添加'),
                       )
                     else
-                      for (final a in members)
+                      for (final member in members)
                         ListTile(
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.link),
-                          title: Text(a.institutionName),
-                          subtitle: Text(
-                              '${a.accountType.labelZh} · ${a.sovereigntyRegion}'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/accounts/${a.id}'),
+                          title: Text(member.account.institutionName),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${member.account.accountType.labelZh} · ${member.account.sovereigntyRegion}',
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _memberFeeLine(member.link, channel),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _hasFeeOverride(member.link)
+                                      ? GwpColors.info
+                                      : GwpColors.textMuted,
+                                  fontWeight: _hasFeeOverride(member.link)
+                                      ? FontWeight.w500
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: _hasFeeOverride(member.link)
+                              ? const GwpStatusBadge(
+                                  label: '已覆盖',
+                                  variant: StatusVariant.info,
+                                )
+                              : const GwpStatusBadge(
+                                  label: '默认',
+                                  variant: StatusVariant.muted,
+                                ),
+                          onTap: () => context.push('/accounts/${member.account.id}'),
                         ),
                   ],
                 ),
@@ -345,4 +376,51 @@ class _MembersCard extends ConsumerWidget {
       },
     );
   }
+}
+
+bool _hasFeeOverride(AccountChannel link) {
+  return link.feeRateOverride != null ||
+      link.fixedFeeOverride != null ||
+      (link.feeCurrencyOverride != null &&
+          link.feeCurrencyOverride!.trim().isNotEmpty);
+}
+
+String _channelFeeDesc(Channel channel) {
+  return _renderFeeDesc(
+    feeRate: channel.feeRate,
+    fixedFee: channel.fixedFee,
+    currency: channel.limitCurrency,
+  );
+}
+
+String _accountFeeDesc(AccountChannel link, Channel channel) {
+  return _renderFeeDesc(
+    feeRate: link.feeRateOverride ?? channel.feeRate,
+    fixedFee: link.fixedFeeOverride ?? channel.fixedFee,
+    currency: link.feeCurrencyOverride ?? channel.limitCurrency,
+  );
+}
+
+String _memberFeeLine(AccountChannel link, Channel channel) {
+  if (_hasFeeOverride(link)) {
+    return '账户费率覆盖：${_accountFeeDesc(link, channel)}';
+  }
+  return '沿用通道默认费率：${_channelFeeDesc(channel)}';
+}
+
+String _renderFeeDesc({
+  required Decimal? feeRate,
+  required Decimal? fixedFee,
+  required String? currency,
+}) {
+  String text = '';
+  if (feeRate != null && feeRate > Decimal.zero) {
+    text += '${(feeRate.toDouble() * 100).toStringAsFixed(2)}%';
+  }
+  if (fixedFee != null && fixedFee > Decimal.zero) {
+    if (text.isNotEmpty) text += ' + ';
+    text += '${currency ?? ''} ${fixedFee.toStringAsFixed(2)}';
+  }
+  if (text.isEmpty) return '免费';
+  return text;
 }

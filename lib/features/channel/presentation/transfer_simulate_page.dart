@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
 import '../../../core/ui/design_tokens.dart';
@@ -14,6 +15,7 @@ import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
 import '../../../domain/entities/asset.dart';
+import '../../../domain/entities/channel.dart';
 import '../../../domain/usecases/channel_rule.dart';
 import '../../../domain/usecases/plan_transfer_route.dart';
 import '../../account/presentation/account_providers.dart';
@@ -206,6 +208,10 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
           loading: () => <AccountChannel>[],
           error: (_, _) => <AccountChannel>[],
         );
+        final channels = ref.watch(channelListProvider).maybeWhen(
+              data: (list) => list,
+              orElse: () => const <Channel>[],
+            );
 
         // Pre-compute per-account net worth
         final netWorth = <String, Decimal>{};
@@ -259,6 +265,9 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               regionIndex: regionIndex,
               onSwap: _swapAccounts,
             ),
+            const SizedBox(height: GwpSpacing.md),
+
+            _ChannelSummaryHeader(channels: channels),
             const SizedBox(height: GwpSpacing.md),
 
             // ── Account pickers (rich cards) ──
@@ -477,6 +486,59 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
           ],
         );
       },
+    );
+  }
+}
+
+class _ChannelSummaryHeader extends StatelessWidget {
+  const _ChannelSummaryHeader({required this.channels});
+
+  final List<Channel> channels;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = channels.length;
+    final protocols = channels.map((c) => c.transferProtocol).toSet().length;
+
+    return Container(
+      padding: const EdgeInsets.all(GwpSpacing.base),
+      decoration: BoxDecoration(
+        color: GwpColors.surface1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: GwpColors.border, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '转账通道概览',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: GwpColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$total 条通道 · $protocols 种协议',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: GwpColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => context.push('/channels'),
+            icon: const Icon(Icons.swap_horiz_outlined, size: 16),
+            label: const Text('通道管理'),
+          ),
+        ],
+      ),
     );
   }
 }
