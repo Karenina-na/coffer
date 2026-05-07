@@ -276,6 +276,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               icon: Icons.arrow_upward_rounded,
               iconColor: GwpColors.negative,
               selectedId: _sourceId,
+              excludedId: _targetId,
               accounts: accounts,
               netWorth: netWorth,
               assetCount: assetCount,
@@ -289,6 +290,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               icon: Icons.arrow_downward_rounded,
               iconColor: GwpColors.positive,
               selectedId: _targetId,
+              excludedId: _sourceId,
               accounts: accounts,
               netWorth: netWorth,
               assetCount: assetCount,
@@ -832,6 +834,7 @@ class _RichAccountPicker extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.selectedId,
+    required this.excludedId,
     required this.accounts,
     required this.netWorth,
     required this.assetCount,
@@ -844,6 +847,7 @@ class _RichAccountPicker extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String? selectedId;
+  final String? excludedId;
   final List<Account> accounts;
   final Map<String, Decimal> netWorth;
   final Map<String, int> assetCount;
@@ -853,103 +857,293 @@ class _RichAccountPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: selectedId,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 18, color: iconColor),
-      ),
-      dropdownColor: GwpColors.surface2,
-      isExpanded: true,
-      items: accounts.map((a) {
-        final typeColor = _typeColors[a.accountType] ?? GwpColors.actionPrimary;
-        final typeIcon = _typeIcons[a.accountType] ?? Icons.account_balance;
-        final nw = netWorth[a.id];
-        final ac = assetCount[a.id] ?? 0;
-        final cc = channelCount[a.id] ?? 0;
-        final regionName = regionLabel(regionIndex, a.sovereigntyRegion);
-        return DropdownMenuItem(
-          value: a.id,
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                alignment: Alignment.center,
-                child: Icon(typeIcon, size: 14, color: typeColor),
-              ),
-              const SizedBox(width: GwpSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      a.institutionName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: GwpColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Row(
+    final selected = selectedId == null
+        ? null
+        : accounts.cast<Account?>().firstWhere(
+            (a) => a?.id == selectedId,
+            orElse: () => null,
+          );
+    final selectedAssetCount = selected == null ? 0 : (assetCount[selected.id] ?? 0);
+    final selectedChannelCount =
+        selected == null ? 0 : (channelCount[selected.id] ?? 0);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        final picked = await showModalBottomSheet<String>(
+          context: context,
+          useRootNavigator: true,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (ctx) => _AccountPickerSheet(
+            label: label,
+            accounts: accounts,
+            selectedId: selectedId,
+            excludedId: excludedId,
+            assetCount: assetCount,
+            channelCount: channelCount,
+            regionIndex: regionIndex,
+          ),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, size: 18, color: iconColor),
+          suffixIcon: const Icon(Icons.expand_more),
+        ),
+        child: selected == null
+            ? const Text(
+                '请选择账户',
+                style: TextStyle(color: GwpColors.textMuted),
+              )
+            : Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: regionColor(
-                              regionIndex,
-                              a.sovereigntyRegion,
-                            ),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
                         Text(
-                          regionName,
+                          selected.institutionName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: GwpColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${selected.accountType.labelZh} · ${regionLabel(regionIndex, selected.sovereigntyRegion)} · $selectedAssetCount资产 · $selectedChannelCount通道',
                           style: const TextStyle(
                             fontSize: 10,
                             color: GwpColors.textMuted,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${a.accountType.labelZh} · $ac资产 · $cc通道',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: GwpColors.textMuted,
-                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              if (nw != null && nw > Decimal.zero) ...[
-                const SizedBox(width: GwpSpacing.sm),
-                Text(
-                  Money.format(nw, currency: 'CNY'),
-                  style: const TextStyle(
-                    fontFamily: GwpTypo.monoFont,
-                    fontFeatures: GwpTypo.tabularFigures,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: GwpColors.textSecondary,
                   ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _AccountPickerSheet extends StatefulWidget {
+  const _AccountPickerSheet({
+    required this.label,
+    required this.accounts,
+    required this.selectedId,
+    required this.excludedId,
+    required this.assetCount,
+    required this.channelCount,
+    required this.regionIndex,
+  });
+
+  final String label;
+  final List<Account> accounts;
+  final String? selectedId;
+  final String? excludedId;
+  final Map<String, int> assetCount;
+  final Map<String, int> channelCount;
+  final RegionIndex regionIndex;
+
+  @override
+  State<_AccountPickerSheet> createState() => _AccountPickerSheetState();
+}
+
+class _AccountPickerSheetState extends State<_AccountPickerSheet> {
+  final _queryCtrl = TextEditingController();
+  String _query = '';
+  bool _onlyConnected = true;
+  bool _onlyWithAssets = false;
+  AccountType? _type;
+  String? _region;
+
+  @override
+  void dispose() {
+    _queryCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final typeChoices = widget.accounts.map((a) => a.accountType).toSet().toList()
+      ..sort((a, b) => a.code.compareTo(b.code));
+    final regionChoices = widget.accounts.map((a) => a.sovereigntyRegion).toSet().toList()
+      ..sort();
+
+    final filtered = widget.accounts.where((a) {
+      if (widget.excludedId != null && a.id == widget.excludedId) return false;
+      if (_onlyConnected && (widget.channelCount[a.id] ?? 0) <= 0) return false;
+      if (_onlyWithAssets && (widget.assetCount[a.id] ?? 0) <= 0) return false;
+      if (_type != null && a.accountType != _type) return false;
+      if (_region != null && a.sovereigntyRegion != _region) return false;
+
+      final q = _query.trim().toLowerCase();
+      if (q.isEmpty) return true;
+      final haystack = [
+        a.institutionName,
+        a.accountNo ?? '',
+        a.sovereigntyRegion,
+        regionLabel(widget.regionIndex, a.sovereigntyRegion),
+        a.accountType.labelZh,
+        a.accountType.labelBilingual,
+      ].join(' ').toLowerCase();
+      return haystack.contains(q);
+    }).toList()
+      ..sort((a, b) => a.institutionName.compareTo(b.institutionName));
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: GwpSpacing.base,
+          right: GwpSpacing.base,
+          top: GwpSpacing.base,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + GwpSpacing.base,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '选择${widget.label}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: GwpSpacing.sm),
+            TextField(
+              controller: _queryCtrl,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: const InputDecoration(
+                hintText: '搜索机构、账号、地区、账户类型',
+                prefixIcon: Icon(Icons.search),
+              ),
+            ),
+            const SizedBox(height: GwpSpacing.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  label: const Text('已接入通道'),
+                  selected: _onlyConnected,
+                  onSelected: (v) => setState(() => _onlyConnected = v),
+                ),
+                FilterChip(
+                  label: const Text('有资产'),
+                  selected: _onlyWithAssets,
+                  onSelected: (v) => setState(() => _onlyWithAssets = v),
                 ),
               ],
+            ),
+            const SizedBox(height: GwpSpacing.sm),
+            if (typeChoices.isNotEmpty) ...[
+              const Text(
+                '账户类型',
+                style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('全部'),
+                    selected: _type == null,
+                    onSelected: (_) => setState(() => _type = null),
+                  ),
+                  for (final t in typeChoices)
+                    ChoiceChip(
+                      label: Text(t.labelZh),
+                      selected: _type == t,
+                      onSelected: (_) => setState(() => _type = t),
+                    ),
+                ],
+              ),
+              const SizedBox(height: GwpSpacing.sm),
             ],
-          ),
-        );
-      }).toList(),
-      onChanged: onChanged,
+            if (regionChoices.isNotEmpty) ...[
+              const Text(
+                '主权地区',
+                style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('全部'),
+                    selected: _region == null,
+                    onSelected: (_) => setState(() => _region = null),
+                  ),
+                  for (final r in regionChoices)
+                    ChoiceChip(
+                      label: Text(regionLabel(widget.regionIndex, r)),
+                      selected: _region == r,
+                      onSelected: (_) => setState(() => _region = r),
+                    ),
+                ],
+              ),
+              const SizedBox(height: GwpSpacing.sm),
+            ],
+            Flexible(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(GwpSpacing.lg),
+                        child: Text(
+                          '没有匹配的账户',
+                          style: TextStyle(color: GwpColors.textMuted),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final a = filtered[index];
+                        final typeColor = _typeColors[a.accountType] ?? GwpColors.actionPrimary;
+                        final typeIcon = _typeIcons[a.accountType] ?? Icons.account_balance;
+                        final ac = widget.assetCount[a.id] ?? 0;
+                        final cc = widget.channelCount[a.id] ?? 0;
+                        final isSelected = widget.selectedId == a.id;
+                        return ListTile(
+                          selected: isSelected,
+                          leading: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: typeColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(typeIcon, size: 16, color: typeColor),
+                          ),
+                          title: Text(a.institutionName),
+                          subtitle: Text(
+                            '${a.accountType.labelZh} · ${regionLabel(widget.regionIndex, a.sovereigntyRegion)} · $ac资产 · $cc通道',
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check_circle, color: GwpColors.actionPrimary)
+                              : null,
+                          onTap: () => Navigator.of(context).pop(a.id),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -58,6 +58,15 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
       createdAt: now,
       updatedAt: now,
     ),
+    Account(
+      id: 'acc-3',
+      accountType: AccountType.payment,
+      sovereigntyRegion: 'SG',
+      institutionName: 'Unlinked Wallet',
+      status: AccountStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    ),
   ];
   final channels = [
     Channel(
@@ -113,5 +122,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('转账通道'), findsOneWidget);
+  });
+
+  testWidgets('源账户选择改为底部弹窗并默认过滤未接入通道账户', (tester) async {
+    await _pumpTransfer(tester);
+
+    await tester.tap(find.text('请选择账户').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('选择源账户'), findsNWidgets(2));
+    expect(find.text('已接入通道'), findsOneWidget);
+    expect(find.text('ICBC'), findsOneWidget);
+    expect(find.text('Fidelity'), findsOneWidget);
+    expect(find.text('Unlinked Wallet'), findsNothing);
   });
 }
