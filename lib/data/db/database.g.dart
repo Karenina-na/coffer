@@ -1562,6 +1562,39 @@ class $AccountChannelsTable extends AccountChannels
       'REFERENCES channels (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _feeRateOverrideMeta = const VerificationMeta(
+    'feeRateOverride',
+  );
+  @override
+  late final GeneratedColumn<String> feeRateOverride = GeneratedColumn<String>(
+    'fee_rate_override',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fixedFeeOverrideMeta = const VerificationMeta(
+    'fixedFeeOverride',
+  );
+  @override
+  late final GeneratedColumn<String> fixedFeeOverride = GeneratedColumn<String>(
+    'fixed_fee_override',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _feeCurrencyOverrideMeta =
+      const VerificationMeta('feeCurrencyOverride');
+  @override
+  late final GeneratedColumn<String> feeCurrencyOverride =
+      GeneratedColumn<String>(
+        'fee_currency_override',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1573,8 +1606,27 @@ class $AccountChannelsTable extends AccountChannels
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
   @override
-  List<GeneratedColumn> get $columns => [accountId, channelId, createdAt];
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    accountId,
+    channelId,
+    feeRateOverride,
+    fixedFeeOverride,
+    feeCurrencyOverride,
+    createdAt,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1603,6 +1655,33 @@ class $AccountChannelsTable extends AccountChannels
     } else if (isInserting) {
       context.missing(_channelIdMeta);
     }
+    if (data.containsKey('fee_rate_override')) {
+      context.handle(
+        _feeRateOverrideMeta,
+        feeRateOverride.isAcceptableOrUnknown(
+          data['fee_rate_override']!,
+          _feeRateOverrideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fixed_fee_override')) {
+      context.handle(
+        _fixedFeeOverrideMeta,
+        fixedFeeOverride.isAcceptableOrUnknown(
+          data['fixed_fee_override']!,
+          _fixedFeeOverrideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fee_currency_override')) {
+      context.handle(
+        _feeCurrencyOverrideMeta,
+        feeCurrencyOverride.isAcceptableOrUnknown(
+          data['fee_currency_override']!,
+          _feeCurrencyOverrideMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1610,6 +1689,12 @@ class $AccountChannelsTable extends AccountChannels
       );
     } else if (isInserting) {
       context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
     }
     return context;
   }
@@ -1628,10 +1713,26 @@ class $AccountChannelsTable extends AccountChannels
         DriftSqlType.string,
         data['${effectivePrefix}channel_id'],
       )!,
+      feeRateOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fee_rate_override'],
+      ),
+      fixedFeeOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fixed_fee_override'],
+      ),
+      feeCurrencyOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fee_currency_override'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      ),
     );
   }
 
@@ -1645,18 +1746,38 @@ class AccountChannelRow extends DataClass
     implements Insertable<AccountChannelRow> {
   final String accountId;
   final String channelId;
+  final String? feeRateOverride;
+  final String? fixedFeeOverride;
+  final String? feeCurrencyOverride;
   final DateTime createdAt;
+  final DateTime? updatedAt;
   const AccountChannelRow({
     required this.accountId,
     required this.channelId,
+    this.feeRateOverride,
+    this.fixedFeeOverride,
+    this.feeCurrencyOverride,
     required this.createdAt,
+    this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['account_id'] = Variable<String>(accountId);
     map['channel_id'] = Variable<String>(channelId);
+    if (!nullToAbsent || feeRateOverride != null) {
+      map['fee_rate_override'] = Variable<String>(feeRateOverride);
+    }
+    if (!nullToAbsent || fixedFeeOverride != null) {
+      map['fixed_fee_override'] = Variable<String>(fixedFeeOverride);
+    }
+    if (!nullToAbsent || feeCurrencyOverride != null) {
+      map['fee_currency_override'] = Variable<String>(feeCurrencyOverride);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
     return map;
   }
 
@@ -1664,7 +1785,19 @@ class AccountChannelRow extends DataClass
     return AccountChannelsCompanion(
       accountId: Value(accountId),
       channelId: Value(channelId),
+      feeRateOverride: feeRateOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(feeRateOverride),
+      fixedFeeOverride: fixedFeeOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fixedFeeOverride),
+      feeCurrencyOverride: feeCurrencyOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(feeCurrencyOverride),
       createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
     );
   }
 
@@ -1676,7 +1809,13 @@ class AccountChannelRow extends DataClass
     return AccountChannelRow(
       accountId: serializer.fromJson<String>(json['accountId']),
       channelId: serializer.fromJson<String>(json['channelId']),
+      feeRateOverride: serializer.fromJson<String?>(json['feeRateOverride']),
+      fixedFeeOverride: serializer.fromJson<String?>(json['fixedFeeOverride']),
+      feeCurrencyOverride: serializer.fromJson<String?>(
+        json['feeCurrencyOverride'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
   @override
@@ -1685,24 +1824,52 @@ class AccountChannelRow extends DataClass
     return <String, dynamic>{
       'accountId': serializer.toJson<String>(accountId),
       'channelId': serializer.toJson<String>(channelId),
+      'feeRateOverride': serializer.toJson<String?>(feeRateOverride),
+      'fixedFeeOverride': serializer.toJson<String?>(fixedFeeOverride),
+      'feeCurrencyOverride': serializer.toJson<String?>(feeCurrencyOverride),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
 
   AccountChannelRow copyWith({
     String? accountId,
     String? channelId,
+    Value<String?> feeRateOverride = const Value.absent(),
+    Value<String?> fixedFeeOverride = const Value.absent(),
+    Value<String?> feeCurrencyOverride = const Value.absent(),
     DateTime? createdAt,
+    Value<DateTime?> updatedAt = const Value.absent(),
   }) => AccountChannelRow(
     accountId: accountId ?? this.accountId,
     channelId: channelId ?? this.channelId,
+    feeRateOverride: feeRateOverride.present
+        ? feeRateOverride.value
+        : this.feeRateOverride,
+    fixedFeeOverride: fixedFeeOverride.present
+        ? fixedFeeOverride.value
+        : this.fixedFeeOverride,
+    feeCurrencyOverride: feeCurrencyOverride.present
+        ? feeCurrencyOverride.value
+        : this.feeCurrencyOverride,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
   AccountChannelRow copyWithCompanion(AccountChannelsCompanion data) {
     return AccountChannelRow(
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       channelId: data.channelId.present ? data.channelId.value : this.channelId,
+      feeRateOverride: data.feeRateOverride.present
+          ? data.feeRateOverride.value
+          : this.feeRateOverride,
+      fixedFeeOverride: data.fixedFeeOverride.present
+          ? data.fixedFeeOverride.value
+          : this.fixedFeeOverride,
+      feeCurrencyOverride: data.feeCurrencyOverride.present
+          ? data.feeCurrencyOverride.value
+          : this.feeCurrencyOverride,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -1711,37 +1878,65 @@ class AccountChannelRow extends DataClass
     return (StringBuffer('AccountChannelRow(')
           ..write('accountId: $accountId, ')
           ..write('channelId: $channelId, ')
-          ..write('createdAt: $createdAt')
+          ..write('feeRateOverride: $feeRateOverride, ')
+          ..write('fixedFeeOverride: $fixedFeeOverride, ')
+          ..write('feeCurrencyOverride: $feeCurrencyOverride, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(accountId, channelId, createdAt);
+  int get hashCode => Object.hash(
+    accountId,
+    channelId,
+    feeRateOverride,
+    fixedFeeOverride,
+    feeCurrencyOverride,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AccountChannelRow &&
           other.accountId == this.accountId &&
           other.channelId == this.channelId &&
-          other.createdAt == this.createdAt);
+          other.feeRateOverride == this.feeRateOverride &&
+          other.fixedFeeOverride == this.fixedFeeOverride &&
+          other.feeCurrencyOverride == this.feeCurrencyOverride &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
 }
 
 class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
   final Value<String> accountId;
   final Value<String> channelId;
+  final Value<String?> feeRateOverride;
+  final Value<String?> fixedFeeOverride;
+  final Value<String?> feeCurrencyOverride;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> updatedAt;
   final Value<int> rowid;
   const AccountChannelsCompanion({
     this.accountId = const Value.absent(),
     this.channelId = const Value.absent(),
+    this.feeRateOverride = const Value.absent(),
+    this.fixedFeeOverride = const Value.absent(),
+    this.feeCurrencyOverride = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountChannelsCompanion.insert({
     required String accountId,
     required String channelId,
+    this.feeRateOverride = const Value.absent(),
+    this.fixedFeeOverride = const Value.absent(),
+    this.feeCurrencyOverride = const Value.absent(),
     required DateTime createdAt,
+    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : accountId = Value(accountId),
        channelId = Value(channelId),
@@ -1749,13 +1944,22 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
   static Insertable<AccountChannelRow> custom({
     Expression<String>? accountId,
     Expression<String>? channelId,
+    Expression<String>? feeRateOverride,
+    Expression<String>? fixedFeeOverride,
+    Expression<String>? feeCurrencyOverride,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (accountId != null) 'account_id': accountId,
       if (channelId != null) 'channel_id': channelId,
+      if (feeRateOverride != null) 'fee_rate_override': feeRateOverride,
+      if (fixedFeeOverride != null) 'fixed_fee_override': fixedFeeOverride,
+      if (feeCurrencyOverride != null)
+        'fee_currency_override': feeCurrencyOverride,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1763,13 +1967,21 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
   AccountChannelsCompanion copyWith({
     Value<String>? accountId,
     Value<String>? channelId,
+    Value<String?>? feeRateOverride,
+    Value<String?>? fixedFeeOverride,
+    Value<String?>? feeCurrencyOverride,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? updatedAt,
     Value<int>? rowid,
   }) {
     return AccountChannelsCompanion(
       accountId: accountId ?? this.accountId,
       channelId: channelId ?? this.channelId,
+      feeRateOverride: feeRateOverride ?? this.feeRateOverride,
+      fixedFeeOverride: fixedFeeOverride ?? this.fixedFeeOverride,
+      feeCurrencyOverride: feeCurrencyOverride ?? this.feeCurrencyOverride,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1783,8 +1995,22 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
     if (channelId.present) {
       map['channel_id'] = Variable<String>(channelId.value);
     }
+    if (feeRateOverride.present) {
+      map['fee_rate_override'] = Variable<String>(feeRateOverride.value);
+    }
+    if (fixedFeeOverride.present) {
+      map['fixed_fee_override'] = Variable<String>(fixedFeeOverride.value);
+    }
+    if (feeCurrencyOverride.present) {
+      map['fee_currency_override'] = Variable<String>(
+        feeCurrencyOverride.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1797,7 +2023,11 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
     return (StringBuffer('AccountChannelsCompanion(')
           ..write('accountId: $accountId, ')
           ..write('channelId: $channelId, ')
+          ..write('feeRateOverride: $feeRateOverride, ')
+          ..write('fixedFeeOverride: $fixedFeeOverride, ')
+          ..write('feeCurrencyOverride: $feeCurrencyOverride, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10187,14 +10417,22 @@ typedef $$AccountChannelsTableCreateCompanionBuilder =
     AccountChannelsCompanion Function({
       required String accountId,
       required String channelId,
+      Value<String?> feeRateOverride,
+      Value<String?> fixedFeeOverride,
+      Value<String?> feeCurrencyOverride,
       required DateTime createdAt,
+      Value<DateTime?> updatedAt,
       Value<int> rowid,
     });
 typedef $$AccountChannelsTableUpdateCompanionBuilder =
     AccountChannelsCompanion Function({
       Value<String> accountId,
       Value<String> channelId,
+      Value<String?> feeRateOverride,
+      Value<String?> fixedFeeOverride,
+      Value<String?> feeCurrencyOverride,
       Value<DateTime> createdAt,
+      Value<DateTime?> updatedAt,
       Value<int> rowid,
     });
 
@@ -10259,8 +10497,28 @@ class $$AccountChannelsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get feeRateOverride => $composableBuilder(
+    column: $table.feeRateOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fixedFeeOverride => $composableBuilder(
+    column: $table.fixedFeeOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get feeCurrencyOverride => $composableBuilder(
+    column: $table.feeCurrencyOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10320,8 +10578,28 @@ class $$AccountChannelsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get feeRateOverride => $composableBuilder(
+    column: $table.feeRateOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fixedFeeOverride => $composableBuilder(
+    column: $table.fixedFeeOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get feeCurrencyOverride => $composableBuilder(
+    column: $table.feeCurrencyOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -10381,8 +10659,26 @@ class $$AccountChannelsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get feeRateOverride => $composableBuilder(
+    column: $table.feeRateOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fixedFeeOverride => $composableBuilder(
+    column: $table.fixedFeeOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get feeCurrencyOverride => $composableBuilder(
+    column: $table.feeCurrencyOverride,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   $$AccountsTableAnnotationComposer get accountId {
     final $$AccountsTableAnnotationComposer composer = $composerBuilder(
@@ -10463,24 +10759,40 @@ class $$AccountChannelsTableTableManager
               ({
                 Value<String> accountId = const Value.absent(),
                 Value<String> channelId = const Value.absent(),
+                Value<String?> feeRateOverride = const Value.absent(),
+                Value<String?> fixedFeeOverride = const Value.absent(),
+                Value<String?> feeCurrencyOverride = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountChannelsCompanion(
                 accountId: accountId,
                 channelId: channelId,
+                feeRateOverride: feeRateOverride,
+                fixedFeeOverride: fixedFeeOverride,
+                feeCurrencyOverride: feeCurrencyOverride,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String accountId,
                 required String channelId,
+                Value<String?> feeRateOverride = const Value.absent(),
+                Value<String?> fixedFeeOverride = const Value.absent(),
+                Value<String?> feeCurrencyOverride = const Value.absent(),
                 required DateTime createdAt,
+                Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountChannelsCompanion.insert(
                 accountId: accountId,
                 channelId: channelId,
+                feeRateOverride: feeRateOverride,
+                fixedFeeOverride: fixedFeeOverride,
+                feeCurrencyOverride: feeCurrencyOverride,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -109,6 +109,32 @@ void main() {
     expect(rows, isEmpty);
   });
 
+  test('account_channels 支持账户级费用覆盖字段', () async {
+    await db.customSelect('SELECT 1').get();
+    await db.customStatement(
+      "INSERT INTO accounts "
+      "(id, account_type, sovereignty_region, institution_name, status, created_at, updated_at, is_deleted) "
+      "VALUES ('acc-1', 'BANK', 'CN', 'CMB', 'ACTIVE', 1700000000, 1700000000, 0)",
+    );
+    await db.customStatement(
+      "INSERT INTO channels "
+      "(id, name, transfer_protocol, status, created_at, updated_at) "
+      "VALUES ('ch-1', 'SWIFT', 'SWIFT', 'ENABLED', 1700000000, 1700000000)",
+    );
+    await db.customStatement(
+      "INSERT INTO account_channels "
+      "(account_id, channel_id, fee_rate_override, fixed_fee_override, fee_currency_override, created_at, updated_at) "
+      "VALUES ('acc-1', 'ch-1', '0', '0', 'USD', 1700000000, 1700000000)",
+    );
+
+    final rows = await db.customSelect(
+      "SELECT fee_rate_override, fixed_fee_override, fee_currency_override FROM account_channels",
+    ).get();
+    expect(rows.single.read<String>('fee_rate_override'), '0');
+    expect(rows.single.read<String>('fixed_fee_override'), '0');
+    expect(rows.single.read<String>('fee_currency_override'), 'USD');
+  });
+
   test('exchange_rates 唯一索引生效：同 (pair_key, as_of_time) 二次写入冲突', () async {
     await db.customSelect('SELECT 1').get();
 

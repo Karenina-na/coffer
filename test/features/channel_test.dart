@@ -273,6 +273,41 @@ void main() {
           ['ch-direct-hi']);
     });
 
+    test('账户级费率覆盖会替代通道默认费率', () async {
+      await seedChannel(
+        _ch(id: 'ch-direct', feeRate: Decimal.parse('0.02')),
+        ['acc-1', 'acc-2'],
+      );
+      await seedChannel(
+        _ch(id: 'ch-bp', feeRate: Decimal.parse('0.0015')),
+        ['acc-1', 'acc-3'],
+      );
+      await seedChannel(
+        _ch(id: 'ch-pb', feeRate: Decimal.parse('0.0015')),
+        ['acc-3', 'acc-2'],
+      );
+
+      final override = await accountChannels.saveConfig(
+        accountId: 'acc-1',
+        channelId: 'ch-direct',
+        feeRateOverride: Decimal.zero,
+        fixedFeeOverride: Decimal.zero,
+      );
+      expect(override.isOk, isTrue);
+
+      final r = await uc(
+        sourceAccountId: 'acc-1',
+        targetAccountId: 'acc-2',
+        amount: Decimal.parse('1000'),
+        currency: 'CNY',
+        objective: RouteObjective.minFee,
+      );
+      expect(r.isOk, isTrue);
+      final route = r.valueOrNull!;
+      expect(route.legs.map((l) => l.channel.id).toList(), ['ch-direct']);
+      expect(route.totalFee, Decimal.zero);
+    });
+
     test('无通道可达: NotFoundError', () async {
       final r = await uc(
         sourceAccountId: 'acc-1',

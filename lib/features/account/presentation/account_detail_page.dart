@@ -15,6 +15,7 @@ import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
 import '../../../domain/entities/account.dart';
+import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
@@ -1817,7 +1818,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
             final byId = {for (final c in channels) c.id: c};
             final attached = [
               for (final l in links)
-                if (byId[l.channelId] != null) byId[l.channelId]!,
+                if (byId[l.channelId] != null) (byId[l.channelId]!, l),
             ];
             final available = channels
                 .where((c) => !links.any((l) => l.channelId == c.id))
@@ -1831,7 +1832,8 @@ class _ChannelNetworkSection extends ConsumerWidget {
                 else
                   for (var i = 0; i < attached.length; i++) ...[
                     _ChannelCard(
-                      channel: attached[i],
+                      channel: attached[i].$1,
+                      link: attached[i].$2,
                       accountId: accountId,
                     ),
                     if (i < attached.length - 1)
@@ -1884,9 +1886,21 @@ class _ChannelNetworkSection extends ConsumerWidget {
       ),
     );
     if (picked == null) return;
-    final r = await ref
-        .read(linkAccountChannelUseCaseProvider)
-        .link(accountId: accountId, channelId: picked);
+    final selected = available.where((c) => c.id == picked).firstOrNull;
+    if (selected == null) return;
+    if (!context.mounted) return;
+    final config = await _showAccountChannelConfigDialog(
+      context: context,
+      channel: selected,
+    );
+    if (config == null) return;
+    final r = await ref.read(saveAccountChannelConfigUseCaseProvider)(
+          accountId: accountId,
+          channelId: picked,
+          feeRateOverride: config.feeRateOverride,
+          fixedFeeOverride: config.fixedFeeOverride,
+          feeCurrencyOverride: config.feeCurrencyOverride,
+        );
     if (!context.mounted) return;
     r.when(
       ok: (_) {},
@@ -1900,10 +1914,12 @@ class _ChannelNetworkSection extends ConsumerWidget {
 class _ChannelCard extends ConsumerWidget {
   const _ChannelCard({
     required this.channel,
+    required this.link,
     required this.accountId,
   });
 
   final Channel channel;
+  final AccountChannel link;
   final String accountId;
 
   @override
@@ -1912,20 +1928,23 @@ class _ChannelCard extends ConsumerWidget {
         _protocolColors[channel.transferProtocol] ?? GwpColors.textMuted;
     final isEnabled = channel.status == ChannelStatus.enabled;
 
-    // Fee description
-    String feeDesc = '';
-    if (channel.feeRate != null && channel.feeRate! > Decimal.zero) {
-      feeDesc += '${(channel.feeRate!.toDouble() * 100).toStringAsFixed(2)}%';
-    }
-    if (channel.fixedFee != null && channel.fixedFee! > Decimal.zero) {
-      if (feeDesc.isNotEmpty) feeDesc += ' + ';
-      feeDesc +=
-          '${channel.limitCurrency ?? ''} ${channel.fixedFee!.toStringAsFixed(2)}';
-    }
-    if (feeDesc.isEmpty) feeDesc = '免费';
+    final defaultFeeDesc = _feeDesc(
+      feeRate: channel.feeRate,
+      fixedFee: channel.fixedFee,
+      currency: channel.limitCurrency,
+    );
+    final effectiveFeeDesc = _feeDesc(
+      feeRate: link.feeRateOverride ?? channel.feeRate,
+      fixedFee: link.fixedFeeOverride ?? channel.fixedFee,
+      currency: link.feeCurrencyOverride ?? channel.limitCurrency,
+    );
+    final hasOverride =
+        link.feeRateOverride != null ||
+        link.fixedFeeOverride != null ||
+        (link.feeCurrencyOverride != null &&
+            link.feeCurrencyOverride!.trim().isNotEmpty);
 
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.sm),
       decoration: BoxDecoration(
         color: protColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
@@ -1934,95 +1953,292 @@ class _ChannelCard extends ConsumerWidget {
           width: 0.5,
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Protocol badge
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: protColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                channel.transferProtocol.length > 4
-                    ? channel.transferProtocol.substring(0, 4)
-                    : channel.transferProtocol,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  color: protColor,
-                ),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => context.push('/channels/${channel.id}'),
+            child: Padding(
+              padding: const EdgeInsets.all(GwpSpacing.sm),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: protColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        channel.transferProtocol.length > 4
+                            ? channel.transferProtocol.substring(0, 4)
+                            : channel.transferProtocol,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: protColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: GwpSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                channel.name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: GwpColors.textPrimary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: GwpSpacing.sm),
+                            GwpStatusBadge(
+                              label: channel.status.labelZh,
+                              variant: isEnabled
+                                  ? StatusVariant.positive
+                                  : StatusVariant.muted,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          hasOverride
+                              ? '默认 $defaultFeeDesc · 账户 $effectiveFeeDesc'
+                              : '费率 $defaultFeeDesc'
+                                  '${channel.dailyLimit != null ? ' · 日限额 ${compactValue(channel.dailyLimit!.toDouble())}' : ''}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: GwpColors.textMuted,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: GwpSpacing.sm),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: GwpColors.textMuted,
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: GwpSpacing.sm),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: GwpSpacing.sm,
+              vertical: GwpSpacing.xs,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  channel.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                TextButton.icon(
+                  onPressed: () async {
+                    final config = await _showAccountChannelConfigDialog(
+                      context: context,
+                      channel: channel,
+                      initial: link,
+                    );
+                    if (config == null) return;
+                    final r = await ref.read(saveAccountChannelConfigUseCaseProvider)(
+                          accountId: accountId,
+                          channelId: channel.id,
+                          feeRateOverride: config.feeRateOverride,
+                          fixedFeeOverride: config.fixedFeeOverride,
+                          feeCurrencyOverride: config.feeCurrencyOverride,
+                        );
+                    if (!context.mounted) return;
+                    r.when(
+                      ok: (_) {},
+                      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('保存配置失败: ${errorToMessage(e)}')),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text('配置费用'),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '费率 $feeDesc'
-                  '${channel.dailyLimit != null ? ' · 日限额 ${compactValue(channel.dailyLimit!.toDouble())}' : ''}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: GwpColors.textMuted,
+                const SizedBox(width: GwpSpacing.xs),
+                TextButton.icon(
+                  onPressed: () async {
+                    final r = await ref
+                        .read(linkAccountChannelUseCaseProvider)
+                        .unlink(
+                          accountId: accountId,
+                          channelId: channel.id,
+                        );
+                    if (!context.mounted) return;
+                    r.when(
+                      ok: (_) {},
+                      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('移除失败: ${errorToMessage(e)}')),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.link_off, size: 16),
+                  label: const Text('解绑'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: GwpColors.textMuted,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-          ),
-          // Status + delete
-          Column(
-            children: [
-              GwpStatusBadge(
-                 label: channel.status.labelZh,
-                variant: isEnabled
-                    ? StatusVariant.positive
-                    : StatusVariant.muted,
-              ),
-              const SizedBox(height: 4),
-              GestureDetector(
-                onTap: () async {
-                  final r = await ref
-                      .read(linkAccountChannelUseCaseProvider)
-                      .unlink(
-                        accountId: accountId,
-                        channelId: channel.id,
-                      );
-                  if (!context.mounted) return;
-                  r.when(
-                    ok: (_) {},
-                    err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('移除失败: ${errorToMessage(e)}')),
-                    ),
-                  );
-                },
-                child: const Icon(
-                  Icons.link_off,
-                  size: 16,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
+}
+
+String _feeDesc({
+  required Decimal? feeRate,
+  required Decimal? fixedFee,
+  required String? currency,
+}) {
+  String text = '';
+  if (feeRate != null && feeRate > Decimal.zero) {
+    text += '${(feeRate.toDouble() * 100).toStringAsFixed(2)}%';
+  }
+  if (fixedFee != null && fixedFee > Decimal.zero) {
+    if (text.isNotEmpty) text += ' + ';
+    text += '${currency ?? ''} ${fixedFee.toStringAsFixed(2)}';
+  }
+  if (text.isEmpty) return '免费';
+  return text;
+}
+
+class _AccountChannelConfigDraft {
+  const _AccountChannelConfigDraft({
+    this.feeRateOverride,
+    this.fixedFeeOverride,
+    this.feeCurrencyOverride,
+  });
+
+  final Decimal? feeRateOverride;
+  final Decimal? fixedFeeOverride;
+  final String? feeCurrencyOverride;
+}
+
+Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
+  required BuildContext context,
+  required Channel channel,
+  AccountChannel? initial,
+}) async {
+  final feeRateCtrl = TextEditingController(
+    text: initial?.feeRateOverride?.toString() ?? '',
+  );
+  final fixedFeeCtrl = TextEditingController(
+    text: initial?.fixedFeeOverride?.toString() ?? '',
+  );
+  final feeCurrencyCtrl = TextEditingController(
+    text: initial?.feeCurrencyOverride ?? channel.limitCurrency ?? '',
+  );
+  final formKey = GlobalKey<FormState>();
+
+  Decimal? parseOptional(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) return null;
+    return Decimal.tryParse(text);
+  }
+
+  final result = await showDialog<_AccountChannelConfigDraft>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('配置通道 · ${channel.name}'),
+      content: Form(
+        key: formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '默认费率：${_feeDesc(feeRate: channel.feeRate, fixedFee: channel.fixedFee, currency: channel.limitCurrency)}',
+                style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: feeRateCtrl,
+                decoration: const InputDecoration(
+                  labelText: '账户级费率覆盖（可空）',
+                  helperText: '留空表示沿用通道默认值；0 表示免费',
+                ),
+                validator: (v) {
+                  final text = v?.trim() ?? '';
+                  if (text.isEmpty) return null;
+                  final parsed = Decimal.tryParse(text);
+                  if (parsed == null) return '请输入有效数字';
+                  if (parsed < Decimal.zero) return '不能为负数';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: fixedFeeCtrl,
+                decoration: const InputDecoration(
+                  labelText: '账户级固定费覆盖（可空）',
+                  helperText: '留空表示沿用通道默认值；0 表示免费',
+                ),
+                validator: (v) {
+                  final text = v?.trim() ?? '';
+                  if (text.isEmpty) return null;
+                  final parsed = Decimal.tryParse(text);
+                  if (parsed == null) return '请输入有效数字';
+                  if (parsed < Decimal.zero) return '不能为负数';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: feeCurrencyCtrl,
+                decoration: const InputDecoration(
+                  labelText: '费用币种覆盖（可空）',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (!formKey.currentState!.validate()) return;
+            final feeCurrency = feeCurrencyCtrl.text.trim().isEmpty
+                ? null
+                : feeCurrencyCtrl.text.trim().toUpperCase();
+            Navigator.pop(
+              ctx,
+              _AccountChannelConfigDraft(
+                feeRateOverride: parseOptional(feeRateCtrl.text),
+                fixedFeeOverride: parseOptional(fixedFeeCtrl.text),
+                feeCurrencyOverride: feeCurrency,
+              ),
+            );
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    ),
+  );
+
+  feeRateCtrl.dispose();
+  fixedFeeCtrl.dispose();
+  feeCurrencyCtrl.dispose();
+  return result;
 }
 
 // ──────────────────────────────────────────────────────────────

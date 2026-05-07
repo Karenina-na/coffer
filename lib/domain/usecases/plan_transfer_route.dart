@@ -143,6 +143,10 @@ class PlanTransferRouteUseCase {
     };
     final chanById = {for (final c in allCh) c.id: c};
 
+    final linkByKey = <(String, String), AccountChannel>{
+      for (final link in allLinks) (link.accountId, link.channelId): link,
+    };
+
     // 按 channel 收集成员账户；忽略孤儿关联。
     final byChan = <String, List<String>>{};
     for (final l in allLinks) {
@@ -165,6 +169,8 @@ class PlanTransferRouteUseCase {
         for (var j = 0; j < members.length; j++) {
           if (i == j) continue;
           final to = accById[members[j]]!;
+          final link = linkByKey[(from.id, c.id)];
+          if (link == null) continue;
           final ctx = TransferContext(
             amount: amount,
             currency: currency,
@@ -173,13 +179,13 @@ class PlanTransferRouteUseCase {
             at: at,
             todaysCumulativeAmount: todaysCumulativeAmount,
           );
-          final feeError = _feeErrorOf(c, amount);
+          final feeError = _feeErrorOf(c, link, amount);
           if (feeError != null) {
             firstFeeError ??= feeError;
             continue;
           }
           final v = _engine.evaluate(c, ctx);
-          final edge = _Edge(from: from, to: to, channel: c);
+          final edge = _Edge(from: from, to: to, channel: c, link: link);
           if (v.isEmpty) {
             (adj[from.id] ??= []).add(edge);
           } else {
@@ -246,7 +252,7 @@ class PlanTransferRouteUseCase {
   }
 
   RouteLeg _legOf(_Edge e, Decimal amount) {
-    final fee = _feeOf(e.channel, amount);
+    final fee = _feeOf(e.channel, e.link, amount);
     return RouteLeg(
       channel: e.channel,
       fromAccount: e.from,
@@ -290,7 +296,7 @@ class PlanTransferRouteUseCase {
       for (final e in adj[u] ?? const <_Edge>[]) {
         final v = e.to.id;
         if (visited.contains(v)) continue;
-        final w = _weight(e.channel, amount, objective);
+        final w = _weight(e, amount, objective);
         final nd = dist[u]! + w;
         final cur = dist[v];
         if (cur == null || nd < cur) {
@@ -317,23 +323,23 @@ class PlanTransferRouteUseCase {
     return out;
   }
 
-  Decimal _weight(Channel c, Decimal amount, RouteObjective objective) {
+  Decimal _weight(_Edge e, Decimal amount, RouteObjective objective) {
     switch (objective) {
       case RouteObjective.minFee:
-        return _feeOf(c, amount);
+        return _feeOf(e.channel, e.link, amount);
       case RouteObjective.minHops:
         return Decimal.one;
     }
   }
 
-  Decimal _feeOf(Channel c, Decimal amount) {
-    final rate = c.feeRate ?? Decimal.zero;
-    final fixed = c.fixedFee ?? Decimal.zero;
+  Decimal _feeOf(Channel c, AccountChannel link, Decimal amount) {
+    final rate = link.feeRateOverride ?? c.feeRate ?? Decimal.zero;
+    final fixed = link.fixedFeeOverride ?? c.fixedFee ?? Decimal.zero;
     return (amount * rate) + fixed;
   }
 
-  ValidationError? _feeErrorOf(Channel c, Decimal amount) {
-    final fee = _feeOf(c, amount);
+  ValidationError? _feeErrorOf(Channel c, AccountChannel link, Decimal amount) {
+    final fee = _feeOf(c, link, amount);
     if (fee < Decimal.zero) {
       return const ValidationError('channel fee must be >= 0');
     }
@@ -349,8 +355,10 @@ class _Edge {
     required this.from,
     required this.to,
     required this.channel,
+    required this.link,
   });
   final Account from;
   final Account to;
   final Channel channel;
+  final AccountChannel link;
 }

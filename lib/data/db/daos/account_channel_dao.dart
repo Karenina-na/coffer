@@ -30,6 +30,17 @@ class AccountChannelDao extends DatabaseAccessor<AppDatabase>
     await into(accountChannels).insertOnConflictUpdate(row);
   }
 
+  Future<AccountChannelRow?> findByKey({
+    required String accountId,
+    required String channelId,
+  }) {
+    return (select(accountChannels)
+          ..where((t) =>
+              t.accountId.equals(accountId) &
+              t.channelId.equals(channelId)))
+        .getSingleOrNull();
+  }
+
   Future<int> removeLink({
     required String accountId,
     required String channelId,

@@ -1,3 +1,7 @@
+import 'package:decimal/decimal.dart';
+import 'package:drift/drift.dart';
+
+import '../../core/money/money.dart';
 import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../../domain/entities/account_channel.dart';
@@ -17,7 +21,11 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
   AccountChannel _toDomain(AccountChannelRow r) => AccountChannel(
         accountId: r.accountId,
         channelId: r.channelId,
+        feeRateOverride: Money.parseOrNull(r.feeRateOverride),
+        fixedFeeOverride: Money.parseOrNull(r.fixedFeeOverride),
+        feeCurrencyOverride: r.feeCurrencyOverride,
         createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
       );
 
   @override
@@ -51,14 +59,57 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
         accountId: accountId,
         channelId: channelId,
         createdAt: now,
+        updatedAt: const Value.absent(),
       ));
       return Ok(AccountChannel(
         accountId: accountId,
         channelId: channelId,
+        feeRateOverride: null,
+        fixedFeeOverride: null,
+        feeCurrencyOverride: null,
         createdAt: now,
+        updatedAt: null,
       ));
     } catch (e) {
       return Err(StorageError('link failed: $e'));
+    }
+  }
+
+  @override
+  Future<Result<AccountChannel, AppError>> saveConfig({
+    required String accountId,
+    required String channelId,
+    Decimal? feeRateOverride,
+    Decimal? fixedFeeOverride,
+    String? feeCurrencyOverride,
+  }) async {
+    try {
+      final now = _now();
+      final existing = await _dao.findByKey(
+        accountId: accountId,
+        channelId: channelId,
+      );
+      final createdAt = existing?.createdAt ?? now;
+      await _dao.upsert(AccountChannelsCompanion.insert(
+        accountId: accountId,
+        channelId: channelId,
+        feeRateOverride: _val(Money.stringifyOrNull(feeRateOverride)),
+        fixedFeeOverride: _val(Money.stringifyOrNull(fixedFeeOverride)),
+        feeCurrencyOverride: _val(feeCurrencyOverride),
+        createdAt: createdAt,
+        updatedAt: Value(now),
+      ));
+      return Ok(AccountChannel(
+        accountId: accountId,
+        channelId: channelId,
+        feeRateOverride: feeRateOverride,
+        fixedFeeOverride: fixedFeeOverride,
+        feeCurrencyOverride: feeCurrencyOverride,
+        createdAt: createdAt,
+        updatedAt: now,
+      ));
+    } catch (e) {
+      return Err(StorageError('saveConfig failed: $e'));
     }
   }
 
@@ -90,6 +141,7 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
             accountId: accountId,
             channelId: cid,
             createdAt: now,
+            updatedAt: const Value.absent(),
           ));
         }
       });
@@ -99,3 +151,5 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
     }
   }
 }
+
+Value<T> _val<T>(T? v) => v == null ? const Value.absent() : Value(v);

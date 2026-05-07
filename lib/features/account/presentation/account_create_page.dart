@@ -136,6 +136,31 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               controller: _accountNoCtrl,
               decoration: const InputDecoration(labelText: '账户编号（可选）'),
             ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blueGrey.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.blueGrey.withValues(alpha: 0.12),
+                  width: 0.5,
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.swap_horiz_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '转账通道与账户级手续费覆盖请在保存后到账户详情页配置。',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _submitting ? null : _submit,

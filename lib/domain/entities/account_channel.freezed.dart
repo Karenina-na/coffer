@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AccountChannel {
 
- String get accountId; String get channelId; DateTime get createdAt;
+ String get accountId; String get channelId; Decimal? get feeRateOverride; Decimal? get fixedFeeOverride; String? get feeCurrencyOverride; DateTime get createdAt; DateTime? get updatedAt;
 /// Create a copy of AccountChannel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $AccountChannelCopyWith<AccountChannel> get copyWith => _$AccountChannelCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccountChannel&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.channelId, channelId) || other.channelId == channelId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccountChannel&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.channelId, channelId) || other.channelId == channelId)&&(identical(other.feeRateOverride, feeRateOverride) || other.feeRateOverride == feeRateOverride)&&(identical(other.fixedFeeOverride, fixedFeeOverride) || other.fixedFeeOverride == fixedFeeOverride)&&(identical(other.feeCurrencyOverride, feeCurrencyOverride) || other.feeCurrencyOverride == feeCurrencyOverride)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,accountId,channelId,createdAt);
+int get hashCode => Object.hash(runtimeType,accountId,channelId,feeRateOverride,fixedFeeOverride,feeCurrencyOverride,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'AccountChannel(accountId: $accountId, channelId: $channelId, createdAt: $createdAt)';
+  return 'AccountChannel(accountId: $accountId, channelId: $channelId, feeRateOverride: $feeRateOverride, fixedFeeOverride: $fixedFeeOverride, feeCurrencyOverride: $feeCurrencyOverride, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $AccountChannelCopyWith<$Res>  {
   factory $AccountChannelCopyWith(AccountChannel value, $Res Function(AccountChannel) _then) = _$AccountChannelCopyWithImpl;
 @useResult
 $Res call({
- String accountId, String channelId, DateTime createdAt
+ String accountId, String channelId, Decimal? feeRateOverride, Decimal? fixedFeeOverride, String? feeCurrencyOverride, DateTime createdAt, DateTime? updatedAt
 });
 
 
@@ -62,12 +62,16 @@ class _$AccountChannelCopyWithImpl<$Res>
 
 /// Create a copy of AccountChannel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? accountId = null,Object? channelId = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? accountId = null,Object? channelId = null,Object? feeRateOverride = freezed,Object? fixedFeeOverride = freezed,Object? feeCurrencyOverride = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
 as String,channelId: null == channelId ? _self.channelId : channelId // ignore: cast_nullable_to_non_nullable
-as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as String,feeRateOverride: freezed == feeRateOverride ? _self.feeRateOverride : feeRateOverride // ignore: cast_nullable_to_non_nullable
+as Decimal?,fixedFeeOverride: freezed == fixedFeeOverride ? _self.fixedFeeOverride : fixedFeeOverride // ignore: cast_nullable_to_non_nullable
+as Decimal?,feeCurrencyOverride: freezed == feeCurrencyOverride ? _self.feeCurrencyOverride : feeCurrencyOverride // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -152,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String accountId,  String channelId,  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String accountId,  String channelId,  Decimal? feeRateOverride,  Decimal? fixedFeeOverride,  String? feeCurrencyOverride,  DateTime createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AccountChannel() when $default != null:
-return $default(_that.accountId,_that.channelId,_that.createdAt);case _:
+return $default(_that.accountId,_that.channelId,_that.feeRateOverride,_that.fixedFeeOverride,_that.feeCurrencyOverride,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -173,10 +177,10 @@ return $default(_that.accountId,_that.channelId,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String accountId,  String channelId,  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String accountId,  String channelId,  Decimal? feeRateOverride,  Decimal? fixedFeeOverride,  String? feeCurrencyOverride,  DateTime createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _AccountChannel():
-return $default(_that.accountId,_that.channelId,_that.createdAt);case _:
+return $default(_that.accountId,_that.channelId,_that.feeRateOverride,_that.fixedFeeOverride,_that.feeCurrencyOverride,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -193,10 +197,10 @@ return $default(_that.accountId,_that.channelId,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String accountId,  String channelId,  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String accountId,  String channelId,  Decimal? feeRateOverride,  Decimal? fixedFeeOverride,  String? feeCurrencyOverride,  DateTime createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _AccountChannel() when $default != null:
-return $default(_that.accountId,_that.channelId,_that.createdAt);case _:
+return $default(_that.accountId,_that.channelId,_that.feeRateOverride,_that.fixedFeeOverride,_that.feeCurrencyOverride,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -208,12 +212,16 @@ return $default(_that.accountId,_that.channelId,_that.createdAt);case _:
 
 
 class _AccountChannel implements AccountChannel {
-  const _AccountChannel({required this.accountId, required this.channelId, required this.createdAt});
+  const _AccountChannel({required this.accountId, required this.channelId, this.feeRateOverride, this.fixedFeeOverride, this.feeCurrencyOverride, required this.createdAt, this.updatedAt});
   
 
 @override final  String accountId;
 @override final  String channelId;
+@override final  Decimal? feeRateOverride;
+@override final  Decimal? fixedFeeOverride;
+@override final  String? feeCurrencyOverride;
 @override final  DateTime createdAt;
+@override final  DateTime? updatedAt;
 
 /// Create a copy of AccountChannel
 /// with the given fields replaced by the non-null parameter values.
@@ -225,16 +233,16 @@ _$AccountChannelCopyWith<_AccountChannel> get copyWith => __$AccountChannelCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccountChannel&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.channelId, channelId) || other.channelId == channelId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccountChannel&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.channelId, channelId) || other.channelId == channelId)&&(identical(other.feeRateOverride, feeRateOverride) || other.feeRateOverride == feeRateOverride)&&(identical(other.fixedFeeOverride, fixedFeeOverride) || other.fixedFeeOverride == fixedFeeOverride)&&(identical(other.feeCurrencyOverride, feeCurrencyOverride) || other.feeCurrencyOverride == feeCurrencyOverride)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,accountId,channelId,createdAt);
+int get hashCode => Object.hash(runtimeType,accountId,channelId,feeRateOverride,fixedFeeOverride,feeCurrencyOverride,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'AccountChannel(accountId: $accountId, channelId: $channelId, createdAt: $createdAt)';
+  return 'AccountChannel(accountId: $accountId, channelId: $channelId, feeRateOverride: $feeRateOverride, fixedFeeOverride: $fixedFeeOverride, feeCurrencyOverride: $feeCurrencyOverride, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -245,7 +253,7 @@ abstract mixin class _$AccountChannelCopyWith<$Res> implements $AccountChannelCo
   factory _$AccountChannelCopyWith(_AccountChannel value, $Res Function(_AccountChannel) _then) = __$AccountChannelCopyWithImpl;
 @override @useResult
 $Res call({
- String accountId, String channelId, DateTime createdAt
+ String accountId, String channelId, Decimal? feeRateOverride, Decimal? fixedFeeOverride, String? feeCurrencyOverride, DateTime createdAt, DateTime? updatedAt
 });
 
 
@@ -262,12 +270,16 @@ class __$AccountChannelCopyWithImpl<$Res>
 
 /// Create a copy of AccountChannel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? accountId = null,Object? channelId = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? accountId = null,Object? channelId = null,Object? feeRateOverride = freezed,Object? fixedFeeOverride = freezed,Object? feeCurrencyOverride = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_AccountChannel(
 accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
 as String,channelId: null == channelId ? _self.channelId : channelId // ignore: cast_nullable_to_non_nullable
-as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as String,feeRateOverride: freezed == feeRateOverride ? _self.feeRateOverride : feeRateOverride // ignore: cast_nullable_to_non_nullable
+as Decimal?,fixedFeeOverride: freezed == fixedFeeOverride ? _self.fixedFeeOverride : fixedFeeOverride // ignore: cast_nullable_to_non_nullable
+as Decimal?,feeCurrencyOverride: freezed == feeCurrencyOverride ? _self.feeCurrencyOverride : feeCurrencyOverride // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'account_channel.freezed.dart';
@@ -12,6 +13,10 @@ abstract class AccountChannel with _$AccountChannel {
   const factory AccountChannel({
     required String accountId,
     required String channelId,
+    Decimal? feeRateOverride,
+    Decimal? fixedFeeOverride,
+    String? feeCurrencyOverride,
     required DateTime createdAt,
+    DateTime? updatedAt,
   }) = _AccountChannel;
 }

@@ -74,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -394,6 +394,24 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'CREATE UNIQUE INDEX IF NOT EXISTS idx_search_history_unique_key '
             'ON search_history_entries (unique_key)',
+          );
+        }
+        if (from < 20) {
+          await customStatement(
+            'ALTER TABLE account_channels ADD COLUMN fee_rate_override TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE account_channels ADD COLUMN fixed_fee_override TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE account_channels ADD COLUMN fee_currency_override TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE account_channels ADD COLUMN updated_at INTEGER',
+          );
+          await customStatement(
+            'UPDATE account_channels SET updated_at = created_at '
+            'WHERE updated_at IS NULL',
           );
         }
       }); // end transaction

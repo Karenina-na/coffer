@@ -133,6 +133,33 @@ void main() {
     expect(route.legs.single.channel.id, 'ch-c');
   });
 
+  test('账户级覆盖为 0 时直连路径可变为最低费用', () async {
+    await seedChannel(_ch(id: 'ch-a', feeRate: Decimal.parse('0.0015')), ['acc-1', 'acc-3']);
+    await seedChannel(_ch(id: 'ch-b', feeRate: Decimal.parse('0.0015')), ['acc-3', 'acc-2']);
+    await seedChannel(_ch(id: 'ch-c', feeRate: Decimal.parse('0.02')), ['acc-1', 'acc-2']);
+
+    final override = await accountChannelRepo.saveConfig(
+      accountId: 'acc-1',
+      channelId: 'ch-c',
+      feeRateOverride: Decimal.zero,
+      fixedFeeOverride: Decimal.zero,
+    );
+    expect(override.isOk, isTrue);
+
+    final r = await useCase(
+      sourceAccountId: 'acc-1',
+      targetAccountId: 'acc-2',
+      amount: Decimal.parse('1000'),
+      currency: 'USD',
+      objective: RouteObjective.minFee,
+    );
+    expect(r.isOk, isTrue);
+    final route = r.valueOrNull!;
+    expect(route.legs.length, 1);
+    expect(route.legs.single.channel.id, 'ch-c');
+    expect(route.totalFee, Decimal.zero);
+  });
+
   test('4 账户复杂图：acc-1→acc-4 通过 acc-2 和 acc-3 中转', () async {
     // acc-1 ↔ acc-2 via ch-12
     // acc-2 ↔ acc-3 via ch-23

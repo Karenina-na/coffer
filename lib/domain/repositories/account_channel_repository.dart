@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../entities/account_channel.dart';
@@ -13,6 +15,14 @@ abstract interface class AccountChannelRepository {
   Future<Result<AccountChannel, AppError>> link({
     required String accountId,
     required String channelId,
+  });
+
+  Future<Result<AccountChannel, AppError>> saveConfig({
+    required String accountId,
+    required String channelId,
+    Decimal? feeRateOverride,
+    Decimal? fixedFeeOverride,
+    String? feeCurrencyOverride,
   });
 
   Future<Result<void, AppError>> unlink({

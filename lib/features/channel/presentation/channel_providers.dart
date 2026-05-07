@@ -5,6 +5,7 @@ import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/usecases/link_account_channel.dart';
 import '../../../domain/usecases/plan_transfer_route.dart';
+import '../../../domain/usecases/save_account_channel_config.dart';
 import '../../../domain/usecases/save_channel.dart';
 import '../../account/presentation/account_providers.dart';
 
@@ -52,3 +53,12 @@ final linkAccountChannelUseCaseProvider =
     ref.watch(channelRepositoryProvider),
   );
 });
+
+final saveAccountChannelConfigUseCaseProvider =
+    Provider<SaveAccountChannelConfigUseCase>((ref) {
+      return SaveAccountChannelConfigUseCase(
+        ref.watch(accountChannelRepositoryProvider),
+        ref.watch(accountRepositoryProvider),
+        ref.watch(channelRepositoryProvider),
+      );
+    });

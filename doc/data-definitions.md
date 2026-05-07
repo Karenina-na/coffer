@@ -74,13 +74,22 @@
 | id | UUID / BIGINT | 是 | 主键 |
 | account_id | UUID / BIGINT | 是 | 外键，关联 Account.id |
 | channel_id | UUID / BIGINT | 是 | 外键，关联 Channel.id |
+| fee_rate_override | DECIMAL(10,6) / TEXT | 否 | 账户级比例费率覆盖；为空 = 沿用 Channel.fee_rate；`0` 合法，表示免比例费 |
+| fixed_fee_override | DECIMAL(18,6) / TEXT | 否 | 账户级固定费覆盖；为空 = 沿用 Channel.fixed_fee；`0` 合法，表示免固定费 |
+| fee_currency_override | VARCHAR(10) | 否 | 账户级费用币种覆盖；为空 = 沿用 Channel.limit_currency |
 | created_at | DATETIME | 是 | 创建时间 |
+| updated_at | DATETIME | 否 | 最近一次修改账户级通道配置的时间 |
 
 唯一约束：`(account_id, channel_id)`。
 
 外键约束：
 - `account_id -> accounts.id`（`ON DELETE CASCADE`）
 - `channel_id -> channels.id`（`ON DELETE CASCADE`）
+
+费用语义：
+- `AccountChannel` 上的 override 为**完全覆盖**通道默认值，不做叠加；
+- 规划转账路径时按**源账户**在该通道上的 override 计费；
+- override 为 `0` 视为有效值，不等同于空。
 
 ## 5. Card
 
