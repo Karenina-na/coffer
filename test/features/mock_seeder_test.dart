@@ -13,12 +13,20 @@ import 'package:gwp/data/repositories/drift_asset_price_history_repository.dart'
 import 'package:gwp/data/repositories/drift_asset_repository.dart';
 import 'package:gwp/data/repositories/drift_card_repository.dart';
 import 'package:gwp/data/repositories/drift_channel_repository.dart';
+import 'package:gwp/data/repositories/drift_exchange_rate_repository.dart';
 import 'package:gwp/data/repositories/drift_event_repository.dart';
 import 'package:gwp/data/repositories/drift_watched_pair_repository.dart';
+import 'package:gwp/domain/entities/event_enums.dart';
+import 'package:gwp/domain/events/event_bus.dart';
+import 'package:gwp/domain/usecases/create_event.dart';
 import 'package:gwp/features/settings/mock_seeder.dart';
 import 'package:gwp/domain/usecases/create_account.dart';
 import 'package:gwp/domain/usecases/create_asset.dart';
 import 'package:gwp/domain/usecases/create_card.dart';
+import 'package:gwp/domain/usecases/link_account_channel.dart';
+import 'package:gwp/domain/usecases/manage_watched_pair.dart';
+import 'package:gwp/domain/usecases/save_channel.dart';
+import 'package:gwp/domain/usecases/save_manual_rate.dart';
 import 'package:gwp/domain/usecases/update_asset.dart';
 import 'package:uuid/uuid.dart';
 
@@ -39,6 +47,7 @@ class _FakeKeyStore implements SecureKeyStore {
 void main() {
   late AppDatabase db;
   late SeedDeps deps;
+  late DriftWatchedPairRepository watched;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -59,7 +68,7 @@ void main() {
     final costHistory = DriftAssetCostHistoryRepository(db.assetCostHistoryDao);
     final channels = DriftChannelRepository(db.channelDao);
     final accountChannels = DriftAccountChannelRepository(db.accountChannelDao);
-    final watched = DriftWatchedPairRepository(db.watchedPairDao);
+    watched = DriftWatchedPairRepository(db.watchedPairDao);
     final events = DriftEventRepository(db.eventDao);
 
     const uuid = Uuid();
@@ -87,12 +96,23 @@ void main() {
         idGenerator: uuid.v4,
         now: DateTime.now,
       ),
+      cardRepo: cards,
+      saveChannel: SaveChannelUseCase(channels),
+      linkAccountChannel: LinkAccountChannelUseCase(
+        accountChannels,
+        accounts,
+        channels,
+      ),
+      manageWatchedPair: ManageWatchedPairUseCase(watched),
+      saveManualRate: SaveManualRateUseCase(
+        rates: DriftExchangeRateRepository(db.exchangeRateDao),
+        watchedPairs: ManageWatchedPairUseCase(watched),
+        idGenerator: uuid.v4,
+        now: DateTime.now,
+      ),
+      createEvent: CreateEventUseCase(events),
+      exchangeRates: DriftExchangeRateRepository(db.exchangeRateDao),
       priceHistory: priceHistory,
-      costHistory: costHistory,
-      channelRepo: channels,
-      accountChannelRepo: accountChannels,
-      watchRepo: watched,
-      eventRepo: events,
       assets: assets,
       idGen: uuid.v4,
       now: DateTime.now,
@@ -114,13 +134,14 @@ void main() {
     expect(result.channelLinks, greaterThan(0));
     expect(result.events, greaterThan(0));
     expect(result.watchedPairs, greaterThan(0));
+    expect(result.rates, greaterThan(0));
     expect(result.pricePoints, greaterThan(0));
     expect(result.costHistoryPoints, greaterThan(0));
   });
 
   test('watchedPair 已落库且可通过仓储读回', () async {
     await seedMockWithDeps(deps);
-    final list = await deps.watchRepo.listAll();
+    final list = await watched.listAll();
     expect(list, isNotEmpty);
     // 随便取一条，基线字段非空
     expect(list.first.baseCurrency, isNotEmpty);
@@ -147,4 +168,31 @@ void main() {
     // 关键契约：不抛异常，且确实走到了写入路径（accounts 计数 + errors 条数之和 > 0）
     expect(forced.accounts + forced.errors.length, greaterThan(0));
   });
+
+  test('seeded rate alerts use real pair keys and card events point to real cards', () async {
+    await seedMockWithDeps(deps);
+
+    final recent = await DriftEventRepository(db.eventDao).watchRecent().first;
+    final rateAlerts = recent
+        .where((e) => e.eventType == DomainEventTypes.rateAlert)
+        .toList(growable: false);
+    expect(rateAlerts, isNotEmpty);
+    for (final event in rateAlerts) {
+      expect(event.relatedId, contains('/'));
+    }
+
+    final cardEvents = recent
+        .where((e) => e.relatedModel == RelatedModel.card)
+        .toList(growable: false);
+    expect(cardEvents, isNotEmpty);
+    for (final event in cardEvents) {
+      final card = await deps.cardRepo.findById(event.relatedId);
+      expect(
+        card.isOk,
+        isTrue,
+        reason: 'card event should reference real card: ${event.relatedId}',
+      );
+    }
+  });
+
 }

@@ -177,6 +177,14 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 - **类型擦除**：`FeatureSearchConfig<T>` 在构造期把泛型 callbacks (`match` / `itemBuilder` / `filter predicates`) 包装为 `dynamic`-typed 闭包，避免 Dart 函数逆变导致的运行时类型转换失败。
 - **注册点**：`DashboardPage`, `HoldingsPage`（按 Tab 切换 current）, `CardListPage`, `ExchangeRateListPage`, `EventListPage`。
 
+### 4.8 设置页辅助入口
+
+设置页中的 App 级辅助入口遵循以下规则：
+
+- **清除所有数据**：位于「危险区」，执行后锁屏并清空业务数据；
+- **注入演示数据**：紧随「清除所有数据」展示，**release 也可用**；用于向空库或测试库注入一组单批次装配的演示数据，覆盖账户、资产、卡片、通道、汇率、事件与少量历史序列；源代码可按模块拆分实现，但对用户仍保持单一入口、单次注入的心智模型；
+- 演示数据入口不再归类为 debug-only 工具，避免 release 验收时缺少可快速构造测试场景的能力。
+
 ## 5. 组件分层规范
 
 所有列表类 Feature 采用 **Page / Body 两层结构**：

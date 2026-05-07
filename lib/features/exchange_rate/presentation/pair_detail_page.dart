@@ -214,6 +214,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: GwpColors.canvas,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1621,7 +1622,7 @@ class _RateAlertEditorSheetState
     final low = _parse(_lowCtrl.text);
     final pct = _parse(_pctCtrl.text);
     setState(() => _saving = true);
-    final r = await ref.read(watchedPairRepositoryProvider).updateThresholds(
+    final r = await ref.read(manageWatchedPairUseCaseProvider).updateThresholds(
           pairKey: widget.pair.pairKey,
           thresholdHigh: high,
           thresholdLow: low,

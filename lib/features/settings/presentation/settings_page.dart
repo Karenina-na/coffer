@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +27,6 @@ final resetAllDataUseCaseProvider = Provider<ResetAllDataUseCase>((ref) {
     pinStore: ref.watch(pinStoreProvider),
   );
 });
-
-@visibleForTesting
-bool shouldShowDebugTools({bool debugMode = kDebugMode}) => debugMode;
 
 /// 立即锁屏：
 /// 1) 先用 GoRouter 把位置复位到 `/dashboard``，避免解锁后停留在 `/settings`
@@ -163,6 +159,15 @@ class SettingsPage extends ConsumerWidget {
                   );
                 },
               ),
+              Consumer(
+                builder: (context, ref, _) {
+                  return _EntryRow(
+                    icon: Icons.dataset_linked_outlined,
+                    title: '注入演示数据',
+                    onTap: () => _seedMockData(context, ref),
+                  );
+                },
+              ),
             ],
           ),
           const SizedBox(height: GwpSpacing.md),
@@ -227,25 +232,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: GwpSpacing.md),
           const _ApiDiagSection(),
-          if (kDebugMode) ...[
-            const SizedBox(height: GwpSpacing.md),
-            _SectionCard(
-              icon: Icons.science_outlined,
-              iconColor: GwpColors.warning,
-              title: 'DEBUG',
-              children: [
-                Consumer(
-                  builder: (context, ref, _) {
-                    return _EntryRow(
-                      icon: Icons.auto_awesome_motion_outlined,
-                      title: '一次性注入测试数据',
-                      onTap: () => _seedMockData(context, ref),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -262,11 +248,11 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
         color: GwpColors.warning,
         size: 32,
       ),
-      title: const Text('注入测试数据？'),
+      title: const Text('注入演示数据？'),
       content: const Text(
-        '此操作会向当前数据库插入一批演示账户 / 资产 / 卡片 / 通道 / '
-        '事件与 30 日价格历史。\n\n'
-        '• 与真实写入路径一致\n'
+        '此操作会一次性装配一组跨模块联动的演示账户、资产、卡片、通道、汇率与事件。\n\n'
+        '• 源代码已按模块拆分，但注入仍作为单一批次执行\n'
+        '• 会尽量覆盖 Dashboard / 资金 / 卡片 / 汇率 / 事件 / 拓扑 / 分析\n'
         '• 写入后无法一键撤销\n\n'
         '确定继续吗？',
       ),
@@ -300,7 +286,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
             ),
           ),
           SizedBox(width: 12),
-          Text('正在注入测试数据…'),
+          Text('正在注入数据…'),
         ],
       ),
       duration: Duration(minutes: 5),
@@ -316,7 +302,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('已检测到历史数据'),
-          content: const Text('库中已有资产。仅在你清楚当前是测试库时选择"强制注入"。'),
+          content: const Text('库中已有资产。仅在你确认当前数据可混入演示数据时继续强制注入。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
@@ -351,7 +337,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
           duration: Duration(minutes: 5),
         ),
       );
-      final forced = await seedMockData(ref, force: true);
+       final forced = await seedMockData(ref, force: true);
       if (!context.mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
@@ -364,7 +350,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
     }
     messenger.showSnackBar(
       SnackBar(
-        content: Text('示例数据已录入\n$result'),
+        content: Text('数据已录入\n$result'),
         duration: const Duration(seconds: 5),
       ),
     );

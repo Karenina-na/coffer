@@ -43,11 +43,6 @@ Future<void> _pumpSettings(
 }
 
 void main() {
-  test('DEBUG 工具只允许 debug 模式展示', () {
-    expect(shouldShowDebugTools(debugMode: true), isTrue);
-    expect(shouldShowDebugTools(debugMode: false), isFalse);
-  });
-
   testWidgets('渲染三大分区与来自 provider 的 schema 版本', (tester) async {
     await _pumpSettings(tester, schemaVersion: 99);
 
@@ -98,17 +93,15 @@ void main() {
     expect(find.text('BACKUP_ROUTE'), findsOneWidget);
   });
 
-  testWidgets('DEBUG 分区在 debug 模式可见，且点击弹出确认对话框', (tester) async {
-    // flutter test 默认 kDebugMode = true，故 DEBUG 分区应呈现。
+  testWidgets('演示数据入口默认可见，且点击弹出确认对话框', (tester) async {
     await _pumpSettings(tester);
 
-    expect(find.text('DEBUG'), findsOneWidget);
-    expect(find.text('一次性注入测试数据'), findsOneWidget);
+    expect(find.text('注入演示数据'), findsOneWidget);
 
-    await tester.tap(find.text('一次性注入测试数据'));
+    await tester.tap(find.text('注入演示数据'));
     await tester.pumpAndSettle();
 
-    expect(find.text('注入测试数据？'), findsOneWidget);
+    expect(find.text('注入演示数据？'), findsOneWidget);
     expect(find.widgetWithText(TextButton, '取消'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '注入'), findsOneWidget);
   });
@@ -116,16 +109,15 @@ void main() {
   testWidgets('确认对话框点击"取消" → 关闭对话框且不触发 SnackBar', (tester) async {
     await _pumpSettings(tester);
 
-    await tester.tap(find.text('一次性注入测试数据'));
+    await tester.tap(find.text('注入演示数据'));
     await tester.pumpAndSettle();
-    expect(find.text('注入测试数据？'), findsOneWidget);
+    expect(find.text('注入演示数据？'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, '取消'));
     await tester.pumpAndSettle();
 
-    expect(find.text('注入测试数据？'), findsNothing);
-    // 未进入种子流程 → 不会出现"正在注入测试数据…"
-    expect(find.text('正在注入测试数据…'), findsNothing);
+    expect(find.text('注入演示数据？'), findsNothing);
+    expect(find.text('正在注入数据…'), findsNothing);
     expect(find.byType(SnackBar), findsNothing);
   });
 
@@ -133,7 +125,7 @@ void main() {
     await _pumpSettings(tester);
 
     // "备份与恢复" / "PIN 与指纹" / "立即锁定" / "转账协议" / "国家 / 地区" /
-    // "货币" / "清除所有数据" / "开源许可" / "一次性注入测试数据" 都带 onTap → 都有 chevron_right
+    // "货币" / "清除所有数据" / "注入演示数据" / "开源许可" 都带 onTap → 都有 chevron_right
     // "应用名称" / "应用版本" / "数据库 Schema" / "数据存储" 仅展示 trailing/subtitle → 无 chevron
     final chevrons = find.byIcon(Icons.chevron_right);
     expect(chevrons, findsNWidgets(9));

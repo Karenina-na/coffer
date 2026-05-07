@@ -102,7 +102,7 @@ class _EventCreatePageState extends ConsumerState<EventCreatePage> {
       createdAt: now,
       updatedAt: now,
     );
-    final r = await ref.read(eventRepositoryProvider).record(event);
+    final r = await ref.read(createEventUseCaseProvider)(event);
     if (!mounted) return;
     setState(() => _submitting = false);
     r.when(

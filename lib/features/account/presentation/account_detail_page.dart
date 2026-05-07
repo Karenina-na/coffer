@@ -1902,6 +1902,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
   ) async {
     final picked = await showModalBottomSheet<String>(
       context: context,
+      useRootNavigator: true,
       builder: (ctx) => SafeArea(
         child: ListView(
           shrinkWrap: true,
@@ -1923,7 +1924,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
     );
     if (picked == null) return;
     final r = await ref
-        .read(accountChannelRepositoryProvider)
+        .read(linkAccountChannelUseCaseProvider)
         .link(accountId: accountId, channelId: picked);
     if (!context.mounted) return;
     r.when(
@@ -2036,7 +2037,7 @@ class _ChannelCard extends ConsumerWidget {
               GestureDetector(
                 onTap: () async {
                   final r = await ref
-                      .read(accountChannelRepositoryProvider)
+                      .read(linkAccountChannelUseCaseProvider)
                       .unlink(
                         accountId: accountId,
                         channelId: channel.id,

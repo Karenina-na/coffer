@@ -94,11 +94,6 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
     super.dispose();
   }
 
-  String _maskOf(String digits) {
-    if (digits.length <= 4) return '*' * digits.length;
-    return '*' * (digits.length - 4) + digits.substring(digits.length - 4);
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_accountId == null) {
@@ -119,27 +114,21 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
 
       if (_isEdit) {
         final prev = widget.initial!;
-        final plainCardNo = _cardNoCtrl.text.trim().isEmpty
-            ? null
-            : _cardNoCtrl.text.trim();
-        final newMasked =
-            plainCardNo != null ? _maskOf(plainCardNo) : prev.cardNoMasked;
-        final updated = prev.copyWith(
-          cardOrganization: _organization!.code,
-          issuerName: _issuerCtrl.text.trim(),
-          cardType: _type,
-          expireMonth: int.parse(_mmCtrl.text),
-          expireYear: int.parse(_yyyyCtrl.text),
-          currency: _primaryCurrency,
-          supportsAllCurrencies: _supportsAll,
-          supportedCurrencies: supported,
-          billingAddress: billingAddress,
-          cardNoMasked: newMasked,
-        );
-        final r = await ref.read(cardRepositoryProvider).update(
-              card: updated,
+        final plainCardNo =
+            _cardNoCtrl.text.trim().isEmpty ? null : _cardNoCtrl.text.trim();
+        final r = await ref.read(saveCardUseCaseProvider).update(
+              prev: prev,
+              cardOrganization: _organization!.code,
               plainCardNo: plainCardNo,
+              cardType: _type,
+              expireMonth: int.parse(_mmCtrl.text),
+              expireYear: int.parse(_yyyyCtrl.text),
+              issuerName: _issuerCtrl.text.trim(),
               plainCvv: plainCvv,
+              currency: _primaryCurrency,
+              supportsAllCurrencies: _supportsAll,
+              supportedCurrencies: supported,
+              billingAddress: billingAddress,
             );
         if (!mounted) return;
         r.when(
@@ -151,7 +140,7 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
         return;
       }
 
-      final r = await ref.read(createCardUseCaseProvider)(
+      final r = await ref.read(saveCardUseCaseProvider).create(
         accountId: _accountId!,
         cardOrganization: _organization!.code,
         plainCardNo: _cardNoCtrl.text,

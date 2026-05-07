@@ -128,7 +128,7 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
       createdAt: prev?.createdAt ?? now,
       updatedAt: now,
     );
-    final result = await ref.read(channelRepositoryProvider).upsert(channel);
+    final result = await ref.read(saveChannelUseCaseProvider)(channel);
     if (!mounted) return;
     setState(() => _submitting = false);
     result.when(

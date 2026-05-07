@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/providers/channel_providers.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/channel.dart';
+import '../../../domain/usecases/link_account_channel.dart';
 import '../../../domain/usecases/plan_transfer_route.dart';
+import '../../../domain/usecases/save_channel.dart';
 import '../../account/presentation/account_providers.dart';
 
 export '../../../data/providers/channel_providers.dart'
@@ -35,5 +37,18 @@ final planTransferRouteUseCaseProvider =
     ref.watch(accountRepositoryProvider),
     ref.watch(channelRepositoryProvider),
     ref.watch(accountChannelRepositoryProvider),
+  );
+});
+
+final saveChannelUseCaseProvider = Provider<SaveChannelUseCase>((ref) {
+  return SaveChannelUseCase(ref.watch(channelRepositoryProvider));
+});
+
+final linkAccountChannelUseCaseProvider =
+    Provider<LinkAccountChannelUseCase>((ref) {
+  return LinkAccountChannelUseCase(
+    ref.watch(accountChannelRepositoryProvider),
+    ref.watch(accountRepositoryProvider),
+    ref.watch(channelRepositoryProvider),
   );
 });

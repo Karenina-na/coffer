@@ -2,7 +2,6 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
@@ -16,7 +15,6 @@ import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/exchange_rate_enums.dart';
 import '../../../domain/entities/watched_pair.dart';
-import '../../../domain/utils/pair_key.dart';
 import 'exchange_rate_providers.dart';
 import 'pair_detail_page.dart';
 import 'rate_sparkline.dart';
@@ -57,12 +55,13 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       builder: (_) => const _RateEditorSheet(),
     );
   }
 
   Future<void> _openPairManager() async {
-    await Navigator.of(context).push(
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const _WatchedPairsPage()),
     );
   }
@@ -82,13 +81,10 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 88),
-        child: FloatingActionButton.extended(
-          onPressed: _openEditor,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('录入'),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openEditor,
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('录入'),
       ),
       body: pairs.when(
         loading: () => const Center(
@@ -107,7 +103,7 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
             );
           }
           return ListView(
-            padding: const EdgeInsets.only(bottom: 112),
+            padding: const EdgeInsets.only(bottom: 24),
             children: [
               // Heat strip overview card
               _HeatStripCard(pairs: list),
@@ -292,7 +288,11 @@ class _PairRateCard extends ConsumerWidget {
     if (hasData && series.length >= 2) {
       final a = first!.rate;
       final b = latest!.rate;
-      if (a != Decimal.zero) changePct = ((b - a) * Decimal.fromInt(100) / a).toDecimal();
+      if (a != Decimal.zero) {
+        changePct = ((b - a) * Decimal.fromInt(100) / a).toDecimal(
+          scaleOnInfinitePrecision: 10,
+        );
+      }
     }
     final isUp = changePct == null || changePct >= Decimal.zero;
     final sign = changePct == null
@@ -318,7 +318,7 @@ class _PairRateCard extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
+            Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
               builder: (_) => PairDetailPage(pairKey: pair.pairKey),
             ));
           },
@@ -530,32 +530,19 @@ class _RateEditorSheetState extends ConsumerState<_RateEditorSheet> {
       _busy = true;
       _errorMsg = null;
     });
-    final now = DateTime.now();
-    final entity = ExchangeRate(
-      id: const Uuid().v4(),
-      pairKey: pairKeyOf(base, quote),
-      baseCurrency: base,
-      quoteCurrency: quote,
-      rate: rate,
-      asOfTime: now,
-      updatedAt: now,
-      source: _sourceCtrl.text.trim().isEmpty
-          ? 'manual'
-          : _sourceCtrl.text.trim(),
-      snapshotType: _snapshot,
-    );
-    final r =
-        await ref.read(exchangeRateRepositoryProvider).upsert(entity);
+    final r = await ref.read(saveManualRateUseCaseProvider)(
+          baseCurrency: base,
+          quoteCurrency: quote,
+          rate: rate,
+          snapshotType: _snapshot,
+          source: _sourceCtrl.text.trim(),
+        );
     if (!mounted) return;
     setState(() => _busy = false);
     if (r.isErr) {
       setState(() => _errorMsg = errorToMessage(r.errorOrNull!));
       return;
     }
-    await ref.read(watchedPairRepositoryProvider).add(
-          baseCurrency: base,
-          quoteCurrency: quote,
-        );
     if (!mounted) return;
     Navigator.pop(context);
   }
@@ -710,6 +697,7 @@ class _WatchedPairsPage extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       builder: (_) => const _PairEditorSheet(),
     );
   }
@@ -733,10 +721,10 @@ class _PairTile extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => PairDetailPage(pairKey: pair.pairKey),
-              ),
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PairDetailPage(pairKey: pair.pairKey),
+                ),
             );
           },
           child: Container(
@@ -790,7 +778,7 @@ class _PairTile extends ConsumerWidget {
                       size: 20, color: GwpColors.negative),
                   onPressed: () async {
                     final r = await ref
-                        .read(watchedPairRepositoryProvider)
+                        .read(manageWatchedPairUseCaseProvider)
                         .remove(pair.pairKey);
                     if (!context.mounted) return;
                     r.when(
@@ -835,7 +823,7 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
       _busy = true;
       _errorMsg = null;
     });
-    final r = await ref.read(watchedPairRepositoryProvider).add(
+    final r = await ref.read(manageWatchedPairUseCaseProvider).add(
           baseCurrency: _baseCtrl.text,
           quoteCurrency: _quoteCtrl.text,
         );

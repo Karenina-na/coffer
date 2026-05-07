@@ -4,7 +4,9 @@ import '../../../data/providers/exchange_rate_providers.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/watched_pair.dart';
 import '../../../domain/usecases/check_rate_alerts.dart';
+import '../../../domain/usecases/manage_watched_pair.dart';
 import '../../../domain/usecases/refresh_watched_rates.dart';
+import '../../../domain/usecases/save_manual_rate.dart';
 import '../../../domain/valuation/asset_valuator.dart';
 import '../../event/presentation/event_providers.dart';
 
@@ -31,6 +33,20 @@ final refreshWatchedRatesUseCaseProvider =
     watchedRepo: ref.watch(watchedPairRepositoryProvider),
     rateRepo: ref.watch(exchangeRateRepositoryProvider),
     provider: ref.watch(frankfurterProviderProvider),
+  );
+});
+
+final manageWatchedPairUseCaseProvider =
+    Provider<ManageWatchedPairUseCase>((ref) {
+  return ManageWatchedPairUseCase(ref.watch(watchedPairRepositoryProvider));
+});
+
+final saveManualRateUseCaseProvider = Provider<SaveManualRateUseCase>((ref) {
+  return SaveManualRateUseCase(
+    rates: ref.watch(exchangeRateRepositoryProvider),
+    watchedPairs: ref.watch(manageWatchedPairUseCaseProvider),
+    idGenerator: ref.watch(uuidGeneratorProvider),
+    now: DateTime.now,
   );
 });
 
