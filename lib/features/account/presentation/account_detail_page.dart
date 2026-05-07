@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
+import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_donut_chart.dart';
 import '../../../core/ui/design_tokens.dart';
@@ -20,10 +21,10 @@ import '../../../domain/entities/asset_price_history_point.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
-import '../../../domain/usecases/aggregate_account_value.dart';
 import '../../../core/errors.dart';
 import '../../../core/result.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../../domain/usecases/refresh_asset_price.dart';
 import '../../../domain/valuation/asset_valuator.dart';
 import '../../asset/presentation/asset_providers.dart';
@@ -128,36 +129,7 @@ class AccountDetailPage extends ConsumerStatefulWidget {
 }
 
 class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
-  String _baseCurrency = 'CNY';
-  Future<AccountAggregate?>? _aggFuture;
-  List<Asset> _lastAssets = const [];
   bool _syncing = false;
-
-  Future<AccountAggregate?> _aggregate(List<Asset> assets) async {
-    final r = await ref
-        .read(aggregateAccountValueUseCaseProvider)
-        .call(assets: assets, baseCurrency: _baseCurrency);
-    return r.valueOrNull;
-  }
-
-  void _triggerAggregate(List<Asset> assets) {
-    final sameLen = assets.length == _lastAssets.length;
-    final sameSig = sameLen &&
-        () {
-          for (var i = 0; i < assets.length; i++) {
-            if (assets[i].id != _lastAssets[i].id ||
-                assets[i].marketValue != _lastAssets[i].marketValue ||
-                assets[i].currency != _lastAssets[i].currency) {
-              return false;
-            }
-          }
-          return true;
-        }();
-    if (_aggFuture == null || !sameSig) {
-      _lastAssets = assets;
-      _aggFuture = _aggregate(assets);
-    }
-  }
 
   void _onMoreAction(String action, List<Account>? list) {
     final account =
@@ -229,7 +201,6 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       if (mounted) {
         setState(() {
           _syncing = false;
-          _aggFuture = null;
         });
       }
     }
@@ -302,7 +273,11 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountListProvider);
     final assetsAsync = ref.watch(assetsByAccountProvider(widget.accountId));
+    final valuedAssetsAsync = ref.watch(
+      valuedAssetsByAccountProvider(widget.accountId),
+    );
     final cardsAsync = ref.watch(cardsByAccountProvider(widget.accountId));
+    final valuationCurrency = ref.watch(valuationCurrencyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -343,25 +318,6 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               ],
             ),
             orElse: () => const SizedBox.shrink(),
-          ),
-          PopupMenuButton<String>(
-            tooltip: '基准币种',
-            initialValue: _baseCurrency,
-            onSelected: (v) => setState(() {
-              _baseCurrency = v;
-              _aggFuture = null;
-            }),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'CNY', child: Text('CNY')),
-              PopupMenuItem(value: 'USD', child: Text('USD')),
-              PopupMenuItem(value: 'HKD', child: Text('HKD')),
-              PopupMenuItem(value: 'SGD', child: Text('SGD')),
-              PopupMenuItem(value: 'EUR', child: Text('EUR')),
-            ],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Center(child: Text(_baseCurrency)),
-            ),
           ),
           PopupMenuButton<String>(
             tooltip: '更多操作',
@@ -417,14 +373,27 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               ),
             ),
             data: (assets) {
-              _triggerAggregate(assets);
-              return _Body(
-                account: account,
-                assets: assets,
-                cardsAsync: cardsAsync,
-                aggFuture: _aggFuture,
-                baseCurrency: _baseCurrency,
-                accountId: widget.accountId,
+              return valuedAssetsAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    color: GwpColors.actionPrimary,
+                  ),
+                ),
+                error: (e, _) => GwpEmptyState.error(
+                  message: '加载计价值失败: ${errorToMessage(e)}',
+                  onRetry: () => ref.invalidate(
+                    valuedAssetsByAccountProvider(widget.accountId),
+                  ),
+                ),
+                data: (valued) => _Body(
+                  account: account,
+                  assets: assets,
+                  valuedAssets: valued.assets,
+                  cardsAsync: cardsAsync,
+                  valuationCurrency: valuationCurrency,
+                  missingRateCount: valued.missingAssetIds.length,
+                  accountId: widget.accountId,
+                ),
               );
             },
           );
@@ -442,17 +411,19 @@ class _Body extends StatelessWidget {
   const _Body({
     required this.account,
     required this.assets,
+    required this.valuedAssets,
     required this.cardsAsync,
-    required this.aggFuture,
-    required this.baseCurrency,
+    required this.valuationCurrency,
+    required this.missingRateCount,
     required this.accountId,
   });
 
   final Account account;
   final List<Asset> assets;
+  final List<ValuedAsset> valuedAssets;
   final AsyncValue<List<BankCard>> cardsAsync;
-  final Future<AccountAggregate?>? aggFuture;
-  final String baseCurrency;
+  final String valuationCurrency;
+  final int missingRateCount;
   final String accountId;
 
   @override
@@ -466,20 +437,24 @@ class _Body extends StatelessWidget {
         _AccountHero(
           account: account,
           assets: assets,
+          valuedAssets: valuedAssets,
           cardsAsync: cardsAsync,
-          aggFuture: aggFuture,
-          baseCurrency: baseCurrency,
+          valuationCurrency: valuationCurrency,
+          missingRateCount: missingRateCount,
         ),
         const SizedBox(height: GwpSpacing.base),
         if (assets.isNotEmpty) ...[
-          _AssetComposition(assets: assets),
+          _AssetComposition(valuedAssets: valuedAssets),
           const SizedBox(height: GwpSpacing.base),
-          _CostBasisSection(assets: assets, baseCurrency: baseCurrency),
+          _CostBasisSection(
+            valuedAssets: valuedAssets,
+            valuationCurrency: valuationCurrency,
+          ),
           const SizedBox(height: GwpSpacing.base),
           _NetWorthTrendSection(accountId: accountId),
           const SizedBox(height: GwpSpacing.base),
         ],
-        _AssetListSection(assets: assets),
+        _AssetListSection(valuedAssets: valuedAssets),
         const SizedBox(height: GwpSpacing.base),
         _CardGallerySection(
           cardsAsync: cardsAsync,
@@ -501,16 +476,18 @@ class _AccountHero extends StatelessWidget {
   const _AccountHero({
     required this.account,
     required this.assets,
+    required this.valuedAssets,
     required this.cardsAsync,
-    required this.aggFuture,
-    required this.baseCurrency,
+    required this.valuationCurrency,
+    required this.missingRateCount,
   });
 
   final Account account;
   final List<Asset> assets;
+  final List<ValuedAsset> valuedAssets;
   final AsyncValue<List<BankCard>> cardsAsync;
-  final Future<AccountAggregate?>? aggFuture;
-  final String baseCurrency;
+  final String valuationCurrency;
+  final int missingRateCount;
 
   @override
   Widget build(BuildContext context) {
@@ -588,76 +565,47 @@ class _AccountHero extends StatelessWidget {
           ],
           const SizedBox(height: GwpSpacing.lg),
           // Total value
-          FutureBuilder<AccountAggregate?>(
-            future: aggFuture,
-            builder: (_, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return Row(
-                  children: [
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: GwpColors.actionPrimary,
-                      ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                heroFormat(
+                  valuedAssets.fold<Decimal>(
+                    Decimal.zero,
+                    (sum, item) => sum + (item.valuedAmount ?? Decimal.zero),
+                  ),
+                ),
+                style: const TextStyle(
+                  fontFamily: GwpTypo.monoFont,
+                  fontFeatures: GwpTypo.tabularFigures,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: GwpColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Text(
+                    '总市值 · $valuationCurrency',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: GwpColors.textMuted,
                     ),
+                  ),
+                  if (missingRateCount > 0) ...[
                     const SizedBox(width: 8),
                     Text(
-                      '正在聚合市值…',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: GwpColors.textMuted,
+                      '$missingRateCount 项缺汇率',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: GwpColors.warning,
                       ),
                     ),
                   ],
-                );
-              }
-              final agg = snap.data;
-              if (agg == null) {
-                return const Text(
-                  '聚合失败',
-                  style: TextStyle(fontSize: 14, color: GwpColors.negative),
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    heroFormat(agg.total),
-                    style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: GwpColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        '总市值 · ${agg.baseCurrency}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: GwpColors.textMuted,
-                        ),
-                      ),
-                      if (agg.missingRates.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '${agg.missingRates.length} 项缺汇率',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: GwpColors.warning,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
                 ],
-              );
-            },
+              ),
+            ],
           ),
           const SizedBox(height: GwpSpacing.lg),
           // KPI chips
@@ -755,19 +703,27 @@ class _MiniKpi extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _AssetComposition extends StatelessWidget {
-  const _AssetComposition({required this.assets});
-  final List<Asset> assets;
+  const _AssetComposition({required this.valuedAssets});
+  final List<ValuedAsset> valuedAssets;
 
   @override
   Widget build(BuildContext context) {
     // Type distribution
     final typeTotals = <String, double>{};
     final currencyTotals = <String, double>{};
-    for (final a in assets) {
-      final mv = a.marketValue?.toDouble() ?? 0;
+    for (final a in valuedAssets) {
+      final mv = a.valuedAmount?.toDouble() ?? 0;
       if (mv <= 0) continue;
-      typeTotals.update(a.assetType.name, (v) => v + mv, ifAbsent: () => mv);
-      currencyTotals.update(a.currency, (v) => v + mv, ifAbsent: () => mv);
+      typeTotals.update(
+        a.asset.assetType.name,
+        (v) => v + mv,
+        ifAbsent: () => mv,
+      );
+      currencyTotals.update(
+        a.asset.currency,
+        (v) => v + mv,
+        ifAbsent: () => mv,
+      );
     }
 
     final segments = typeTotals.entries
@@ -800,7 +756,7 @@ class _AssetComposition extends StatelessWidget {
                   segments: segments,
                   size: 110,
                   strokeWidth: 18,
-                  centerLabel: '${assets.length}',
+                  centerLabel: '${valuedAssets.length}',
                   centerSubLabel: '项资产',
                 ),
                 const SizedBox(width: GwpSpacing.base),
@@ -975,12 +931,12 @@ class _CurrencyRow extends StatelessWidget {
 
 class _CostBasisSection extends StatelessWidget {
   const _CostBasisSection({
-    required this.assets,
-    required this.baseCurrency,
+    required this.valuedAssets,
+    required this.valuationCurrency,
   });
 
-  final List<Asset> assets;
-  final String baseCurrency;
+  final List<ValuedAsset> valuedAssets;
+  final String valuationCurrency;
 
   @override
   Widget build(BuildContext context) {
@@ -989,12 +945,11 @@ class _CostBasisSection extends StatelessWidget {
     Decimal totalMarket = Decimal.zero;
     int withCost = 0;
 
-    for (final a in assets) {
-      final mv = a.marketValue ?? Decimal.zero;
-      final cp = a.costPrice;
+    for (final a in valuedAssets) {
+      final mv = a.valuedAmount ?? Decimal.zero;
       if (mv > Decimal.zero) totalMarket += mv;
-      if (cp != null && cp > Decimal.zero && a.quantity > Decimal.zero) {
-        totalCost += cp * a.quantity;
+      if (a.valuedCostBasis != null && a.valuedCostBasis! > Decimal.zero) {
+        totalCost += a.valuedCostBasis!;
         withCost++;
       }
     }
@@ -1045,7 +1000,7 @@ class _CostBasisSection extends StatelessWidget {
           _CompareBar(
             label1: '总成本',
             value1: totalCost.toDouble(),
-            label2: '总市值',
+            label2: '总市值 · $valuationCurrency',
             value2: totalMarket.toDouble(),
             color1: GwpColors.textMuted,
             color2: pnlColor,
@@ -1053,7 +1008,7 @@ class _CostBasisSection extends StatelessWidget {
           const SizedBox(height: GwpSpacing.sm),
           // Coverage note
           Text(
-            '$withCost / ${assets.length} 项资产有成本价',
+            '$withCost / ${valuedAssets.length} 项资产有成本价',
             style: const TextStyle(
               fontSize: 10,
               color: GwpColors.textMuted,
@@ -1473,8 +1428,8 @@ class _AccountTrendChart extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _AssetListSection extends StatefulWidget {
-  const _AssetListSection({required this.assets});
-  final List<Asset> assets;
+  const _AssetListSection({required this.valuedAssets});
+  final List<ValuedAsset> valuedAssets;
 
   @override
   State<_AssetListSection> createState() => _AssetListSectionState();
@@ -1486,7 +1441,7 @@ class _AssetListSectionState extends State<_AssetListSection> {
 
   @override
   Widget build(BuildContext context) {
-    final assets = widget.assets;
+    final assets = widget.valuedAssets;
     final visible = _showAll ? assets : assets.take(_previewLimit).toList();
 
     return _SectionCard(
@@ -1515,11 +1470,12 @@ class _AssetListSectionState extends State<_AssetListSection> {
 
 class _AssetRow extends ConsumerWidget {
   const _AssetRow({required this.asset});
-  final Asset asset;
+  final ValuedAsset asset;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final historyAsync = ref.watch(assetValuationHistoryProvider(asset.id));
+    final rawAsset = asset.asset;
+    final historyAsync = ref.watch(assetValuationHistoryProvider(rawAsset.id));
     final rawPoints = historyAsync.maybeWhen(
       data: (p) => p,
       orElse: () => const <AssetPriceHistoryPoint>[],
@@ -1534,12 +1490,11 @@ class _AssetRow extends ConsumerWidget {
     final changeColor = changePct == null
         ? GwpColors.textMuted
         : (isUp ? GwpColors.positive : GwpColors.negative);
-    final mv = asset.marketValue;
     final typeColor =
-        _assetTypeColors[asset.assetType.name] ?? GwpColors.actionPrimary;
+        _assetTypeColors[rawAsset.assetType.name] ?? GwpColors.actionPrimary;
 
     return InkWell(
-      onTap: () => context.push('/assets/${asset.id}'),
+      onTap: () => context.push('/assets/${rawAsset.id}'),
       borderRadius: BorderRadius.circular(6),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -1565,7 +1520,7 @@ class _AssetRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                     asset.assetCode ?? asset.assetType.labelZh,
+                     rawAsset.assetCode ?? rawAsset.assetType.labelZh,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1575,7 +1530,7 @@ class _AssetRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                     '${asset.assetType.labelZh} · ${asset.quantity}',
+                     '${rawAsset.assetType.labelZh} · ${rawAsset.quantity}',
                     style: const TextStyle(
                       fontSize: 10,
                       color: GwpColors.textMuted,
@@ -1602,9 +1557,12 @@ class _AssetRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    mv == null
+                    asset.nativeValue == null
                         ? '—'
-                        : Money.format(mv, currency: asset.currency),
+                        : Money.format(
+                            asset.nativeValue!,
+                            currency: rawAsset.currency,
+                          ),
                     style: const TextStyle(
                       fontFamily: GwpTypo.monoFont,
                       fontFeatures: GwpTypo.tabularFigures,
@@ -1612,17 +1570,20 @@ class _AssetRow extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                       color: GwpColors.textPrimary,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    changePct == null
-                        ? asset.currency
+                    changePct == null && !asset.isConvertible
+                        ? '缺汇率'
+                        : changePct == null
+                            ? rawAsset.currency
                         : '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
-                      color: changeColor,
+                      color: changePct == null && !asset.isConvertible
+                          ? GwpColors.warning
+                          : changeColor,
                     ),
                   ),
                 ],

@@ -5,14 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
+import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_number_text.dart';
 import '../../../domain/entities/account.dart';
-import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
+import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../account/presentation/account_providers.dart';
 import 'asset_providers.dart';
 
@@ -22,8 +23,9 @@ class AssetListBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final assetsAsync = ref.watch(assetListProvider);
+    final assetsAsync = ref.watch(valuedAssetsProvider);
     final accountsAsync = ref.watch(accountListProvider);
+    final valuationCurrency = ref.watch(valuationCurrencyProvider);
     return assetsAsync.when(
       loading: () => const Center(
         child: CircularProgressIndicator(color: GwpColors.actionPrimary),
@@ -32,8 +34,8 @@ class AssetListBody extends ConsumerWidget {
         message: '加载失败: ${errorToMessage(e)}',
         onRetry: () => ref.invalidate(assetListProvider),
       ),
-      data: (assets) {
-        if (assets.isEmpty) {
+      data: (valued) {
+        if (valued.assets.isEmpty) {
           return const GwpEmptyState(
             icon: Icons.show_chart_outlined,
             title: '还没有资产',
@@ -45,7 +47,12 @@ class AssetListBody extends ConsumerWidget {
           loading: () => <Account>[],
           error: (_, _) => <Account>[],
         );
-        return _AssetListView(assets: assets, accounts: accounts);
+        return _AssetListView(
+          assets: valued.assets,
+          accounts: accounts,
+          valuationCurrency: valuationCurrency,
+          missingAssetIds: valued.missingAssetIds.toSet(),
+        );
       },
     );
   }
@@ -98,10 +105,17 @@ const _kGroupPreviewLimit = 3;
 const _kAutoExpandCount = 2;
 
 class _AssetListView extends StatefulWidget {
-  const _AssetListView({required this.assets, required this.accounts});
+  const _AssetListView({
+    required this.assets,
+    required this.accounts,
+    required this.valuationCurrency,
+    required this.missingAssetIds,
+  });
 
-  final List<Asset> assets;
+  final List<ValuedAsset> assets;
   final List<Account> accounts;
+  final String valuationCurrency;
+  final Set<String> missingAssetIds;
 
   @override
   State<_AssetListView> createState() => _AssetListViewState();
@@ -112,7 +126,7 @@ class _AssetListViewState extends State<_AssetListView> {
   final _showAllItems = <String>{};
   bool _initialized = false;
 
-  List<Asset> get assets => widget.assets;
+  List<ValuedAsset> get assets => widget.assets;
   List<Account> get accounts => widget.accounts;
 
   @override
@@ -122,13 +136,13 @@ class _AssetListViewState extends State<_AssetListView> {
     var totalGain = Decimal.zero;
     var gainableCount = 0;
     for (final a in assets) {
-      if (a.marketValue != null && a.marketValue! > Decimal.zero) {
-        totalValue += a.marketValue!;
+      if (a.valuedAmount != null && a.valuedAmount! > Decimal.zero) {
+        totalValue += a.valuedAmount!;
       }
-      if (a.marketValue != null &&
-          a.costPrice != null &&
-          a.costPrice! > Decimal.zero) {
-        totalGain += a.marketValue! - a.costPrice! * a.quantity;
+      if (a.valuedAmount != null &&
+          a.valuedCostBasis != null &&
+          a.valuedCostBasis! > Decimal.zero) {
+        totalGain += a.valuedAmount! - a.valuedCostBasis!;
         gainableCount++;
       }
     }
@@ -137,37 +151,38 @@ class _AssetListViewState extends State<_AssetListView> {
     // Type breakdown
     final typeBreakdown = <AssetType, double>{};
     for (final a in assets) {
-      final mv = a.marketValue?.toDouble() ?? 0;
+      final mv = a.valuedAmount?.toDouble() ?? 0;
       if (mv > 0) {
-        typeBreakdown[a.assetType] = (typeBreakdown[a.assetType] ?? 0) + mv;
+        typeBreakdown[a.asset.assetType] =
+            (typeBreakdown[a.asset.assetType] ?? 0) + mv;
       }
     }
 
     // Currency breakdown
     final currencyBreakdown = <String, double>{};
     for (final a in assets) {
-      final mv = a.marketValue?.toDouble() ?? 0;
+      final mv = a.valuedAmount?.toDouble() ?? 0;
       if (mv > 0) {
-        currencyBreakdown[a.currency] =
-            (currencyBreakdown[a.currency] ?? 0) + mv;
+        currencyBreakdown[a.asset.currency] =
+            (currencyBreakdown[a.asset.currency] ?? 0) + mv;
       }
     }
 
     // Group by account
     final accountMap = {for (final a in accounts) a.id: a};
-    final grouped = <String, List<Asset>>{};
+    final grouped = <String, List<ValuedAsset>>{};
     for (final a in assets) {
-      grouped.putIfAbsent(a.accountId, () => []).add(a);
+      grouped.putIfAbsent(a.asset.accountId, () => []).add(a);
     }
     final sortedAccountIds = grouped.keys.toList()
       ..sort((a, b) {
         final aTotal = grouped[a]!.fold<Decimal>(
           Decimal.zero,
-          (s, asset) => s + (asset.marketValue ?? Decimal.zero),
+          (s, asset) => s + (asset.valuedAmount ?? Decimal.zero),
         );
         final bTotal = grouped[b]!.fold<Decimal>(
           Decimal.zero,
-          (s, asset) => s + (asset.marketValue ?? Decimal.zero),
+          (s, asset) => s + (asset.valuedAmount ?? Decimal.zero),
         );
         return bTotal.compareTo(aTotal);
       });
@@ -190,6 +205,8 @@ class _AssetListViewState extends State<_AssetListView> {
           totalValue: totalValue,
           totalGain: totalGain,
           assetCount: assets.length,
+          valuationCurrency: widget.valuationCurrency,
+          missingCount: widget.missingAssetIds.length,
           hasGainData: gainableCount > 0,
           typeBreakdown: typeBreakdown,
           currencyBreakdown: currencyBreakdown,
@@ -225,7 +242,7 @@ class _AssetListViewState extends State<_AssetListView> {
     );
   }
 
-  List<Asset> _visibleItems(String accountId, List<Asset> all) {
+  List<ValuedAsset> _visibleItems(String accountId, List<ValuedAsset> all) {
     if (_showAllItems.contains(accountId) || all.length <= _kGroupPreviewLimit) {
       return all;
     }
@@ -242,6 +259,8 @@ class _PortfolioHero extends StatelessWidget {
     required this.totalValue,
     required this.totalGain,
     required this.assetCount,
+    required this.valuationCurrency,
+    required this.missingCount,
     required this.hasGainData,
     required this.typeBreakdown,
     required this.currencyBreakdown,
@@ -250,6 +269,8 @@ class _PortfolioHero extends StatelessWidget {
   final Decimal totalValue;
   final Decimal totalGain;
   final int assetCount;
+  final String valuationCurrency;
+  final int missingCount;
   final bool hasGainData;
   final Map<AssetType, double> typeBreakdown;
   final Map<String, double> currencyBreakdown;
@@ -294,7 +315,7 @@ class _PortfolioHero extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       totalValue > Decimal.zero
-                          ? Money.format(totalValue, currency: 'CNY')
+                          ? Money.format(totalValue, currency: valuationCurrency)
                           : '—',
                       style: const TextStyle(
                         fontFamily: GwpTypo.monoFont,
@@ -309,11 +330,11 @@ class _PortfolioHero extends StatelessWidget {
                       Row(
                         children: [
                           GwpNumberText(
-                            value:
-                                '${isUp ? '+' : ''}${Money.format(totalGain, currency: 'CNY')}',
-                            sign: totalGain > Decimal.zero
-                                ? ValueSign.positive
-                                : (totalGain < Decimal.zero
+                              value:
+                                  '${isUp ? '+' : ''}${Money.format(totalGain, currency: valuationCurrency)}',
+                              sign: totalGain > Decimal.zero
+                                  ? ValueSign.positive
+                                  : (totalGain < Decimal.zero
                                     ? ValueSign.negative
                                     : ValueSign.neutral),
                             fontSize: 13,
@@ -343,6 +364,14 @@ class _PortfolioHero extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                    if (missingCount > 0)
+                      Text(
+                        '$missingCount 项缺失汇率，未计入统计',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: GwpColors.warning,
+                        ),
                       ),
                   ],
                 ),
@@ -526,7 +555,7 @@ class _AccountGroupHeader extends StatelessWidget {
   });
 
   final Account? account;
-  final List<Asset> assets;
+  final List<ValuedAsset> assets;
   final double totalValue;
   final bool expanded;
   final VoidCallback onToggle;
@@ -535,7 +564,7 @@ class _AccountGroupHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     var total = Decimal.zero;
     for (final a in assets) {
-      total += a.marketValue ?? Decimal.zero;
+      total += a.valuedAmount ?? Decimal.zero;
     }
     final name = account?.institutionName ?? '未知账户';
     final region = account?.sovereigntyRegion ?? '';
@@ -546,9 +575,10 @@ class _AccountGroupHeader extends StatelessWidget {
     // Per-account asset type mini breakdown
     final typeMap = <String, double>{};
     for (final a in assets) {
-      final mv = a.marketValue?.toDouble() ?? 0;
+      final mv = a.valuedAmount?.toDouble() ?? 0;
       if (mv > 0) {
-        typeMap[a.assetType.name] = (typeMap[a.assetType.name] ?? 0) + mv;
+        typeMap[a.asset.assetType.name] =
+            (typeMap[a.asset.assetType.name] ?? 0) + mv;
       }
     }
     final sortedTypes = typeMap.entries.toList()
@@ -708,27 +738,27 @@ const _assetTypeIcons = <AssetType, IconData>{
 class _AssetCard extends ConsumerWidget {
   const _AssetCard({required this.asset, required this.totalValue});
 
-  final Asset asset;
+  final ValuedAsset asset;
   final double totalValue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final market = asset.marketValue;
-    final cost = asset.costPrice;
+    final rawAsset = asset.asset;
+    final nativeMarket = asset.nativeValue;
+    final valuedMarket = asset.valuedAmount;
+    final valuedCostBasis = asset.valuedCostBasis;
     final typeColor =
-        _assetTypeColors[asset.assetType] ?? GwpColors.actionPrimary;
-    final typeIcon = _assetTypeIcons[asset.assetType] ?? Icons.show_chart;
-    final valueText =
-        market == null ? '—' : Money.format(market, currency: asset.currency);
-
+        _assetTypeColors[rawAsset.assetType] ?? GwpColors.actionPrimary;
+    final typeIcon = _assetTypeIcons[rawAsset.assetType] ?? Icons.show_chart;
     // Gain/loss
     Decimal? gain;
     double? gainPct;
-    if (market != null && cost != null && cost > Decimal.zero) {
-      final costBasis = cost * asset.quantity;
-      gain = market - costBasis;
-      if (costBasis > Decimal.zero) {
-        gainPct = gain.toDouble() / costBasis.toDouble() * 100;
+    if (valuedMarket != null &&
+        valuedCostBasis != null &&
+        valuedCostBasis > Decimal.zero) {
+      gain = valuedMarket - valuedCostBasis;
+      if (valuedCostBasis > Decimal.zero) {
+        gainPct = gain.toDouble() / valuedCostBasis.toDouble() * 100;
       }
     }
     final sign = gain == null
@@ -738,7 +768,7 @@ class _AssetCard extends ConsumerWidget {
             : (gain < Decimal.zero ? ValueSign.negative : ValueSign.neutral));
 
     // Proportion of total portfolio
-    final mvD = market?.toDouble() ?? 0;
+    final mvD = valuedMarket?.toDouble() ?? 0;
     final proportion =
         totalValue > 0 && mvD > 0 ? (mvD / totalValue).clamp(0.0, 1.0) : 0.0;
 
@@ -752,7 +782,7 @@ class _AssetCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => context.push('/assets/${asset.id}'),
+          onTap: () => context.push('/assets/${rawAsset.id}'),
           onLongPress: () => _promptUpdatePrice(context, ref),
           child: Container(
             decoration: BoxDecoration(
@@ -799,7 +829,7 @@ class _AssetCard extends ConsumerWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      asset.assetCode ?? asset.assetType.labelZh,
+                                      rawAsset.assetCode ?? rawAsset.assetType.labelZh,
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -810,7 +840,7 @@ class _AssetCard extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${asset.assetType.labelZh} · 数量 ${asset.quantity} · ${asset.currency}',
+                                      '${rawAsset.assetType.labelZh} · 数量 ${rawAsset.quantity} · ${rawAsset.currency}',
                                       style: const TextStyle(
                                           fontSize: 11,
                                           color: GwpColors.textMuted),
@@ -825,10 +855,20 @@ class _AssetCard extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  GwpNumberText(
-                                    value: valueText,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                  Text(
+                                    nativeMarket == null
+                                        ? '—'
+                                        : Money.format(
+                                            nativeMarket,
+                                            currency: rawAsset.currency,
+                                          ),
+                                    style: const TextStyle(
+                                      fontFamily: GwpTypo.monoFont,
+                                      fontFeatures: GwpTypo.tabularFigures,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: GwpColors.textPrimary,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   if (gain != null && gainPct != null)
@@ -842,7 +882,7 @@ class _AssetCard extends ConsumerWidget {
                                     )
                                   else
                                     Text(
-                                      asset.currency,
+                                      rawAsset.currency,
                                       style: const TextStyle(
                                         fontSize: 11,
                                         color: GwpColors.textMuted,
@@ -897,19 +937,20 @@ class _AssetCard extends ConsumerWidget {
   }
 
   Future<void> _promptUpdatePrice(BuildContext context, WidgetRef ref) async {
+    final rawAsset = asset.asset;
     final ctrl = TextEditingController(
-      text: asset.currentPrice?.toString() ?? '',
+      text: rawAsset.currentPrice?.toString() ?? '',
     );
     final ok = await showDialog<Decimal>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('更新价格 · ${asset.assetCode ?? asset.assetType.labelZh}'),
+        title: Text('更新价格 · ${rawAsset.assetCode ?? rawAsset.assetType.labelZh}'),
         content: TextField(
           controller: ctrl,
-          keyboardType:
+            keyboardType:
               const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: '当前价 (${asset.currency})',
+            decoration: InputDecoration(
+            labelText: '当前价 (${rawAsset.currency})',
           ),
           autofocus: true,
         ),
@@ -930,7 +971,7 @@ class _AssetCard extends ConsumerWidget {
     );
     if (ok == null) return;
     final r = await ref.read(valuateAssetUseCaseProvider)(
-      assetId: asset.id,
+      assetId: rawAsset.id,
       newPrice: ok,
     );
     if (!context.mounted) return;

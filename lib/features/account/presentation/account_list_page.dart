@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
+import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/region_meta.dart';
@@ -14,7 +15,7 @@ import '../../../core/ui/gwp_number_text.dart';
 import '../../../core/ui/gwp_status_badge.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_enums.dart';
-import '../../../domain/entities/asset.dart';
+import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../asset/presentation/asset_providers.dart';
 import 'account_providers.dart';
 import '../../../data/providers/dict_providers.dart';
@@ -27,7 +28,8 @@ class AccountListBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountListProvider);
-    final assetsAsync = ref.watch(assetListProvider);
+    final assetsAsync = ref.watch(valuedAssetsProvider);
+    final valuationCurrency = ref.watch(valuationCurrencyProvider);
     return accountsAsync.when(
       loading: () => const Center(
         child: CircularProgressIndicator(color: GwpColors.actionPrimary),
@@ -45,9 +47,14 @@ class AccountListBody extends ConsumerWidget {
           );
         }
         final assets = assetsAsync.when(
-          data: (list) => list,
-          loading: () => <Asset>[],
-          error: (_, _) => <Asset>[],
+          data: (valued) => valued.assets,
+          loading: () => <ValuedAsset>[],
+          error: (_, _) => <ValuedAsset>[],
+        );
+        final missingAssetIds = assetsAsync.when(
+          data: (valued) => valued.missingAssetIds.toSet(),
+          loading: () => <String>{},
+          error: (_, _) => <String>{},
         );
         final regionIndex =
             ref.watch(regionMetaIndexProvider).value ?? const {};
@@ -55,6 +62,8 @@ class AccountListBody extends ConsumerWidget {
           accounts: accounts,
           assets: assets,
           regionIndex: regionIndex,
+          valuationCurrency: valuationCurrency,
+          missingAssetIds: missingAssetIds,
         );
       },
     );
@@ -76,11 +85,15 @@ class _AccountListView extends StatefulWidget {
     required this.accounts,
     required this.assets,
     required this.regionIndex,
+    required this.valuationCurrency,
+    required this.missingAssetIds,
   });
 
   final List<Account> accounts;
-  final List<Asset> assets;
+  final List<ValuedAsset> assets;
   final RegionIndex regionIndex;
+  final String valuationCurrency;
+  final Set<String> missingAssetIds;
 
   @override
   State<_AccountListView> createState() => _AccountListViewState();
@@ -92,7 +105,7 @@ class _AccountListViewState extends State<_AccountListView> {
   bool _initialized = false;
 
   List<Account> get accounts => widget.accounts;
-  List<Asset> get assets => widget.assets;
+  List<ValuedAsset> get assets => widget.assets;
   RegionIndex get regionIndex => widget.regionIndex;
 
   @override
@@ -101,11 +114,12 @@ class _AccountListViewState extends State<_AccountListView> {
     final netWorth = <String, Decimal>{};
     final assetCount = <String, int>{};
     for (final a in assets) {
-      final mv = a.marketValue;
+      final mv = a.valuedAmount;
       if (mv != null && mv > Decimal.zero) {
-        netWorth[a.accountId] = (netWorth[a.accountId] ?? Decimal.zero) + mv;
+        netWorth[a.asset.accountId] =
+            (netWorth[a.asset.accountId] ?? Decimal.zero) + mv;
       }
-      assetCount[a.accountId] = (assetCount[a.accountId] ?? 0) + 1;
+      assetCount[a.asset.accountId] = (assetCount[a.asset.accountId] ?? 0) + 1;
     }
 
     // Per-account type aggregation for donut
@@ -178,6 +192,8 @@ class _AccountListViewState extends State<_AccountListView> {
           activeCount: activeCount,
           regionCount: grouped.length,
           totalAssets: assets.length,
+          valuationCurrency: widget.valuationCurrency,
+          missingCount: widget.missingAssetIds.length,
           typeValue: typeValue,
           regionValue: regionValue,
           regionIndex: regionIndex,
@@ -210,7 +226,7 @@ class _AccountListViewState extends State<_AccountListView> {
                 assetCount: assetCount[account.id] ?? 0,
                 totalNetWorth: totalD,
                 accountAssets: assets
-                    .where((a) => a.accountId == account.id)
+                    .where((a) => a.asset.accountId == account.id)
                     .toList(),
               ),
             if (!_showAllItems.contains(region) &&
@@ -244,6 +260,8 @@ class _HeroCard extends StatelessWidget {
     required this.activeCount,
     required this.regionCount,
     required this.totalAssets,
+    required this.valuationCurrency,
+    required this.missingCount,
     required this.typeValue,
     required this.regionValue,
     required this.regionIndex,
@@ -254,6 +272,8 @@ class _HeroCard extends StatelessWidget {
   final int activeCount;
   final int regionCount;
   final int totalAssets;
+  final String valuationCurrency;
+  final int missingCount;
   final Map<AccountType, double> typeValue;
   final Map<String, double> regionValue;
   final RegionIndex regionIndex;
@@ -291,7 +311,7 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             totalNetWorth > Decimal.zero
-                ? Money.format(totalNetWorth, currency: 'CNY')
+                ? Money.format(totalNetWorth, currency: valuationCurrency)
                 : '—',
             style: const TextStyle(
               fontFamily: GwpTypo.monoFont,
@@ -301,6 +321,13 @@ class _HeroCard extends StatelessWidget {
               color: GwpColors.textPrimary,
             ),
           ),
+          if (missingCount > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              '$missingCount 项缺失汇率，未计入统计',
+              style: const TextStyle(fontSize: 10, color: GwpColors.warning),
+            ),
+          ],
           const SizedBox(height: GwpSpacing.md),
           // KPI row
           Row(
@@ -726,7 +753,7 @@ class _AccountCard extends ConsumerWidget {
   final Decimal? netWorth;
   final int assetCount;
   final double totalNetWorth;
-  final List<Asset> accountAssets;
+  final List<ValuedAsset> accountAssets;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -741,9 +768,10 @@ class _AccountCard extends ConsumerWidget {
     // Asset type breakdown for this account
     final breakdown = <String, double>{};
     for (final a in accountAssets) {
-      final mv = a.marketValue?.toDouble() ?? 0;
+      final mv = a.valuedAmount?.toDouble() ?? 0;
       if (mv > 0) {
-        breakdown[a.assetType.name] = (breakdown[a.assetType.name] ?? 0) + mv;
+        breakdown[a.asset.assetType.name] =
+            (breakdown[a.asset.assetType.name] ?? 0) + mv;
       }
     }
     final sortedTypes = breakdown.entries.toList()
@@ -888,7 +916,7 @@ class _AccountCard extends ConsumerWidget {
                                         GwpNumberText(
                                           value: Money.format(
                                             nw,
-                                            currency: 'CNY',
+                                            currency: ref.watch(valuationCurrencyProvider),
                                           ),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,

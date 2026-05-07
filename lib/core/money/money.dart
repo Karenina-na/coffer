@@ -94,7 +94,7 @@ class Money {
     // 项目涉及币种（CNY/USD/HKD/EUR/GBP/JPY/SGD/AUD/加密）均为前缀符号格式，
     // 统一 `{symbol}{signedNumber}`。如果后续新增后缀型币种，再按 locale
     // pattern 拆分。
-    return isNeg ? '-$symbol$body' : '$symbol$body';
+    return isNeg ? '-$symbol $body' : '$symbol $body';
   }
 
   static String _groupThousands(String digits, String sep) {

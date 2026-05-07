@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors.dart';
 import '../../../core/money/money.dart';
+import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/result.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
@@ -20,6 +21,7 @@ import '../../../domain/entities/account.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
+import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../../domain/valuation/asset_valuator.dart';
 import '../../../domain/usecases/transfer_asset.dart';
 import '../../account/presentation/account_providers.dart';
@@ -152,6 +154,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
   @override
   Widget build(BuildContext context) {
     final assetAsync = ref.watch(assetByIdProvider(widget.assetId));
+    final valuedAsync = ref.watch(valuedAssetByIdProvider(widget.assetId));
     final historyAsync = ref.watch(
       assetValuationHistoryProvider(widget.assetId),
     );
@@ -245,63 +248,84 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
           }
           final accountAsync = ref.watch(accountByIdProvider(asset.accountId));
           final account = accountAsync.asData?.value;
+          final valuationCurrency = ref.watch(valuationCurrencyProvider);
           final allPoints = _extractPoints(historyAsync.asData?.value ?? const []);
           final filtered = _filterByRange(allPoints, _rangeDays);
           final coverage = _coverage(filtered, _rangeDays);
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 24),
-            children: [
-              _AssetHero(asset: asset, points: filtered),
-              const SizedBox(height: GwpSpacing.base),
-              _SectionCard(
-                icon: Icons.show_chart,
-                title: '价格走势',
-                children: [
-                  _RangeSelector(
-                    current: _rangeDays,
-                    ranges: _ranges,
-                    onSelected: (d) => setState(() => _rangeDays = d),
-                  ),
-                  _CoverageBanner(coverage: coverage),
-                  SizedBox(
-                    height: 180,
-                    child: _PriceChart(
-                      points: filtered,
-                      currency: asset.currency,
-                    ),
-                  ),
-                  _RangeStats(points: filtered),
-                ],
-              ),
-              const SizedBox(height: GwpSpacing.md),
-              _SectionCard(
-                icon: Icons.analytics_outlined,
-                title: '持仓分析',
-                children: [_HoldingAnalysis(asset: asset)],
-              ),
-              const SizedBox(height: GwpSpacing.md),
-              _SectionCard(
-                icon: Icons.account_balance_outlined,
-                title: '关联账户',
-                children: [_AccountLinkCard(asset: asset, account: account)],
-              ),
-              const SizedBox(height: GwpSpacing.md),
-              _SectionCard(
-                icon: Icons.info_outline,
-                title: '基本信息',
-                children: [_BasicInfoCard(asset: asset)],
-              ),
-              if (filtered.isNotEmpty) ...[
-                const SizedBox(height: GwpSpacing.md),
+          return valuedAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+            ),
+            error: (e, _) => GwpEmptyState.error(
+              message: '加载计价值失败: ${errorToMessage(e)}',
+              onRetry: () => ref.invalidate(valuedAssetByIdProvider(widget.assetId)),
+            ),
+            data: (valuedAsset) => ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                _AssetHero(
+                  asset: asset,
+                  valuedAsset: valuedAsset,
+                  valuationCurrency: valuationCurrency,
+                  points: filtered,
+                ),
+                const SizedBox(height: GwpSpacing.base),
                 _SectionCard(
-                  icon: Icons.history,
-                  title: '估值历史',
+                  icon: Icons.show_chart,
+                  title: '价格走势',
                   children: [
-                    _HistoryTimeline(points: filtered, currency: asset.currency),
+                    _RangeSelector(
+                      current: _rangeDays,
+                      ranges: _ranges,
+                      onSelected: (d) => setState(() => _rangeDays = d),
+                    ),
+                    _CoverageBanner(coverage: coverage),
+                    SizedBox(
+                      height: 180,
+                      child: _PriceChart(
+                        points: filtered,
+                        currency: asset.currency,
+                      ),
+                    ),
+                    _RangeStats(points: filtered),
                   ],
                 ),
+                const SizedBox(height: GwpSpacing.md),
+                _SectionCard(
+                  icon: Icons.analytics_outlined,
+                  title: '持仓分析',
+                  children: [
+                    _HoldingAnalysis(
+                      asset: asset,
+                      valuedAsset: valuedAsset,
+                      valuationCurrency: valuationCurrency,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: GwpSpacing.md),
+                _SectionCard(
+                  icon: Icons.account_balance_outlined,
+                  title: '关联账户',
+                  children: [_AccountLinkCard(asset: asset, account: account)],
+                ),
+                const SizedBox(height: GwpSpacing.md),
+                _SectionCard(
+                  icon: Icons.info_outline,
+                  title: '基本信息',
+                  children: [_BasicInfoCard(asset: asset)],
+                ),
+                if (filtered.isNotEmpty) ...[
+                  const SizedBox(height: GwpSpacing.md),
+                  _SectionCard(
+                    icon: Icons.history,
+                    title: '估值历史',
+                    children: [
+                      _HistoryTimeline(points: filtered, currency: asset.currency),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),
@@ -610,8 +634,15 @@ class _SectionCard extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _AssetHero extends StatelessWidget {
-  const _AssetHero({required this.asset, required this.points});
+  const _AssetHero({
+    required this.asset,
+    required this.valuedAsset,
+    required this.valuationCurrency,
+    required this.points,
+  });
   final Asset asset;
+  final ValuedAsset? valuedAsset;
+  final String valuationCurrency;
   final List<_Point> points;
 
   @override
@@ -823,18 +854,34 @@ class _AssetHero extends StatelessWidget {
               _HeroChip(
                 icon: Icons.account_balance_wallet_outlined,
                 label: '市值',
-                value: asset.marketValue == null
+                value: valuedAsset?.valuedAmount == null
                     ? '—'
-                    : compactValue(asset.marketValue!.toDouble()),
+                    : compactValue(valuedAsset!.valuedAmount!.toDouble()),
               ),
               const SizedBox(width: GwpSpacing.sm),
               _HeroChip(
                 icon: Icons.paid_outlined,
-                label: '币种',
-                value: asset.currency,
+                label: '计价',
+                value: valuationCurrency,
               ),
             ],
           ),
+          if (valuedAsset?.valuedAmount != null) ...[
+            const SizedBox(height: GwpSpacing.sm),
+            Text(
+              Money.format(
+                valuedAsset!.valuedAmount!,
+                currency: valuationCurrency,
+              ),
+              style: const TextStyle(
+                fontFamily: GwpTypo.monoFont,
+                fontFeatures: GwpTypo.tabularFigures,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: GwpColors.textPrimary,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1331,18 +1378,22 @@ class _MiniStatCard extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _HoldingAnalysis extends StatelessWidget {
-  const _HoldingAnalysis({required this.asset});
+  const _HoldingAnalysis({
+    required this.asset,
+    required this.valuedAsset,
+    required this.valuationCurrency,
+  });
   final Asset asset;
+  final ValuedAsset? valuedAsset;
+  final String valuationCurrency;
 
   @override
   Widget build(BuildContext context) {
     final qty = asset.quantity;
     final cost = asset.costPrice;
     final cur = asset.currentPrice;
-    final mv = asset.marketValue;
-
-    Decimal? totalCost;
-    if (cost != null) totalCost = qty * cost;
+    final mv = valuedAsset?.valuedAmount;
+    final totalCost = valuedAsset?.valuedCostBasis;
     Decimal? pnl;
     Decimal? pnlPct;
     if (totalCost != null && mv != null) {
@@ -1355,7 +1406,7 @@ class _HoldingAnalysis extends StatelessWidget {
         : (isUp ? GwpColors.positive : GwpColors.negative);
 
     String money(Decimal? d) =>
-        d == null ? '—' : Money.format(d, currency: asset.currency);
+        d == null ? '—' : Money.format(d, currency: valuationCurrency);
 
     // PnL hero
     return Column(
@@ -1406,7 +1457,7 @@ class _HoldingAnalysis extends StatelessWidget {
           _CompareBar(
             label1: '总成本',
             value1: totalCost.toDouble(),
-            label2: '总市值',
+            label2: '总市值 · $valuationCurrency',
             value2: mv.toDouble(),
             color1: GwpColors.textMuted,
             color2: isUp ? GwpColors.positive : GwpColors.negative,
@@ -1414,20 +1465,49 @@ class _HoldingAnalysis extends StatelessWidget {
           const SizedBox(height: GwpSpacing.md),
         ],
         // Detail grid
-        Row(
-          children: [
-            _MetricCell(label: '持仓数量', value: qty.toString()),
-            _MetricCell(label: '成本价', value: cost?.toString() ?? '—'),
-            _MetricCell(label: '现价', value: cur?.toString() ?? '—'),
-          ],
-        ),
-        const SizedBox(height: GwpSpacing.sm),
-        Row(
-          children: [
-            _MetricCell(label: '总市值', value: money(mv), emphasize: true),
-            _MetricCell(label: '总成本', value: money(totalCost)),
-            _MetricCell(label: '币种', value: asset.currency),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 360;
+            final columns = isNarrow ? 2 : 3;
+            final itemWidth =
+                (constraints.maxWidth - GwpSpacing.sm * (columns - 1)) /
+                columns;
+
+            return Wrap(
+              spacing: GwpSpacing.sm,
+              runSpacing: GwpSpacing.sm,
+              children: [
+                SizedBox(
+                  width: itemWidth,
+                  child: _MetricCell(label: '持仓数量', value: qty.toString()),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _MetricCell(label: '成本价', value: cost?.toString() ?? '—'),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _MetricCell(label: '现价', value: cur?.toString() ?? '—'),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _MetricCell(
+                    label: '总市值',
+                    value: money(mv),
+                    emphasize: true,
+                  ),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _MetricCell(label: '总成本', value: money(totalCost)),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _MetricCell(label: '原币', value: asset.currency),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -1539,7 +1619,8 @@ class _MetricCell extends StatelessWidget {
               fontWeight: emphasize ? FontWeight.w600 : FontWeight.w500,
               color: GwpColors.textPrimary,
             ),
-            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+            softWrap: true,
           ),
         ],
       ),
