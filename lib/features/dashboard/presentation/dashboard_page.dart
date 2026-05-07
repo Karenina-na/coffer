@@ -8,6 +8,7 @@ import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_donut_chart.dart';
 import '../../../core/ui/gwp_empty_state.dart';
@@ -137,7 +138,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
               // F. Recent activity（最多 3 条 + 查看全部）
               const _RecentActivitySection(),
-              const SizedBox(height: 24),
+              SizedBox(
+                height: FloatingNavLayout.totalFloatingHeight(context) + 24,
+              ),
             ],
           ),
         ),

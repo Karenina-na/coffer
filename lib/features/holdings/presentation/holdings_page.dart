@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/valuation/asset_valuator.dart';
@@ -208,6 +209,13 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   }
 
   Widget? _shellFabFor(BuildContext context, int idx) {
-    return _fabFor(context, idx);
+    final fab = _fabFor(context, idx);
+    if (fab == null) return null;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: FloatingNavLayout.totalFloatingHeight(context) + GwpSpacing.md,
+      ),
+      child: fab,
+    );
   }
 }

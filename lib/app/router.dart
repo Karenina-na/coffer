@@ -180,7 +180,6 @@ class _HomeShell extends ConsumerWidget {
 
   static const _navHorizontalMargin = 16.0;
   static const _navBottomGap = 12.0;
-  static const _navBarHeight = 64.0;
 
   final String location;
   final Widget child;
@@ -203,9 +202,6 @@ class _HomeShell extends ConsumerWidget {
     final unread = ref.watch(unreadEventCountProvider);
     final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final navReservedHeight = keyboardInset > 0
-        ? 0.0
-        : _navBarHeight + bottomSafeArea + _navBottomGap;
     final showNav = keyboardInset == 0;
 
     return CallbackShortcuts(
@@ -221,10 +217,7 @@ class _HomeShell extends ConsumerWidget {
             body: Stack(
               fit: StackFit.expand,
               children: [
-                Padding(
-                  padding: EdgeInsets.only(bottom: navReservedHeight),
-                  child: child,
-                ),
+                child,
                 if (showNav)
                   Positioned(
                     left: _navHorizontalMargin,

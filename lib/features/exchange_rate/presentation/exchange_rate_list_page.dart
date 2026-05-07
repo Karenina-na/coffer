@@ -7,6 +7,7 @@ import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_heat_strip.dart';
@@ -81,10 +82,15 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openEditor,
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('录入'),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: FloatingNavLayout.totalFloatingHeight(context) + 4,
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: _openEditor,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('录入'),
+        ),
       ),
       body: pairs.when(
         loading: () => const Center(
@@ -103,7 +109,9 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
             );
           }
           return ListView(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(
+              bottom: FloatingNavLayout.totalFloatingHeight(context) + 24,
+            ),
             children: [
               // Heat strip overview card
               _HeatStripCard(pairs: list),

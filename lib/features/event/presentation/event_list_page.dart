@@ -11,6 +11,7 @@ import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
@@ -168,7 +169,11 @@ class _EventListPageState extends ConsumerState<EventListPage>
         ),
       ),
       floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton.extended(
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: FloatingNavLayout.totalFloatingHeight(context) + 4,
+              ),
+              child: FloatingActionButton.extended(
               onPressed: () {
                 String two(int n) => n.toString().padLeft(2, '0');
                 final d = _calendarKey.currentState?.selectedDay ?? _fabDay;
@@ -177,6 +182,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
               },
               icon: const Icon(Icons.add, size: 18),
               label: const Text('新建事件'),
+            ),
             )
           : null,
       body: TabBarView(
@@ -379,7 +385,11 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                   },
                 ),
               ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: FloatingNavLayout.totalFloatingHeight(context) + 24,
+              ),
+            ),
           ],
         );
       },
@@ -1038,6 +1048,7 @@ class _EventCard extends StatelessWidget {
           context: context,
           isScrollControlled: true,
           showDragHandle: true,
+          useRootNavigator: true,
           builder: (_) => _EventDetailSheet(event: event),
         ),
         borderRadius: BorderRadius.circular(12),
