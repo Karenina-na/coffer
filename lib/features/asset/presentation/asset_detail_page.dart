@@ -628,7 +628,7 @@ class _AssetHero extends StatelessWidget {
       final prev = points[points.length - 2].price;
       final curr = currentPrice;
       changeAbs = curr - prev;
-      if (prev != Decimal.zero) changePct = (changeAbs * Decimal.fromInt(100) / prev).toDecimal();
+      if (prev != Decimal.zero) changePct = Money.percent(changeAbs, prev);
     }
     final isUp = changeAbs == null || changeAbs >= Decimal.zero;
     final changeColor = changeAbs == null
@@ -1347,7 +1347,7 @@ class _HoldingAnalysis extends StatelessWidget {
     Decimal? pnlPct;
     if (totalCost != null && mv != null) {
       pnl = mv - totalCost;
-      if (totalCost != Decimal.zero) pnlPct = (pnl * Decimal.fromInt(100) / totalCost).toDecimal();
+      if (totalCost != Decimal.zero) pnlPct = Money.percent(pnl, totalCost);
     }
     final isUp = pnl == null || pnl >= Decimal.zero;
     final pnlColor = pnl == null

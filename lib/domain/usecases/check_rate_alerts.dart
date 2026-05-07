@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/date_utils.dart';
 import '../../core/errors.dart';
+import '../../core/money/money.dart';
 import '../../core/result.dart';
 import '../entities/domain_event.dart';
 import '../entities/event_enums.dart';
@@ -118,8 +119,7 @@ class CheckRateAlertsUseCase {
         final prev = await _findPreviousPoint(p.pairKey, latest);
         final prevRate = prev?.rate;
         if (prevRate != null && prevRate > Decimal.zero) {
-          final pct = ((rate - prevRate) * Decimal.fromInt(100) / prevRate)
-              .toDecimal(scaleOnInfinitePrecision: 10);
+          final pct = Money.percent(rate - prevRate, prevRate);
           if (pct.abs() >= p.alertChangePct!) {
             final r = await _emit(
               p,

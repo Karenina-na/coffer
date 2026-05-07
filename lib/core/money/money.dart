@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 class Money {
   const Money._();
 
+  static const int defaultRatioScale = 10;
+
   /// 将 DB 中的文本列（可空）解析为 [Decimal]。
   static Decimal? parseOrNull(String? raw) {
     if (raw == null || raw.isEmpty) return null;
@@ -23,6 +25,32 @@ class Money {
 
   /// 将 [Decimal] 序列化为 DB 用字符串。
   static String? stringifyOrNull(Decimal? value) => value?.toString();
+
+  /// 在 Decimal 域内安全计算比率，避免无限小数在 toDecimal() 时抛错。
+  static Decimal ratio(
+    Decimal numerator,
+    Decimal denominator, {
+    int scale = defaultRatioScale,
+  }) {
+    if (denominator == Decimal.zero) return Decimal.zero;
+    return (numerator / denominator).toDecimal(
+      scaleOnInfinitePrecision: scale,
+    );
+  }
+
+  /// 在 Decimal 域内安全计算百分比，结果已乘以 100。
+  static Decimal percent(
+    Decimal numerator,
+    Decimal denominator, {
+    int scale = defaultRatioScale,
+  }) {
+    if (denominator == Decimal.zero) return Decimal.zero;
+    return ratio(
+      numerator * Decimal.fromInt(100),
+      denominator,
+      scale: scale,
+    );
+  }
 
   /// 按币种精度渲染展示文本。
   ///

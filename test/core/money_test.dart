@@ -44,5 +44,24 @@ void main() {
       expect(v.startsWith('-'), isTrue);
       expect(v, contains('1,234.50'));
     });
+
+    test('ratio handles infinite precision rationals', () {
+      expect(
+        Money.ratio(Decimal.one, Decimal.fromInt(3)).toString(),
+        '0.3333333333',
+      );
+    });
+
+    test('percent handles infinite precision rationals', () {
+      expect(
+        Money.percent(Decimal.one, Decimal.fromInt(3)).toString(),
+        '33.3333333333',
+      );
+    });
+
+    test('ratio and percent return zero for zero denominator', () {
+      expect(Money.ratio(Decimal.one, Decimal.zero), Decimal.zero);
+      expect(Money.percent(Decimal.one, Decimal.zero), Decimal.zero);
+    });
   });
 }

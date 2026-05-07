@@ -1003,7 +1003,7 @@ class _CostBasisSection extends StatelessWidget {
 
     final pnl = totalMarket - totalCost;
     final pnlPct = totalCost > Decimal.zero
-        ? (pnl * Decimal.fromInt(100) / totalCost).toDecimal()
+        ? Money.percent(pnl, totalCost)
         : Decimal.zero;
     final isProfit = pnl >= Decimal.zero;
     final pnlColor = isProfit ? GwpColors.positive : GwpColors.negative;
@@ -1528,7 +1528,7 @@ class _AssetRow extends ConsumerWidget {
     if (rawPoints.length >= 2) {
       final a = rawPoints.first.price;
       final b = rawPoints.last.price;
-      if (a != Decimal.zero) changePct = ((b - a) * Decimal.fromInt(100) / a).toDecimal();
+      if (a != Decimal.zero) changePct = Money.percent(b - a, a);
     }
     final isUp = changePct == null || changePct >= Decimal.zero;
     final changeColor = changePct == null

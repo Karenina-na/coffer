@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/money/money.dart';
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
@@ -297,9 +298,7 @@ class _PairRateCard extends ConsumerWidget {
       final a = first!.rate;
       final b = latest!.rate;
       if (a != Decimal.zero) {
-        changePct = ((b - a) * Decimal.fromInt(100) / a).toDecimal(
-          scaleOnInfinitePrecision: 10,
-        );
+        changePct = Money.percent(b - a, a);
       }
     }
     final isUp = changePct == null || changePct >= Decimal.zero;

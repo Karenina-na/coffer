@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/money/money.dart';
 import '../../../core/ui/gwp_node_map.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
 import '../../../domain/entities/card.dart';
@@ -44,7 +45,7 @@ class DashboardSummary {
 
 double computeCreditUsedRatio(Decimal limitSum, Decimal availSum) {
   if (limitSum <= Decimal.zero) return 0;
-  final ratio = (availSum / limitSum).toDecimal(scaleOnInfinitePrecision: 10);
+  final ratio = Money.ratio(availSum, limitSum);
   final used = Decimal.one - ratio;
   final usedDouble = used.toDouble();
   if (usedDouble.isNaN || usedDouble.isInfinite) return 0;
