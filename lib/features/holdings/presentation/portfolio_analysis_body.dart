@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/design_tokens.dart';
+import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_bar_rank.dart';
 import '../../../core/ui/gwp_radar_chart.dart';
@@ -16,9 +17,11 @@ class PortfolioAnalysisBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.md,
+      padding: EdgeInsets.fromLTRB(
+        GwpSpacing.base,
+        GwpSpacing.md,
+        GwpSpacing.base,
+        FloatingNavLayout.totalFloatingHeight(context) + GwpSpacing.md,
       ),
       children: const [
         _SnapshotHero(),
@@ -34,7 +37,6 @@ class PortfolioAnalysisBody extends ConsumerWidget {
         _RiskOverviewSection(),
         SizedBox(height: GwpSpacing.base),
         _HealthRadarSection(),
-        SizedBox(height: GwpSpacing.xxl),
       ],
     );
   }
