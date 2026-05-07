@@ -36,6 +36,7 @@ class CardDetailSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       showDragHandle: true,
       useSafeArea: true,
+      useRootNavigator: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) => CardDetailSheet(card: card, account: account),
     );

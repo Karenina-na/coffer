@@ -92,6 +92,7 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: GwpColors.surface1,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

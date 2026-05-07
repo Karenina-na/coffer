@@ -139,13 +139,10 @@ class _CardListPageState extends ConsumerState<CardListPage> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 88),
-        child: FloatingActionButton.extended(
-          onPressed: () => context.push('/cards/new'),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('新建'),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/cards/new'),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('新建'),
       ),
       body: cards.when(
         loading: () => const Center(
@@ -175,7 +172,7 @@ class _CardListPageState extends ConsumerState<CardListPage> {
                   ),
                 ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 sliver: SliverList.separated(
                   itemCount: sorted.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 16),

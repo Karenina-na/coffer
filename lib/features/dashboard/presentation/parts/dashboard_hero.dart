@@ -375,6 +375,7 @@ class _GridMapContentState extends State<_GridMapContent>
       context: context,
       backgroundColor: GwpColors.surface1,
       isScrollControlled: true,
+      useRootNavigator: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),

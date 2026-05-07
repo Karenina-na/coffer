@@ -168,19 +168,15 @@ class _EventListPageState extends ConsumerState<EventListPage>
         ),
       ),
       floatingActionButton: _tabController.index == 0
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 88),
-              child: FloatingActionButton.extended(
-                onPressed: () {
-                  String two(int n) => n.toString().padLeft(2, '0');
-                  final d = _calendarKey.currentState?.selectedDay ?? _fabDay;
-                  final iso =
-                      '${d.year}-${two(d.month)}-${two(d.day)}';
-                  context.push('/events/new?day=$iso');
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('新建事件'),
-              ),
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                String two(int n) => n.toString().padLeft(2, '0');
+                final d = _calendarKey.currentState?.selectedDay ?? _fabDay;
+                final iso = '${d.year}-${two(d.month)}-${two(d.day)}';
+                context.push('/events/new?day=$iso');
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('新建事件'),
             )
           : null,
       body: TabBarView(
@@ -383,7 +379,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                   },
                 ),
               ),
-            const SliverToBoxAdapter(child: SizedBox(height: 112)),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         );
       },
@@ -1396,7 +1392,7 @@ class _EventDetailSheet extends ConsumerWidget {
       if (isRateAlert && event.relatedId.isNotEmpty) {
         nav.pop();
         if (!context.mounted) return;
-        await Navigator.of(context).push(
+        await Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (_) => PairDetailPage(pairKey: event.relatedId),
           ),

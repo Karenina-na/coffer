@@ -208,11 +208,6 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   }
 
   Widget? _shellFabFor(BuildContext context, int idx) {
-    final fab = _fabFor(context, idx);
-    if (fab == null) return null;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 88),
-      child: fab,
-    );
+    return _fabFor(context, idx);
   }
 }

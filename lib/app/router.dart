@@ -180,6 +180,7 @@ class _HomeShell extends ConsumerWidget {
 
   static const _navHorizontalMargin = 16.0;
   static const _navBottomGap = 12.0;
+  static const _navBarHeight = 64.0;
 
   final String location;
   final Widget child;
@@ -201,6 +202,11 @@ class _HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadEventCountProvider);
     final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final navReservedHeight = keyboardInset > 0
+        ? 0.0
+        : _navBarHeight + bottomSafeArea + _navBottomGap;
+    final showNav = keyboardInset == 0;
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -211,25 +217,29 @@ class _HomeShell extends ConsumerWidget {
       },
       child: Focus(
         autofocus: true,
-        child: Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              child,
-              Positioned(
-                left: _navHorizontalMargin,
-                right: _navHorizontalMargin,
-                bottom: bottomSafeArea + _navBottomGap,
-                child: _FloatingNavBar(
-                  selectedIndex: _index,
-                  tabs: _tabs,
-                  unreadBadge: unread > 0,
-                  onTap: (i) => context.go(_tabs[i].$1),
+          child: Scaffold(
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(bottom: navReservedHeight),
+                  child: child,
                 ),
-              ),
-            ],
+                if (showNav)
+                  Positioned(
+                    left: _navHorizontalMargin,
+                    right: _navHorizontalMargin,
+                    bottom: bottomSafeArea + _navBottomGap,
+                    child: _FloatingNavBar(
+                      selectedIndex: _index,
+                      tabs: _tabs,
+                      unreadBadge: unread > 0,
+                      onTap: (i) => context.go(_tabs[i].$1),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
       ),
     );
   }
