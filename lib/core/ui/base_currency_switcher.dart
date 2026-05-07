@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/dashboard/presentation/dashboard_providers.dart';
+import '../valuation/valuation_currency_provider.dart';
 
 const List<String> kSupportedBaseCurrencies = [
   'CNY',
@@ -22,7 +22,7 @@ class BaseCurrencySwitcher extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final current = ref.watch(dashboardBaseCurrencyProvider);
+    final current = ref.watch(valuationCurrencyProvider);
     final cs = Theme.of(context).colorScheme;
     // 小屏下省掉 language 图标与内外边距，只保留「币种码 + 下拉」
     final compact = MediaQuery.sizeOf(context).width < 380;
@@ -30,7 +30,7 @@ class BaseCurrencySwitcher extends ConsumerWidget {
       tooltip: '切换本位币',
       initialValue: current,
       onSelected: (code) =>
-          ref.read(dashboardBaseCurrencyProvider.notifier).set(code),
+          ref.read(valuationCurrencyProvider.notifier).set(code),
       itemBuilder: (_) => [
         for (final c in kSupportedBaseCurrencies)
           PopupMenuItem<String>(

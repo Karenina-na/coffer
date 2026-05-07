@@ -7,6 +7,7 @@ import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
+import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
 import '../../channel/presentation/channel_providers.dart';
@@ -16,6 +17,7 @@ class _PortfolioInputs {
   const _PortfolioInputs({
     required this.accounts,
     required this.assets,
+    required this.valuedAssets,
     required this.baseCurrency,
     required this.netWorth,
     required this.missingRateCount,
@@ -24,6 +26,7 @@ class _PortfolioInputs {
 
   final List<Account> accounts;
   final List<Asset> assets;
+  final List<ValuedAsset> valuedAssets;
   final String baseCurrency;
   final Decimal netWorth;
   final int missingRateCount;
@@ -35,9 +38,11 @@ final _portfolioInputsProvider =
   final summary = await ref.watch(dashboardSummaryProvider.future);
   final accounts = await ref.watch(accountListProvider.future);
   final assets = await ref.watch(assetListProvider.future);
+  final valued = await ref.watch(valuedAssetsProvider.future);
   return _PortfolioInputs(
     accounts: accounts,
     assets: assets,
+    valuedAssets: valued.assets,
     baseCurrency: summary.baseCurrency,
     netWorth: summary.total,
     missingRateCount: summary.missingAssetIds.length,
@@ -51,6 +56,7 @@ final _portfolioInputsWithChannelsProvider =
   return _PortfolioInputs(
     accounts: base.accounts,
     assets: base.assets,
+    valuedAssets: base.valuedAssets,
     baseCurrency: base.baseCurrency,
     netWorth: base.netWorth,
     missingRateCount: base.missingRateCount,
@@ -123,13 +129,13 @@ class AllocationSlice {
 }
 
 List<AllocationSlice> _groupAndSlice(
-  List<Asset> assets,
-  String Function(Asset) keyFn,
+  List<ValuedAsset> assets,
+  String Function(ValuedAsset) keyFn,
 ) {
   final totals = <String, double>{};
   var grand = 0.0;
   for (final a in assets) {
-    final mv = a.marketValue;
+    final mv = a.valuedAmount;
     if (mv == null || mv <= Decimal.zero) continue;
     final key = keyFn(a);
     final d = mv.toDouble();
@@ -152,14 +158,14 @@ List<AllocationSlice> _groupAndSlice(
 final portfolioByTypeProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
-  return _groupAndSlice(inputs.assets, (a) => a.assetType.name);
+  return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.assetType.name);
 });
 
 /// Asset allocation grouped by currency.
 final portfolioByCurrencyProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
-  return _groupAndSlice(inputs.assets, (a) => a.currency);
+  return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.currency);
 });
 
 /// Asset allocation grouped by sovereignty region (via account join).
@@ -167,9 +173,9 @@ final portfolioByRegionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
   final map = {for (final a in accounts) a.id: a.sovereigntyRegion};
-  return _groupAndSlice(assets, (a) => map[a.accountId] ?? '未知');
+  return _groupAndSlice(assets, (a) => map[a.asset.accountId] ?? '未知');
 });
 
 /// Asset allocation grouped by institution (via account join).
@@ -177,9 +183,9 @@ final portfolioByInstitutionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
   final map = {for (final a in accounts) a.id: a.institutionName};
-  return _groupAndSlice(assets, (a) => map[a.accountId] ?? '未知');
+  return _groupAndSlice(assets, (a) => map[a.asset.accountId] ?? '未知');
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -190,17 +196,18 @@ final portfolioByInstitutionProvider =
 final assetTop10Provider =
     FutureProvider.autoDispose<List<RankItem>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
 
   final ranked = assets
-      .where((a) => a.marketValue != null && a.marketValue! > Decimal.zero)
+      .where((a) => a.valuedAmount != null && a.valuedAmount! > Decimal.zero)
       .toList()
-    ..sort((a, b) => b.marketValue!.compareTo(a.marketValue!));
+    ..sort((a, b) => b.valuedAmount!.compareTo(a.valuedAmount!));
 
   return ranked.take(10).map((a) {
     return RankItem(
-      label: a.assetCode ?? (a.id.length >= 6 ? a.id.substring(0, 6) : a.id),
-      value: a.marketValue!.toDouble(),
+      label: a.asset.assetCode ??
+          (a.asset.id.length >= 6 ? a.asset.id.substring(0, 6) : a.asset.id),
+      value: a.valuedAmount!.toDouble(),
     );
   }).toList();
 });
@@ -227,15 +234,15 @@ final accountStackedProvider =
     FutureProvider.autoDispose<List<StackedBarGroup>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
 
   final accountAssets = <String, Map<String, double>>{};
   for (final asset in assets) {
-    final mv = asset.marketValue;
+    final mv = asset.valuedAmount;
     if (mv == null || mv <= Decimal.zero) continue;
-    final typeName = asset.assetType.name;
+    final typeName = asset.asset.assetType.name;
     accountAssets
-        .putIfAbsent(asset.accountId, () => {})
+        .putIfAbsent(asset.asset.accountId, () => {})
         .update(typeName, (v) => v + mv.toDouble(), ifAbsent: () => mv.toDouble());
   }
 
@@ -283,7 +290,7 @@ final currencyExposureProvider =
     FutureProvider.autoDispose<HeatMatrixData>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
 
   final accountMap = {for (final a in accounts) a.id: a.institutionName};
   final cells = <(String, String), double>{};
@@ -291,12 +298,12 @@ final currencyExposureProvider =
   final currencies = <String>{};
 
   for (final asset in assets) {
-    final mv = asset.marketValue;
+    final mv = asset.valuedAmount;
     if (mv == null || mv <= Decimal.zero) continue;
-    final name = accountMap[asset.accountId] ?? '未知';
+    final name = accountMap[asset.asset.accountId] ?? '未知';
     accountNames.add(name);
-    currencies.add(asset.currency);
-    final key = (name, asset.currency);
+    currencies.add(asset.asset.currency);
+    final key = (name, asset.asset.currency);
     cells[key] = (cells[key] ?? 0) + mv.toDouble();
   }
 
@@ -338,7 +345,7 @@ final concentrationProvider =
     FutureProvider.autoDispose<ConcentrationMetrics>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts.cast<dynamic>();
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
   final accountMap = {for (final a in accounts) a.id: a};
 
   var grandTotal = 0.0;
@@ -347,13 +354,14 @@ final concentrationProvider =
   final regionVals = <String, double>{};
 
   for (final a in assets) {
-    final mv = a.marketValue?.toDouble() ?? 0;
+    final mv = a.valuedAmount?.toDouble() ?? 0;
     if (mv <= 0) continue;
     grandTotal += mv;
-    final label = a.assetCode ?? (a.id.length >= 6 ? a.id.substring(0, 6) : a.id);
+    final label = a.asset.assetCode ??
+        (a.asset.id.length >= 6 ? a.asset.id.substring(0, 6) : a.asset.id);
     assetVals[label] = (assetVals[label] ?? 0) + mv;
-    currencyVals[a.currency] = (currencyVals[a.currency] ?? 0) + mv;
-    final region = accountMap[a.accountId]?.sovereigntyRegion ?? '未知';
+    currencyVals[a.asset.currency] = (currencyVals[a.asset.currency] ?? 0) + mv;
+    final region = accountMap[a.asset.accountId]?.sovereigntyRegion ?? '未知';
     regionVals[region] = (regionVals[region] ?? 0) + mv;
   }
 
@@ -412,14 +420,14 @@ const _medLiquidityTypes = {AssetType.stock, AssetType.fund, AssetType.crypto};
 final liquidityProvider =
     FutureProvider.autoDispose<LiquidityProfile>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
   double high = 0, med = 0, low = 0;
   for (final a in assets) {
-    final mv = a.marketValue?.toDouble() ?? 0;
+    final mv = a.valuedAmount?.toDouble() ?? 0;
     if (mv <= 0) continue;
-    if (_highLiquidityTypes.contains(a.assetType)) {
+    if (_highLiquidityTypes.contains(a.asset.assetType)) {
       high += mv;
-    } else if (_medLiquidityTypes.contains(a.assetType)) {
+    } else if (_medLiquidityTypes.contains(a.asset.assetType)) {
       med += mv;
     } else {
       low += mv;
@@ -442,7 +450,7 @@ final healthScoreProvider =
     FutureProvider.autoDispose<List<RadarDimension>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsWithChannelsProvider.future);
   final accounts = inputs.accounts;
-  final assets = inputs.assets;
+  final assets = inputs.valuedAssets;
   final acLinks = inputs.accountChannels;
 
   if (assets.isEmpty) return [];
@@ -451,9 +459,9 @@ final healthScoreProvider =
   final currencyTotals = <String, double>{};
   var grandTotal = 0.0;
   for (final a in assets) {
-    final mv = a.marketValue?.toDouble() ?? 0;
+    final mv = a.valuedAmount?.toDouble() ?? 0;
     if (mv > 0) {
-      currencyTotals[a.currency] = (currencyTotals[a.currency] ?? 0) + mv;
+      currencyTotals[a.asset.currency] = (currencyTotals[a.asset.currency] ?? 0) + mv;
       grandTotal += mv;
     }
   }
@@ -469,8 +477,9 @@ final healthScoreProvider =
   // 2. Liquidity = cash-like assets / total
   double cashLike = 0;
   for (final a in assets) {
-    if (a.assetType == AssetType.fxAsset || a.assetType == AssetType.cd) {
-      cashLike += a.marketValue?.toDouble() ?? 0;
+    if (a.asset.assetType == AssetType.fxAsset ||
+        a.asset.assetType == AssetType.cd) {
+      cashLike += a.valuedAmount?.toDouble() ?? 0;
     }
   }
   final liquidity = grandTotal > 0 ? (cashLike / grandTotal).clamp(0.0, 1.0) : 0.0;
@@ -484,17 +493,17 @@ final healthScoreProvider =
   // 4. Data Freshness = % of assets with valuation updated in past 24h
   final cutoff = DateTime.now().subtract(const Duration(hours: 24));
   var freshCount = 0;
-  for (final a in assets) {
+  for (final a in inputs.assets) {
     if (a.valuationTime != null && a.valuationTime!.isAfter(cutoff)) {
       freshCount++;
     }
   }
-  final freshness = assets.isNotEmpty ? freshCount / assets.length : 0.0;
+  final freshness = inputs.assets.isNotEmpty ? freshCount / inputs.assets.length : 0.0;
 
   // 5. Concentration Risk = 1 - (largest single asset / total)
   double maxSingle = 0;
   for (final a in assets) {
-    final mv = a.marketValue?.toDouble() ?? 0;
+    final mv = a.valuedAmount?.toDouble() ?? 0;
     if (mv > maxSingle) maxSingle = mv;
   }
   final concentration = grandTotal > 0

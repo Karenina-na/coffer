@@ -36,7 +36,7 @@
 | cost_price | DECIMAL(28,10) | 否 | 成本价 |
 | current_price | DECIMAL(28,10) | 否 | 当前价 |
 | currency | VARCHAR(10) | 是 | 计价币种或数字资产符号 |
-| market_value | DECIMAL(28,10) | 否 | 市值缓存 |
+| market_value | DECIMAL(28,10) | 否 | 原币市值缓存（`quantity × current_price`，币种由 `currency` 指定）；全局计价值在查询/展示层按当前计价货币运行时换算，不单独落库 |
 | valuation_time | DATETIME | 否 | 估值时间 |
 | status | ENUM | 是 | HOLDING / FROZEN / REDEEMED / CLOSED |
 | ext_info | JSON | 否 | 扩展信息 |

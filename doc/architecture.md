@@ -112,12 +112,15 @@ lib/
 - **Channel 规则引擎**：`sovereignty_region_rule` 采用 JSON Schema + 谓词列表实现，避免 if-else 蔓延
 - **多跳路径规划**：`PlanTransferRouteUseCase` 以 Account.id 为图节点，按 `AccountChannel` 聚合同一通道的成员账户并在两两之间生成双向边，规则引擎按 (from, to) 的 `sovereignty_region` 逐边评估；Dijkstra 支持 minFee / minHops 两种目标
 - **ExchangeRate 抽象**：定义 `AssetPriceProvider`（行情源）和 `PriceProvider`（汇率源）接口，REALTIME / HOURLY / DAILY 三种快照类型对应不同实现，便于替换与离线兜底
+- **全局计价货币**：Presentation 层通过统一的 `valuationCurrencyProvider` 管理当前计价货币；金额统计不直接横向累加 `Asset.market_value`，而是先经 `ValueAssetsInCurrencyUseCase` 换算到当前计价货币，再驱动仪表盘、分析页、账户/资产列表与详情展示
+- **成本/盈亏口径**：凡使用计价值 `valuedAmount` 的收益、盈亏、成本对比，也必须同步使用换算后的成本基准（`valuedCostBasis`）；禁止把原币 `costPrice × quantity` 直接与计价值做减法
+- **趋势口径一致性**：净值趋势的历史点与“今日点”必须使用同一计价货币口径，禁止历史点已换汇而最新点仍直接累加原币 `market_value`
 
 ## 7. 表现层规范
 
 - 每个 feature 暴露一个 `*NotifierProvider`，对外只暴露不可变 `State`
 - 列表视图使用 `AsyncValue` + `StreamProvider` 直连 Drift `watch*()`，数据变更自动驱动 UI
-- 金额展示统一走 `MoneyFormatter`，按资产 `currency` 精度渲染
+- 金额展示统一走 `MoneyFormatter`；原币值按资产 `currency` 精度渲染，统计与汇总按当前全局计价货币渲染
 - 敏感字段仅展示 masked 值，绝不渲染明文密文
 - 支持 Material 3 动态取色与深色模式
 

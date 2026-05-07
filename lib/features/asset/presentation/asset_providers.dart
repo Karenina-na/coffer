@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../data/providers/asset_providers.dart';
+import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_cost_history_point.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
@@ -10,6 +11,7 @@ import '../../../domain/usecases/create_asset.dart';
 import '../../../domain/usecases/refresh_asset_price.dart';
 import '../../../domain/usecases/transfer_asset.dart';
 import '../../../domain/usecases/update_asset.dart';
+import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../../domain/usecases/valuate_asset.dart';
 import '../../../domain/valuation/asset_valuator.dart';
 import '../../../domain/valuation/strategies/fixed_income_valuator.dart';
@@ -45,6 +47,47 @@ final assetListProvider = StreamProvider<List<Asset>>((ref) {
 final assetByIdProvider = StreamProvider.family<Asset?, String>((ref, assetId) {
   return ref.watch(assetRepositoryProvider).watchById(assetId);
 });
+
+final valueAssetsInCurrencyUseCaseProvider =
+    Provider<ValueAssetsInCurrencyUseCase>((ref) {
+      return ValueAssetsInCurrencyUseCase(ref.watch(priceProviderProvider));
+    });
+
+final valuedAssetsProvider = FutureProvider.autoDispose<ValuedAssets>((ref) async {
+  final assets = await ref.watch(assetListProvider.future);
+  final base = ref.watch(valuationCurrencyProvider);
+  final useCase = ref.watch(valueAssetsInCurrencyUseCaseProvider);
+  final result = await useCase(assets: assets, valuationCurrency: base);
+  return result.when(
+    ok: (valued) => valued,
+    err: (e) => throw Exception('value assets failed: ${e.message}'),
+  );
+});
+
+final valuedAssetsByAccountProvider =
+    FutureProvider.autoDispose.family<ValuedAssets, String>((ref, accountId) async {
+      final assets = await ref.watch(assetsByAccountProvider(accountId).future);
+      final base = ref.watch(valuationCurrencyProvider);
+      final useCase = ref.watch(valueAssetsInCurrencyUseCaseProvider);
+      final result = await useCase(assets: assets, valuationCurrency: base);
+      return result.when(
+        ok: (valued) => valued,
+        err: (e) => throw Exception('value account assets failed: ${e.message}'),
+      );
+    });
+
+final valuedAssetByIdProvider =
+    FutureProvider.autoDispose.family<ValuedAsset?, String>((ref, assetId) async {
+      final asset = await ref.watch(assetByIdProvider(assetId).future);
+      if (asset == null) return null;
+      final base = ref.watch(valuationCurrencyProvider);
+      final useCase = ref.watch(valueAssetsInCurrencyUseCaseProvider);
+      final result = await useCase(assets: [asset], valuationCurrency: base);
+      return result.when(
+        ok: (valued) => valued.assets.firstOrNull,
+        err: (e) => throw Exception('value asset failed: ${e.message}'),
+      );
+    });
 
 final assetsByAccountProvider = StreamProvider.family<List<Asset>, String>((
   ref,
