@@ -82,12 +82,13 @@ class RefreshAssetPriceUseCase {
   final String Function() _idGen;
   final DateTime Function() _now;
 
-  /// 强制从 API 拉取单资产的最新价并更新估值。
+  /// 刷新单资产最新价并更新估值。
   ///
-  /// [forceRefresh] 默认 `true`，确保不走缓存；测试场景可设为 `false`。
+  /// [forceRefresh] 为 `true` 时绕过 `MarketQuoteValuator` 进程内缓存；默认走
+  /// TTL 缓存，以遵循批量同步的限流约束。
   Future<Result<Asset, AppError>> refreshLatest(
     String assetId, {
-    bool forceRefresh = true,
+    bool forceRefresh = false,
   }) async {
     final found = await _assets.findById(assetId);
     if (found.isErr) return Err(found.errorOrNull!);
@@ -171,7 +172,7 @@ class RefreshAssetPriceUseCase {
           continue;
         }
       }
-      final r = await refreshLatest(asset.id, forceRefresh: true);
+      final r = await refreshLatest(asset.id);
       r.when(
         ok: (_) => success.add(asset.id),
         err: (e) => failed[asset.id] = e.message,
@@ -183,12 +184,12 @@ class RefreshAssetPriceUseCase {
 
   /// 批量补录历史估值事件。返回成功写入的事件数。
   ///
-  /// [forceRefresh] 默认 `true`，确保历史序列也从 API 重新拉取。
+  /// [forceRefresh] 为 `true` 时绕过历史序列缓存；默认走 TTL 缓存。
   Future<Result<int, AppError>> refreshHistory({
     required String assetId,
     required DateTime from,
     required DateTime to,
-    bool forceRefresh = true,
+    bool forceRefresh = false,
   }) async {
     if (from.isAfter(to)) {
       return const Err(ValidationError('from 不能晚于 to'));

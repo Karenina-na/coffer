@@ -18,6 +18,7 @@ import 'package:gwp/domain/usecases/refresh_asset_price.dart';
 import 'package:gwp/domain/usecases/valuate_asset.dart';
 import 'package:gwp/domain/utils/pair_key.dart';
 import 'package:gwp/domain/valuation/asset_valuator.dart';
+import 'package:gwp/domain/valuation/strategies/market_quote_valuator.dart';
 
 import 'asset_valuator_test_helpers.dart';
 
@@ -75,6 +76,33 @@ void main() {
 
   RefreshAssetPriceUseCase buildUseCase(FakeAssetPriceProvider provider) {
     final valuator = SimpleFakeValuator(provider);
+    final valuate = ValuateAssetUseCase(
+      assetRepo,
+      historyRepo,
+      fixedRate(Decimal.one),
+      idGenerator: () => 'evt-${++seq}',
+      now: () => now,
+    );
+    return RefreshAssetPriceUseCase(
+      assets: assetRepo,
+      events: eventRepo,
+      priceHistory: historyRepo,
+      bus: bus,
+      fxRates: fixedRate(Decimal.one),
+      valuator: valuator,
+      valuate: valuate,
+      idGenerator: () => 'id-${++seq}',
+      now: () => now,
+    );
+  }
+
+  RefreshAssetPriceUseCase buildCachedUseCase(FakeAssetPriceProvider provider) {
+    final valuator = MarketQuoteValuator(
+      source: provider,
+      clock: () => now,
+      latestTtl: const Duration(minutes: 5),
+      historyTtl: const Duration(hours: 6),
+    );
     final valuate = ValuateAssetUseCase(
       assetRepo,
       historyRepo,
@@ -187,6 +215,28 @@ void main() {
       expect(r.valueOrNull?.success, ['ast-1']);
       expect(r.valueOrNull?.failed, containsPair('ghost', contains('not found')));
     });
+
+    test('重复 refreshAll 增量模式在 TTL 内复用 latest 缓存', () async {
+      await seedAsset(id: 'ast-1', assetCode: 'AAPL');
+      final provider = FakeAssetPriceProvider(
+        latest: AssetQuote(
+          symbol: 'AAPL',
+          price: Decimal.parse('100'),
+          currency: 'USD',
+          asOfTime: now,
+          source: 'test',
+        ),
+      );
+      final useCase = buildCachedUseCase(provider);
+
+      final r1 = await useCase.refreshAll(mode: SyncMode.incremental);
+      final r2 = await useCase.refreshAll(mode: SyncMode.incremental);
+
+      expect(r1.isOk, isTrue);
+      expect(r2.isOk, isTrue);
+      expect(provider.latestCalls, 1,
+          reason: 'TTL 窗口内二次批量刷新不应再次打远端');
+    });
   });
 
   group('refreshHistory', () {
@@ -214,6 +264,35 @@ void main() {
         to: now,
       );
       expect(r.isErr, isTrue);
+    });
+
+    test('重复 refreshHistory 在 TTL 内复用 history 缓存', () async {
+      await seedAsset(id: 'ast-1', assetCode: 'AAPL');
+      final provider = FakeAssetPriceProvider(
+        series: AssetPriceSeries(
+          symbol: 'AAPL',
+          currency: 'USD',
+          source: 'test',
+          points: [
+            AssetPricePoint(
+              t: now.subtract(const Duration(days: 1)),
+              price: Decimal.parse('100'),
+              currency: 'USD',
+            ),
+          ],
+        ),
+      );
+      final useCase = buildCachedUseCase(provider);
+
+      final from = now.subtract(const Duration(days: 1));
+      final to = now;
+      final r1 = await useCase.refreshHistory(assetId: 'ast-1', from: from, to: to);
+      final r2 = await useCase.refreshHistory(assetId: 'ast-1', from: from, to: to);
+
+      expect(r1.isOk, isTrue);
+      expect(r2.isOk, isTrue);
+      expect(provider.seriesCalls, 1,
+          reason: 'TTL 窗口内重复拉历史不应再次打远端');
     });
   });
 

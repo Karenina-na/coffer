@@ -93,6 +93,27 @@ void main() {
       expect(r.isOk, isTrue,
           reason: 'fetchTimeSeries 失败不应开启 fetchLatest 的熔断器');
     });
+
+    test('NotFoundError 不应触发 provider 熔断', () async {
+      final clock = _FakeClock();
+      final p1 = _NotFoundThenSuccessProvider();
+      final p2 = FakeAssetPriceProvider(latest: q('FUND', '2'));
+      final composite = CompositeAssetPriceProvider([p1, p2], clock: () => clock.now);
+
+      for (var i = 0; i < 5; i++) {
+        final r = await composite.fetchLatest('AAPL');
+        expect(r.isOk, isTrue);
+        expect(r.valueOrNull!.price, Decimal.parse('2'));
+        clock.advance(const Duration(seconds: 1));
+      }
+
+      p1.latest = q('110011', '1');
+      final r = await composite.fetchLatest('110011');
+      expect(r.isOk, isTrue);
+      expect(r.valueOrNull!.price, Decimal.parse('1'));
+      expect(p1.latestCalls, 6,
+          reason: 'NotFoundError 不应导致后续合法 symbol 被 breaker 跳过');
+    });
   });
 }
 
@@ -137,4 +158,23 @@ class _FailingSeriesProvider implements AssetPriceProvider {
     required DateTime to,
   }) async =>
       const Err(UnknownError('series always fails'));
+}
+
+class _NotFoundThenSuccessProvider implements AssetPriceProvider {
+  AssetQuote? latest;
+  int latestCalls = 0;
+
+  @override
+  Future<Result<AssetQuote, AppError>> fetchLatest(String symbol) async {
+    latestCalls++;
+    if (latest == null) return const Err(NotFoundError('not supported'));
+    return Ok(latest!);
+  }
+
+  @override
+  Future<Result<AssetPriceSeries, AppError>> fetchTimeSeries({
+    required String symbol,
+    required DateTime from,
+    required DateTime to,
+  }) async => const Err(NotFoundError('not supported'));
 }

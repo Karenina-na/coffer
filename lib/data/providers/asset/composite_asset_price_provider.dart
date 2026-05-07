@@ -32,8 +32,11 @@ class CompositeAssetPriceProvider implements AssetPriceProvider {
         _resetBreaker(p, _latestBreakers);
         return r;
       }
-      _recordFailure(p, _latestBreakers);
-      errs.add('${p.runtimeType}: ${r.errorOrNull!.message}');
+      final err = r.errorOrNull!;
+      if (_shouldTripBreaker(err)) {
+        _recordFailure(p, _latestBreakers);
+      }
+      errs.add('${p.runtimeType}: ${err.message}');
     }
     return Err(UnknownError('all providers failed: ${errs.join(' | ')}'));
   }
@@ -55,8 +58,11 @@ class CompositeAssetPriceProvider implements AssetPriceProvider {
         _resetBreaker(p, _seriesBreakers);
         return r;
       }
-      _recordFailure(p, _seriesBreakers);
-      errs.add('${p.runtimeType}: ${r.errorOrNull!.message}');
+      final err = r.errorOrNull!;
+      if (_shouldTripBreaker(err)) {
+        _recordFailure(p, _seriesBreakers);
+      }
+      errs.add('${p.runtimeType}: ${err.message}');
     }
     return Err(UnknownError('all providers failed: ${errs.join(' | ')}'));
   }
@@ -92,6 +98,10 @@ class CompositeAssetPriceProvider implements AssetPriceProvider {
     if (b != null) {
       b.failures = 0;
     }
+  }
+
+  bool _shouldTripBreaker(AppError err) {
+    return err is NetworkError || err is UnknownError || err is StorageError;
   }
 }
 
