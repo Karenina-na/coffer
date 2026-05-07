@@ -1,0 +1,13 @@
+{
+  "emulatorPath": "C:\\Users\\weizi\\AppData\\Local\\Android\\Sdk\\emulator\\emulator.exe",
+  "avds": {
+    "1": {
+      "name": "Pixel_6_API_34",
+      "label": "Pixel 6"
+    },
+    "2": {
+      "name": "Pixel_7_Pro_API_35",
+      "label": "Pixel 7 Pro"
+    }
+  }
+}
