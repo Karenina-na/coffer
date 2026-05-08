@@ -8,7 +8,7 @@
 
 - Flutter 3.41.7 + Dart SDK `^3.11.5`，Android 为主要验证平台
 - **本地优先**：全量数据落 Drift + SQLCipher；不得引入需联网的后端依赖
-- 外网请求仅限：Frankfurter（汇率）、东方财富 `push2.eastmoney.com` / `push2his.eastmoney.com`、Yahoo Finance `/v8/finance/chart`、OKX API v5（加密货币现货+衍生品，免 Key）、REST Countries `restcountries.com/v3.1/all`（仅用于地区/国家元数据同步）
+- 外网请求仅限：Frankfurter（汇率）、东方财富 `push2.eastmoney.com` / `push2his.eastmoney.com`、Yahoo Finance `/v8/finance/chart`、OKX API v5（加密货币现货+衍生品，免 Key）、REST Countries `restcountries.com/v3.1/name` / `v3.1/alpha`（仅用于按本地已存在国家/地区条目做定向元数据补全，不可全量导入）
 - 分层：`presentation → domain ← data`，domain 零外部依赖
 - 金额：`package:decimal` 的 `Decimal`，**永远禁止 double**
 - 敏感字段：AES-GCM，主密钥在平台 Keystore / Keychain

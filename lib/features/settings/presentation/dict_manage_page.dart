@@ -112,8 +112,12 @@ class DictManagePage extends ConsumerWidget {
       final r = await importer.import();
       messenger.hideCurrentSnackBar();
       r.when(
-        ok: (count) => messenger.showSnackBar(
-          SnackBar(content: Text('已同步 $count 个国家/地区')),
+        ok: (summary) => messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              '已更新 ${summary.updated} 条，未匹配 ${summary.skippedNoMatch} 条，歧义跳过 ${summary.skippedAmbiguous} 条，代码兜底 ${summary.matchedByCodeFallback} 条，新增币种 ${summary.currencyInserted} 条',
+            ),
+          ),
         ),
         err: (e) => messenger.showSnackBar(
           SnackBar(content: Text('同步失败：${e.message}')),
@@ -245,7 +249,13 @@ class DictManagePage extends ConsumerWidget {
           );
     r.when(
       ok: (_) => messenger.showSnackBar(
-        SnackBar(content: Text(entry == null ? '已新增' : '已更新')),
+        SnackBar(
+          content: Text(
+            entry == null && _isRegion
+                ? '已新增，可点击右上角同步补全元数据'
+                : (entry == null ? '已新增' : '已更新'),
+          ),
+        ),
       ),
       err: (e) => messenger.showSnackBar(
         SnackBar(content: Text('操作失败：${errorToMessage(e)}')),
@@ -334,6 +344,7 @@ class _DictFormDialogState extends State<_DictFormDialog> {
   late final TextEditingController _lon;
   late final TextEditingController _lat;
   late final TextEditingController _parentRegion;
+  late bool _showAdvancedRegionMeta;
 
   @override
   void initState() {
@@ -353,6 +364,7 @@ class _DictFormDialogState extends State<_DictFormDialog> {
       text: e?.mapLat != null ? e!.mapLat!.toStringAsFixed(4) : '',
     );
     _parentRegion = TextEditingController(text: e?.parentRegion ?? '');
+    _showAdvancedRegionMeta = e != null;
   }
 
   @override
@@ -432,77 +444,117 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-                const Text(
-                  '地区 UI 元数据',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _flag,
-                  decoration: const InputDecoration(
-                    labelText: '国旗 Emoji',
-                    helperText: '如 🇨🇳 🇺🇸 🇯🇵',
-                  ),
-                  maxLength: 4,
-                ),
-                TextFormField(
-                  controller: _continent,
-                  decoration: const InputDecoration(
-                    labelText: '大洲',
-                    helperText: '如 亚太 / 欧洲 / 美洲 / 中东',
-                  ),
-                ),
-                TextFormField(
-                  controller: _color,
-                  decoration: const InputDecoration(
-                    labelText: '颜色',
-                    helperText: '十六进制，如 0xFFEF4444',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _lon,
-                        decoration: const InputDecoration(
-                          labelText: '经度',
-                          helperText: '-180 ~ 180',
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
-                        ],
+                if (!editing)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: GwpColors.surface2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: GwpColors.border, width: 0.5),
+                    ),
+                    child: const Text(
+                      '可先只填代码和名称，保存后用右上角同步自动补全旗帜、坐标、大洲和上级区域等信息。',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: GwpColors.textMuted,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _lat,
-                        decoration: const InputDecoration(
-                          labelText: '纬度',
-                          helperText: '-90 ~ 90',
+                  ),
+                InkWell(
+                  onTap: () => setState(() {
+                    _showAdvancedRegionMeta = !_showAdvancedRegionMeta;
+                  }),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          editing ? '地区 UI 元数据' : '高级元数据（可选）',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
+                        const Spacer(),
+                        Icon(
+                          _showAdvancedRegionMeta
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
+                          color: GwpColors.textMuted,
                         ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                TextFormField(
-                  controller: _parentRegion,
-                  decoration: const InputDecoration(
-                    labelText: '上级区域',
-                    helperText: '如 EU（德国🇩🇪的上级区域为 EU）',
                   ),
                 ),
+                if (_showAdvancedRegionMeta) ...[
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _flag,
+                    decoration: const InputDecoration(
+                      labelText: '国旗 Emoji',
+                      helperText: '如 🇨🇳 🇺🇸 🇯🇵',
+                    ),
+                    maxLength: 4,
+                  ),
+                  TextFormField(
+                    controller: _continent,
+                    decoration: const InputDecoration(
+                      labelText: '大洲',
+                      helperText: '如 亚太 / 欧洲 / 美洲 / 中东',
+                    ),
+                  ),
+                  TextFormField(
+                    controller: _color,
+                    decoration: const InputDecoration(
+                      labelText: '颜色',
+                      helperText: '十六进制，如 0xFFEF4444',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _lon,
+                          decoration: const InputDecoration(
+                            labelText: '经度',
+                            helperText: '-180 ~ 180',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _lat,
+                          decoration: const InputDecoration(
+                            labelText: '纬度',
+                            helperText: '-90 ~ 90',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  TextFormField(
+                    controller: _parentRegion,
+                    decoration: const InputDecoration(
+                      labelText: '上级区域',
+                      helperText: '如 EU（德国🇩🇪的上级区域为 EU）',
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
