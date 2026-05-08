@@ -1,8 +1,9 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,7 @@ import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/domain_event.dart';
 import '../../../domain/entities/event_enums.dart';
@@ -82,7 +84,10 @@ class EventListPage extends ConsumerStatefulWidget {
 class _EventListPageState extends ConsumerState<EventListPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late final HorizontalSwipeAction _horizontalSwipeAction;
+  late final TopSearchOpener _topSearchOpener;
   final DateTime _fabDay = _today();
+  bool _boundaryHandoffLocked = false;
 
   static DateTime _today() {
     final n = DateTime.now();
@@ -92,6 +97,8 @@ class _EventListPageState extends ConsumerState<EventListPage>
   @override
   void initState() {
     super.initState();
+    _horizontalSwipeAction = ref.read(horizontalSwipeActionProvider.notifier);
+    _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!mounted) return;
@@ -100,7 +107,8 @@ class _EventListPageState extends ConsumerState<EventListPage>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(topSearchOpenerProvider.notifier).set(_openSearch);
+      _topSearchOpener.set(_openSearch);
+      _horizontalSwipeAction.set(_handleHorizontalSwipe);
       // 进入事件页时检查是否有资产超过阈值未同步，有则写一条聚合提醒
       // （`ASSET_SYNC_OUTDATED`）；sourceKey 按天去重，不会刷屏。
       unawaited(() async {
@@ -115,9 +123,61 @@ class _EventListPageState extends ConsumerState<EventListPage>
 
   @override
   void dispose() {
-    ref.read(topSearchOpenerProvider.notifier).set(null);
+    _topSearchOpener.clearLater();
+    _horizontalSwipeAction.clearLater();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _handleHorizontalSwipe(
+    HorizontalSwipeDirection direction,
+  ) async {
+    final nextIndex = switch (direction) {
+      HorizontalSwipeDirection.backward => _tabController.index - 1,
+      HorizontalSwipeDirection.forward => _tabController.index + 1,
+    };
+    if (nextIndex < 0 || nextIndex >= _tabController.length) return false;
+    _tabController.animateTo(nextIndex);
+    return true;
+  }
+
+  bool _handleBoundaryScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.horizontal) return false;
+    if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.idle) {
+      _boundaryHandoffLocked = false;
+      return false;
+    }
+    if (notification is ScrollEndNotification) {
+      _boundaryHandoffLocked = false;
+      return false;
+    }
+    if (notification is! OverscrollNotification || _boundaryHandoffLocked) {
+      return false;
+    }
+
+    final direction = switch (notification.overscroll.sign) {
+      < 0 => HorizontalSwipeDirection.backward,
+      > 0 => HorizontalSwipeDirection.forward,
+      _ => null,
+    };
+    if (direction == null) return false;
+
+    final isAtLeadingEdge = _tabController.index == 0 &&
+        direction == HorizontalSwipeDirection.backward;
+    final isAtTrailingEdge = _tabController.index == _tabController.length - 1 &&
+        direction == HorizontalSwipeDirection.forward;
+    if (!isAtLeadingEdge && !isAtTrailingEdge) return false;
+
+    final handler = ref.read(mainNavigationSwipeActionProvider);
+    if (handler == null) return false;
+    _boundaryHandoffLocked = true;
+    Future<void>.microtask(() async {
+      final handled = await handler(direction);
+      if (!mounted || handled) return;
+      _boundaryHandoffLocked = false;
+    });
+    return false;
   }
 
   void _openSearch() {
@@ -185,13 +245,16 @@ class _EventListPageState extends ConsumerState<EventListPage>
             ),
             )
           : null,
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _CalendarTab(key: _calendarKey),
-          _PendingTab(pending: pending),
-          _FailedTab(failed: failed),
-        ],
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleBoundaryScroll,
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _CalendarTab(key: _calendarKey),
+            _PendingTab(pending: pending),
+            _FailedTab(failed: failed),
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
+import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/valuation/asset_valuator.dart';
 import '../../account/presentation/account_list_page.dart';
@@ -29,12 +31,17 @@ class HoldingsPage extends ConsumerStatefulWidget {
 class _HoldingsPageState extends ConsumerState<HoldingsPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tab;
+  late final HorizontalSwipeAction _horizontalSwipeAction;
+  late final TopSearchOpener _topSearchOpener;
   bool _refreshing = false;
+  bool _boundaryHandoffLocked = false;
 
   @override
   void initState() {
     super.initState();
     final initial = (widget.initialTab ?? 0).clamp(0, 3);
+    _horizontalSwipeAction = ref.read(horizontalSwipeActionProvider.notifier);
+    _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     _tab = TabController(length: 4, vsync: this, initialIndex: initial)
       ..addListener(() {
         if (mounted) {
@@ -45,14 +52,67 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncTopSearch();
+      _horizontalSwipeAction.set(_handleHorizontalSwipe);
     });
   }
 
   @override
   void dispose() {
-    ref.read(topSearchOpenerProvider.notifier).set(null);
+    _topSearchOpener.clearLater();
+    _horizontalSwipeAction.clearLater();
     _tab.dispose();
     super.dispose();
+  }
+
+  Future<bool> _handleHorizontalSwipe(
+    HorizontalSwipeDirection direction,
+  ) async {
+    final nextIndex = switch (direction) {
+      HorizontalSwipeDirection.backward => _tab.index - 1,
+      HorizontalSwipeDirection.forward => _tab.index + 1,
+    };
+    if (nextIndex < 0 || nextIndex >= _tab.length) return false;
+    _tab.animateTo(nextIndex);
+    return true;
+  }
+
+  bool _handleBoundaryScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.horizontal) return false;
+    if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.idle) {
+      _boundaryHandoffLocked = false;
+      return false;
+    }
+    if (notification is ScrollEndNotification) {
+      _boundaryHandoffLocked = false;
+      return false;
+    }
+    if (notification is! OverscrollNotification || _boundaryHandoffLocked) {
+      return false;
+    }
+
+    final direction = switch (notification.overscroll.sign) {
+      < 0 => HorizontalSwipeDirection.backward,
+      > 0 => HorizontalSwipeDirection.forward,
+      _ => null,
+    };
+    if (direction == null) return false;
+
+    final isAtLeadingEdge = _tab.index == 0 &&
+        direction == HorizontalSwipeDirection.backward;
+    final isAtTrailingEdge = _tab.index == _tab.length - 1 &&
+        direction == HorizontalSwipeDirection.forward;
+    if (!isAtLeadingEdge && !isAtTrailingEdge) return false;
+
+    final handler = ref.read(mainNavigationSwipeActionProvider);
+    if (handler == null) return false;
+    _boundaryHandoffLocked = true;
+    Future<void>.microtask(() async {
+      final handled = await handler(direction);
+      if (!mounted || handled) return;
+      _boundaryHandoffLocked = false;
+    });
+    return false;
   }
 
   void _syncTopSearch() {
@@ -81,14 +141,17 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
         ),
       ),
       floatingActionButton: _shellFabFor(context, idx),
-      body: TabBarView(
-        controller: _tab,
-        children: const [
-          AccountListBody(),
-          AssetListBody(),
-          TransferSimulateBody(),
-          PortfolioAnalysisBody(),
-        ],
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleBoundaryScroll,
+        child: TabBarView(
+          controller: _tab,
+          children: const [
+            AccountListBody(),
+            AssetListBody(),
+            TransferSimulateBody(),
+            PortfolioAnalysisBody(),
+          ],
+        ),
       ),
     );
   }

@@ -13,6 +13,12 @@ class TopSearchOpener extends Notifier<VoidCallback?> {
   VoidCallback? build() => null;
 
   void set(VoidCallback? opener) => state = opener;
+
+  void clearLater() {
+    Future<void>.microtask(() {
+      if (ref.mounted) state = null;
+    });
+  }
 }
 
 final topSearchOpenerProvider =

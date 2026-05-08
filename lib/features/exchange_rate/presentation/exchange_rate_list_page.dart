@@ -46,7 +46,7 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
 
   @override
   void dispose() {
-    _topSearchOpener.set(null);
+    _topSearchOpener.clearLater();
     super.dispose();
   }
 
