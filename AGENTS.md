@@ -35,6 +35,7 @@ flutter build apk --release
 4. 安装到模拟器：`adb install -r build/app/outputs/flutter-apk/app-debug.apk`
    - Windows：`$env:ANDROID_HOME\platform-tools\adb` 或 `$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb`
    - 返回 `Success` 才算结束
+   - 代码改动在完成所需验证后，默认直接执行安装，不需要额外等待用户再次提出
 5. **同步更新 `doc/` 文档**：若改动涉及实体字段、架构选型、外部 API、安全策略或 schema 版本变化，必须同步更新对应 doc 文件
 
 > **开始任何任务前，必须先浏览 `doc/` 目录下的对应文档**，确认当前架构、数据模型与 UI 设计基线，避免基于过时假设做出改动。

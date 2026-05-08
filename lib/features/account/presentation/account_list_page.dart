@@ -788,7 +788,6 @@ class _AccountCard extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('/accounts/${account.id}'),
-          onLongPress: () => _confirmDelete(context, ref, account),
           child: Container(
             decoration: BoxDecoration(
               border: Border.all(color: GwpColors.border, width: 0.5),
@@ -997,39 +996,6 @@ class _AccountCard extends ConsumerWidget {
     return GwpStatusBadge(label: label, variant: variant);
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    Account a,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('删除账户'),
-        content: Text('确定删除 "${a.institutionName}"？此操作将软删除该账户。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: GwpColors.negative),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
-    if (!context.mounted) return;
-    if (ok == true) {
-      final result = await ref.read(accountRepositoryProvider).softDelete(a.id);
-      if (result.isErr && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败：${result.errorOrNull?.message ?? '未知错误'}')),
-        );
-      }
-    }
-  }
 }
 
 // ──────────────────────────────────────────────────────────────

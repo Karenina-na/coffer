@@ -69,6 +69,8 @@ adb -s <device-id> install -r "build/app/outputs/flutter-apk/app-release.apk"
 
 If package identity or signing changes, Android may still reject in-place replacement and require a reinstall.
 
+After a code change passes its required verification, default to installing automatically without waiting for an extra user prompt.
+
 Regenerate app assets when branding config changes:
 
 ```bash
