@@ -75,7 +75,9 @@ extension on _EventFilter {
 }
 
 class EventListPage extends ConsumerStatefulWidget {
-  const EventListPage({super.key});
+  const EventListPage({super.key, this.initialTab});
+
+  final int? initialTab;
 
   @override
   ConsumerState<EventListPage> createState() => _EventListPageState();
@@ -88,6 +90,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
   late final TopSearchOpener _topSearchOpener;
   final DateTime _fabDay = _today();
   bool _boundaryHandoffLocked = false;
+  bool _syncingTabToRoute = false;
 
   static DateTime _today() {
     final n = DateTime.now();
@@ -97,13 +100,17 @@ class _EventListPageState extends ConsumerState<EventListPage>
   @override
   void initState() {
     super.initState();
+    final initial = (widget.initialTab ?? 0).clamp(0, 2);
     _horizontalSwipeAction = ref.read(horizontalSwipeActionProvider.notifier);
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: initial);
     _tabController.addListener(() {
       if (!mounted) return;
       // 仅在切 Tab 时刷新 FAB 显隐。
       setState(() {});
+      if (!_tabController.indexIsChanging) {
+        unawaited(_syncRouteTab());
+      }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -118,6 +125,17 @@ class _EventListPageState extends ConsumerState<EventListPage>
           debugPrint('[event_list] checkAssetSyncOutdated failed: $e\n$st');
         }
       }());
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant EventListPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final target = (widget.initialTab ?? 0).clamp(0, 2);
+    if (_tabController.index == target || _syncingTabToRoute) return;
+    scheduleMicrotask(() {
+      if (!mounted || _tabController.index == target) return;
+      _tabController.animateTo(target);
     });
   }
 
@@ -139,6 +157,20 @@ class _EventListPageState extends ConsumerState<EventListPage>
     if (nextIndex < 0 || nextIndex >= _tabController.length) return false;
     _tabController.animateTo(nextIndex);
     return true;
+  }
+
+  Future<void> _syncRouteTab() async {
+    if (!mounted) return;
+    final route = GoRouterState.of(context).uri;
+    final currentTab = int.tryParse(route.queryParameters['tab'] ?? '') ?? 0;
+    if (currentTab == _tabController.index) return;
+    final nextQuery = Map<String, String>.from(route.queryParameters)
+      ..['tab'] = '${_tabController.index}';
+    final nextUri = route.replace(queryParameters: nextQuery);
+    _syncingTabToRoute = true;
+    context.go(nextUri.toString());
+    await Future<void>.microtask(() {});
+    _syncingTabToRoute = false;
   }
 
   bool _handleBoundaryScroll(ScrollNotification notification) {

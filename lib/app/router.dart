@@ -51,7 +51,7 @@ GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
       routes: [
         ShellRoute(
           builder: (context, state, child) => _HomeShell(
-            location: state.matchedLocation,
+            location: state.uri.toString(),
             child: child,
           ),
           routes: [
@@ -76,7 +76,10 @@ GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
             ),
             GoRoute(
               path: '/events',
-              builder: (_, _) => const EventListPage(),
+              builder: (_, state) {
+                final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '');
+                return EventListPage(initialTab: tab);
+              },
             ),
           ],
         ),
@@ -202,6 +205,7 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
   static const _navHorizontalMargin = 16.0;
   static const _navBottomGap = 12.0;
   static const _navTransitionFallback = Duration(milliseconds: 350);
+  static const _shellSwipeDistanceThreshold = 24.0;
 
   static const _tabs = [
     ('/dashboard', Icons.dashboard_outlined, '仪表盘'),
@@ -213,11 +217,13 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
 
   int? _pendingTabIndex;
   Timer? _navTransitionTimer;
+  final Map<int, String> _tabLocations = <int, String>{};
 
   @override
   void initState() {
     super.initState();
     _mainNavigationSwipeAction = ref.read(mainNavigationSwipeActionProvider.notifier);
+    _rememberLocation(widget.location);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _mainNavigationSwipeAction.set((direction) async {
@@ -238,6 +244,7 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
   void didUpdateWidget(covariant _HomeShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.location == widget.location) return;
+    _rememberLocation(widget.location);
     _unlockPendingTabIfSettled();
   }
 
@@ -248,10 +255,17 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
 
   bool get _isMainTabTransitionPending => _pendingTabIndex != null;
 
-  String _routeForIndex(int index) => _tabs[index].$1;
+  String _routeForIndex(int index) => _tabLocations[index] ?? _tabs[index].$1;
 
   bool _matchesMainTabRoute(String location, int index) {
-    return location.startsWith(_routeForIndex(index));
+    return location.startsWith(_tabs[index].$1);
+  }
+
+  void _rememberLocation(String location) {
+    final index = _tabs.indexWhere((tab) => location.startsWith(tab.$1));
+    if (index >= 0) {
+      _tabLocations[index] = location;
+    }
   }
 
   void _unlockPendingTabIfSettled() {
@@ -282,6 +296,18 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
     return true;
   }
 
+  Future<void> _dispatchHorizontalSwipe(
+    BuildContext context,
+    HorizontalSwipeHandler? horizontalSwipeHandler,
+    HorizontalSwipeDirection direction,
+  ) async {
+    if (!context.mounted) return;
+    final handled = await horizontalSwipeHandler?.call(direction) ?? false;
+    if (!context.mounted) return;
+    if (handled) return;
+    _switchMainTab(context, direction);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ref = this.ref;
@@ -305,7 +331,17 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
             body: Stack(
               fit: StackFit.expand,
               children: [
-                widget.child,
+                (horizontalSwipeHandler == null)
+                    ? _ShellBodySwipeSurface(
+                        onHorizontalSwipe: (direction) =>
+                            _dispatchHorizontalSwipe(
+                              context,
+                              horizontalSwipeHandler,
+                              direction,
+                            ),
+                        child: widget.child,
+                      )
+                    : widget.child,
                 if (showNav)
                   Positioned(
                     left: _navHorizontalMargin,
@@ -316,12 +352,11 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
                       tabs: _tabs,
                       unreadBadge: unread > 0,
                       onHorizontalSwipe: (direction) async {
-                        if (!context.mounted) return;
-                        final handled =
-                            await horizontalSwipeHandler?.call(direction) ?? false;
-                        if (!context.mounted) return;
-                        if (handled) return;
-                        _switchMainTab(context, direction);
+                        await _dispatchHorizontalSwipe(
+                          context,
+                          horizontalSwipeHandler,
+                          direction,
+                        );
                       },
                       onTap: (i) => _requestMainTabChange(context, i),
                     ),
@@ -360,6 +395,57 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
       HorizontalSwipeDirection.forward => _index + 1,
     };
     _requestMainTabChange(context, nextIndex);
+  }
+}
+
+class _ShellBodySwipeSurface extends StatefulWidget {
+  const _ShellBodySwipeSurface({
+    required this.onHorizontalSwipe,
+    required this.child,
+  });
+
+  final Future<void> Function(HorizontalSwipeDirection direction)
+      onHorizontalSwipe;
+  final Widget child;
+
+  @override
+  State<_ShellBodySwipeSurface> createState() => _ShellBodySwipeSurfaceState();
+}
+
+class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
+  double? _dragStartX;
+  bool _swipeTriggered = false;
+
+  void _resetDrag() {
+    _dragStartX = null;
+    _swipeTriggered = false;
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    final startX = _dragStartX;
+    if (startX == null || _swipeTriggered) return;
+    final delta = event.position.dx - startX;
+    if (delta.abs() < _HomeShellState._shellSwipeDistanceThreshold) return;
+    _swipeTriggered = true;
+    final direction = delta > 0
+        ? HorizontalSwipeDirection.backward
+        : HorizontalSwipeDirection.forward;
+    unawaited(widget.onHorizontalSwipe(direction));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        _dragStartX = event.position.dx;
+        _swipeTriggered = false;
+      },
+      onPointerMove: _handlePointerMove,
+      onPointerUp: (_) => _resetDrag(),
+      onPointerCancel: (_) => _resetDrag(),
+      child: widget.child,
+    );
   }
 }
 

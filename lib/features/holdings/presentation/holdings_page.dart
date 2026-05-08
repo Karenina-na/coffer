@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +37,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   late final TopSearchOpener _topSearchOpener;
   bool _refreshing = false;
   bool _boundaryHandoffLocked = false;
+  bool _syncingTabToRoute = false;
 
   @override
   void initState() {
@@ -44,15 +47,28 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     _tab = TabController(length: 4, vsync: this, initialIndex: initial)
       ..addListener(() {
-        if (mounted) {
-          setState(() {}); // rebuild AppBar/FAB per active tab
-          _syncTopSearch(); // 转账 tab 走全局搜索，其它 tab 各自模块优先
+        if (!mounted) return;
+        setState(() {}); // rebuild AppBar/FAB per active tab
+        _syncTopSearch(); // 转账 tab 走全局搜索，其它 tab 各自模块优先
+        if (!_tab.indexIsChanging) {
+          unawaited(_syncRouteTab());
         }
       });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncTopSearch();
       _horizontalSwipeAction.set(_handleHorizontalSwipe);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant HoldingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final target = (widget.initialTab ?? 0).clamp(0, 3);
+    if (_tab.index == target || _syncingTabToRoute) return;
+    scheduleMicrotask(() {
+      if (!mounted || _tab.index == target) return;
+      _tab.animateTo(target);
     });
   }
 
@@ -74,6 +90,20 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     if (nextIndex < 0 || nextIndex >= _tab.length) return false;
     _tab.animateTo(nextIndex);
     return true;
+  }
+
+  Future<void> _syncRouteTab() async {
+    if (!mounted) return;
+    final route = GoRouterState.of(context).uri;
+    final currentTab = int.tryParse(route.queryParameters['tab'] ?? '') ?? 0;
+    if (currentTab == _tab.index) return;
+    final nextQuery = Map<String, String>.from(route.queryParameters)
+      ..['tab'] = '${_tab.index}';
+    final nextUri = route.replace(queryParameters: nextQuery);
+    _syncingTabToRoute = true;
+    context.go(nextUri.toString());
+    await Future<void>.microtask(() {});
+    _syncingTabToRoute = false;
   }
 
   bool _handleBoundaryScroll(ScrollNotification notification) {
