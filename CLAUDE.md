@@ -55,6 +55,20 @@ flutter build apk --debug
 flutter build apk --release
 ```
 
+Install Android builds:
+
+```bash
+flutter install -d emulator-5554 --use-application-binary "build/app/outputs/flutter-apk/app-debug.apk"
+```
+
+For a physical Android phone, prefer `adb install -r` with the release APK so local app data is preserved when possible. Avoid `flutter install` for the phone because it may uninstall the old app first.
+
+```bash
+adb -s <device-id> install -r "build/app/outputs/flutter-apk/app-release.apk"
+```
+
+If package identity or signing changes, Android may still reject in-place replacement and require a reinstall.
+
 Regenerate app assets when branding config changes:
 
 ```bash

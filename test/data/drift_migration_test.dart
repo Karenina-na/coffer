@@ -72,6 +72,18 @@ void main() {
     }
   });
 
+  test('onCreate 为内置 CRYPTO 写入南极坐标', () async {
+    final rows = await db.customSelect(
+      "SELECT continent, map_lon, map_lat FROM dict_entries "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
+    ).get();
+    expect(rows, hasLength(1));
+    final row = rows.single;
+    expect(row.read<String>('continent'), '数字');
+    expect(row.read<double>('map_lon'), 18.0);
+    expect(row.read<double>('map_lat'), -82.0);
+  });
+
   test('连接打开后启用 foreign_keys，非法 account_channels 写入会失败', () async {
     final enabled = await db.customSelect('PRAGMA foreign_keys').getSingle();
     expect(enabled.read<int>('foreign_keys'), 1);
@@ -280,5 +292,51 @@ void main() {
     expect(row.read<String>('threshold_high'), '7.5');
     expect(row.read<String>('threshold_low'), '6.8');
     expect(row.read<String>('alert_change_pct'), '0.01');
+  });
+
+  test('v20→v21 修正内置 CRYPTO 的历史占位坐标', () async {
+    await db.customSelect('SELECT 1').get();
+    await db.customStatement(
+      "UPDATE dict_entries SET map_lon = 0.0, map_lat = 0.0 "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
+    );
+
+    await db.customStatement(
+      "UPDATE dict_entries SET map_lon = 18.0, map_lat = -82.0 "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO' "
+      "AND is_builtin = 1 AND continent = '数字' "
+      "AND map_lon = 0.0 AND map_lat = 0.0",
+    );
+
+    final rows = await db.customSelect(
+      "SELECT map_lon, map_lat FROM dict_entries "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
+    ).get();
+    final row = rows.single;
+    expect(row.read<double>('map_lon'), 18.0);
+    expect(row.read<double>('map_lat'), -82.0);
+  });
+
+  test('v20→v21 不覆盖用户自定义的 CRYPTO 坐标', () async {
+    await db.customSelect('SELECT 1').get();
+    await db.customStatement(
+      "UPDATE dict_entries SET map_lon = 44.0, map_lat = -70.0 "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
+    );
+
+    await db.customStatement(
+      "UPDATE dict_entries SET map_lon = 18.0, map_lat = -82.0 "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO' "
+      "AND is_builtin = 1 AND continent = '数字' "
+      "AND map_lon = 0.0 AND map_lat = 0.0",
+    );
+
+    final rows = await db.customSelect(
+      "SELECT map_lon, map_lat FROM dict_entries "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
+    ).get();
+    final row = rows.single;
+    expect(row.read<double>('map_lon'), 44.0);
+    expect(row.read<double>('map_lat'), -70.0);
   });
 }

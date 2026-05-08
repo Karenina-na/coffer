@@ -31,7 +31,8 @@ class RegionMeta {
   /// Falls back to [displayName] when `null`.
   final String? shortName;
 
-  /// Continent group label: `'亚太'` | `'欧洲'` | `'美洲'` | `'中东'`.
+  /// Continent group label, usually `'亚太'` | `'欧洲'` | `'美洲'` | `'中东'`.
+  /// Synthetic regions may also use non-geographic groups such as `'数字'`.
   final String? continent;
 
   /// Accent color for region chips, list bar indicators, etc.
@@ -115,7 +116,7 @@ String regionFlag(RegionIndex index, String code) =>
 
 // ── Continent metadata ────────────────────────────────────────────────────────
 
-/// Ordered list of all continent labels used for filter tabs.
+/// Ordered list of the standard continent labels used for filter tabs.
 const kContinentList = ['亚太', '欧洲', '美洲', '中东'];
 
 /// Accent colors for continent group labels on the world map.
@@ -124,4 +125,16 @@ const kContinentColors = <String, Color>{
   '欧洲': Color(0xFF7B6BD4), // muted violet
   '美洲': Color(0xFF3DAA80), // teal-mint
   '中东': Color(0xFFCC9938), // warm amber
+  '数字': Color(0xFF38BDF8), // crypto cyan
 };
+
+List<String> orderedContinentLabels(Iterable<String> continents) {
+  final available = continents.where((c) => c.isNotEmpty).toSet();
+  final ordered = <String>[
+    ...kContinentList.where(available.contains),
+  ];
+  final extras = available.where((c) => !kContinentList.contains(c)).toList()
+    ..sort();
+  ordered.addAll(extras);
+  return ordered;
+}

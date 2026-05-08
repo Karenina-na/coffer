@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gwp/core/ui/gwp_node_map.dart';
 import 'package:gwp/core/ui/region_meta.dart';
@@ -24,6 +26,7 @@ void main() {
       'CN': RegionMeta(code: 'CN', displayName: '中国', continent: '亚太'),
       'US': RegionMeta(code: 'US', displayName: '美国', continent: '美洲'),
       'GB': RegionMeta(code: 'GB', displayName: '英国', continent: '欧洲'),
+      'CRYPTO': RegionMeta(code: 'CRYPTO', displayName: '加密', continent: '数字'),
     };
 
     test('null filter → 所有节点原样返回', () {
@@ -68,6 +71,12 @@ void main() {
       final result = heroFilterNodes(regionIndex, all, {});
       expect(result, isEmpty);
     });
+
+    test('过滤数字 → 仅 CRYPTO 可见', () {
+      const crypto = MapNode(regionCode: 'CRYPTO', label: '₿10', value: 10);
+      final result = heroFilterNodes(regionIndex, [cn, crypto], {'数字'});
+      expect(result.map((n) => n.regionCode), unorderedEquals(['CRYPTO']));
+    });
   });
 
   // ── heroFilterEdges ─────────────────────────────────────────────────────────
@@ -99,6 +108,48 @@ void main() {
       final result = heroFilterEdges(all, {'CN', 'HK'});
       expect(result.any((e) => e.fromRegion == 'US' || e.toRegion == 'US'),
           isFalse);
+    });
+  });
+
+  group('heroProjectPoint', () {
+    const size = Size(360, 196);
+
+    test('中心点比两侧同纬度点更高，形成弧面', () {
+      final left = heroProjectPoint(size, (0.1, 0.4));
+      final center = heroProjectPoint(size, (0.5, 0.4));
+      final right = heroProjectPoint(size, (0.9, 0.4));
+      expect(center.dy, lessThan(left.dy));
+      expect(center.dy, lessThan(right.dy));
+    });
+
+    test('投影后 x 仍保持单调递增', () {
+      final left = heroProjectPoint(size, (0.1, 0.5));
+      final center = heroProjectPoint(size, (0.5, 0.5));
+      final right = heroProjectPoint(size, (0.9, 0.5));
+      expect(left.dx, lessThan(center.dx));
+      expect(center.dx, lessThan(right.dx));
+    });
+
+    test('投影结果保持在画布范围内', () {
+      final points = [
+        heroProjectPoint(size, (0.0, 0.0)),
+        heroProjectPoint(size, (1.0, 0.0)),
+        heroProjectPoint(size, (0.0, 1.0)),
+        heroProjectPoint(size, (1.0, 1.0)),
+      ];
+      for (final point in points) {
+        expect(point.dx, inInclusiveRange(0.0, size.width));
+        expect(point.dy, inInclusiveRange(0.0, size.height));
+      }
+    });
+  });
+
+  group('orderedContinentLabels', () {
+    test('标准分组按固定顺序，扩展分组追加在后', () {
+      expect(
+        orderedContinentLabels({'数字', '欧洲', '亚太'}),
+        ['亚太', '欧洲', '数字'],
+      );
     });
   });
 }

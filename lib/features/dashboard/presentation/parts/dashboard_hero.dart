@@ -280,6 +280,36 @@ bool _pointInPolygon(
   return inside;
 }
 
+const _heroArcVerticalLift = 0.14;
+const _heroArcEdgeCompression = 0.12;
+const _heroMapTopInset = 0.05;
+const _heroMapBottomInset = 0.04;
+
+@visibleForTesting
+Offset heroProjectPoint(Size size, (double, double) norm) {
+  final nx = norm.$1.clamp(0.0, 1.0);
+  final ny = norm.$2.clamp(0.0, 1.0);
+  final centeredX = nx * 2 - 1;
+  final edgeCompression = 1 - centeredX.abs() * _heroArcEdgeCompression;
+  final projectedX = (0.5 + centeredX * 0.5 * edgeCompression) * size.width;
+
+  final usableHeight = size.height * (1 - _heroMapTopInset - _heroMapBottomInset);
+  final baseY = size.height * _heroMapTopInset + usableHeight * ny;
+  final arcOffset =
+      (centeredX * centeredX - 0.25) * size.height * _heroArcVerticalLift;
+  final projectedY = (baseY + arcOffset).clamp(0.0, size.height);
+
+  return Offset(projectedX, projectedY);
+}
+
+@visibleForTesting
+List<Offset> heroProjectGuide(Size size, double yNorm, {int samples = 24}) {
+  return List.generate(samples + 1, (index) {
+    final nx = index / samples;
+    return heroProjectPoint(size, (nx, yNorm));
+  });
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Hero widget
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -366,7 +396,8 @@ class _GridMapContentState extends State<_GridMapContent>
 
   // ── Continents that actually have nodes in current data ──────
   Set<String> get _dataContinents => widget.mapData.nodes
-      .map((n) => regionMetaOf(widget.regionIndex, n.regionCode)?.continent ?? '其他')
+      .map((n) => regionMetaOf(widget.regionIndex, n.regionCode)?.continent)
+      .whereType<String>()
       .toSet();
 
   void _openFilterSheet() {
@@ -411,8 +442,7 @@ class _GridMapContentState extends State<_GridMapContent>
       for (final node in _visibleNodes) {
         final coords = regionMetaOf(widget.regionIndex, node.regionCode)?.mapCoords;
         if (coords == null) continue;
-        final dotPos = Offset(
-            coords.$1 * canvasSize.width, coords.$2 * canvasSize.height);
+        final dotPos = heroProjectPoint(canvasSize, coords);
         final dist = (tap - dotPos).distance;
         if (dist < bestDist) {
           bestDist = dist;
@@ -480,6 +510,11 @@ class _GridMapContentState extends State<_GridMapContent>
       channelsByRegion.update(e.toRegion, (v) => v + e.channelCount,
           ifAbsent: () => e.channelCount);
     }
+    final legendContinents = orderedContinentLabels(
+      nodes
+          .map((n) => regionMetaOf(widget.regionIndex, n.regionCode)?.continent)
+          .whereType<String>(),
+    );
 
     // Active filter indicator count (how many layers are disabled)
     final allLayerCount = _kPresets[0].layers.length;
@@ -492,7 +527,7 @@ class _GridMapContentState extends State<_GridMapContent>
       children: [
         // ── Map canvas ────────────────────────────────────────
         LayoutBuilder(builder: (context, constraints) {
-          const canvasHeight = 180.0;
+          const canvasHeight = 218.0;
           final canvasWidth = constraints.maxWidth;
           final canvasSize = Size(canvasWidth, canvasHeight);
 
@@ -537,60 +572,63 @@ class _GridMapContentState extends State<_GridMapContent>
                   ),
                 ),
 
-                // Continent color legend — bottom-left
+                // Continent color legend — above bottom controls
                 if (_layers.contains(_MapLayer.regionDots))
                   Positioned(
-                    bottom: 7,
                     left: 10,
-                    right: 56, // avoid overlap with filter button
-                    child: Wrap(
-                      spacing: 3,
-                      runSpacing: 2,
-                      children: kContinentList
-                          .where((c) => nodes.any((n) =>
-                              regionMetaOf(widget.regionIndex, n.regionCode)?.continent == c))
-                          .map((c) => Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 5,
-                                    height: 5,
-                                    margin: const EdgeInsets.only(right: 3),
-                                    decoration: BoxDecoration(
-                                      color: (kContinentColors[c] ??
-                                              GwpColors.actionPrimary)
-                                          .withValues(alpha: 0.70),
-                                      shape: BoxShape.circle,
+                    right: 10,
+                    bottom: 34,
+                    child: IgnorePointer(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 3,
+                        runSpacing: 2,
+                        children: legendContinents
+                            .map((c) => Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      margin: const EdgeInsets.only(right: 3),
+                                      decoration: BoxDecoration(
+                                        color: (kContinentColors[c] ??
+                                                GwpColors.actionPrimary)
+                                            .withValues(alpha: 0.70),
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    c,
-                                    style: TextStyle(
-                                      color: GwpColors.textMuted
-                                          .withValues(alpha: 0.42),
-                                      fontSize: 7.5,
-                                      letterSpacing: 0.2,
+                                    Text(
+                                      c,
+                                      style: TextStyle(
+                                        color: GwpColors.textMuted
+                                            .withValues(alpha: 0.42),
+                                        fontSize: 7.5,
+                                        letterSpacing: 0.2,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                ],
-                              ))
-                          .toList(),
+                                    const SizedBox(width: 6),
+                                  ],
+                                ))
+                            .toList(),
+                      ),
                     ),
                   ),
 
                 // Tap hint — bottom-right, only when no selection
                 if (_selectedNode == null)
                   Positioned(
-                    bottom: 7,
+                    bottom: 10,
                     right: 10,
-                    child: Text(
-                      '轻触节点查看详情',
-                      style: TextStyle(
-                        color:
-                            GwpColors.textMuted.withValues(alpha: 0.30),
-                        fontSize: 8.5,
-                        letterSpacing: 0.3,
+                    child: IgnorePointer(
+                      child: Text(
+                        '轻触节点查看详情',
+                        style: TextStyle(
+                          color:
+                              GwpColors.textMuted.withValues(alpha: 0.30),
+                          fontSize: 8.5,
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                   ),
@@ -622,10 +660,10 @@ class _GridMapContentState extends State<_GridMapContent>
                     ),
                   ),
 
-                // Filter button — top-right
+                // Filter button — bottom-left
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  left: 8,
+                  bottom: 8,
                   child: GestureDetector(
                     onTap: _openFilterSheet,
                     child: Container(
@@ -1035,8 +1073,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             Wrap(
               spacing: 8,
               runSpacing: 6,
-              children: kContinentList
-                  .where((c) => widget.availableContinents.contains(c))
+              children: orderedContinentLabels(widget.availableContinents)
                   .map((cont) {
                 final active = _continents.contains(cont);
                 final cColor =
@@ -1488,16 +1525,7 @@ class _DotWorldPainter extends CustomPainter {
   // ── Dot matrix ───────────────────────────────────────────────
   void _drawDotMatrix(Canvas canvas, Size size) {
     final spacingX = size.width / _dotCols;
-    final spacingY = size.height / _dotRows;
-    final dotR = (spacingX * 0.27).clamp(0.7, 1.5);
-
-    final landPaint = Paint()
-      ..color = GwpColors.borderStrong.withValues(alpha: 0.40)
-      ..style = PaintingStyle.fill;
-
-    final activePaint = Paint()
-      ..color = GwpColors.actionPrimary.withValues(alpha: 0.32)
-      ..style = PaintingStyle.fill;
+    final dotR = (spacingX * 0.27).clamp(0.75, 1.55);
 
     final showGlow = layers.contains(_MapLayer.glow);
 
@@ -1507,10 +1535,13 @@ class _DotWorldPainter extends CustomPainter {
         final isLand = bitmap[r][c] || forcedCells.contains((c, r));
         if (!isLand) continue;
 
+        final nx = (c + 0.5) / _dotCols;
+        final ny = (r + 0.5) / _dotRows;
+        final center = heroProjectPoint(size, (nx, ny));
+        final edgeFactor = (1 - (nx - 0.5).abs() * 1.15).clamp(0.45, 1.0);
+
         var isHot = false;
         if (showGlow) {
-          final nx = (c + 0.5) / _dotCols;
-          final ny = (r + 0.5) / _dotRows;
           for (final ac in activeNorm) {
             final dx = nx - ac.$1, dy = ny - ac.$2;
             if (dx * dx + dy * dy < 0.0052) {
@@ -1520,36 +1551,65 @@ class _DotWorldPainter extends CustomPainter {
           }
         }
 
+        final landPaint = Paint()
+          ..color = GwpColors.borderStrong
+              .withValues(alpha: 0.22 + edgeFactor * 0.24)
+          ..style = PaintingStyle.fill;
+        final activePaint = Paint()
+          ..color = GwpColors.actionPrimary
+              .withValues(alpha: 0.18 + edgeFactor * 0.26)
+          ..style = PaintingStyle.fill;
+
         canvas.drawCircle(
-          Offset((c + 0.5) * spacingX, (r + 0.5) * spacingY),
-          dotR,
+          center,
+          dotR * (0.92 + edgeFactor * 0.12),
           isHot ? activePaint : landPaint,
         );
       }
     }
 
-    // Equator line (main reference)
-    canvas.drawLine(
-      Offset(0, size.height * 0.50),
-      Offset(size.width, size.height * 0.50),
-      Paint()
-        ..color = GwpColors.border.withValues(alpha: 0.22)
-        ..strokeWidth = 0.5,
+    _drawGuideLine(
+      canvas,
+      size,
+      yNorm: 0.50,
+      color: GwpColors.border.withValues(alpha: 0.22),
+      strokeWidth: 0.5,
     );
+    _drawGuideLine(
+      canvas,
+      size,
+      yNorm: 0.333,
+      color: GwpColors.border.withValues(alpha: 0.10),
+      strokeWidth: 0.4,
+    );
+    _drawGuideLine(
+      canvas,
+      size,
+      yNorm: 0.667,
+      color: GwpColors.border.withValues(alpha: 0.10),
+      strokeWidth: 0.4,
+    );
+  }
 
-    // Tropic of Cancer ~30°N  y=(90-30)/180=0.333
-    // Tropic of Capricorn ~30°S  y=(90+30)/180=0.667
-    final tropicPaint = Paint()
-      ..color = GwpColors.border.withValues(alpha: 0.10)
-      ..strokeWidth = 0.4;
-    canvas.drawLine(
-        Offset(0, size.height * 0.333),
-        Offset(size.width, size.height * 0.333),
-        tropicPaint);
-    canvas.drawLine(
-        Offset(0, size.height * 0.667),
-        Offset(size.width, size.height * 0.667),
-        tropicPaint);
+  void _drawGuideLine(
+    Canvas canvas,
+    Size size, {
+    required double yNorm,
+    required Color color,
+    required double strokeWidth,
+  }) {
+    final points = heroProjectGuide(size, yNorm);
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
   }
 
   // ── Edges ────────────────────────────────────────────────────
@@ -1559,20 +1619,29 @@ class _DotWorldPainter extends CustomPainter {
       final to = regionMetaOf(regionIndex, edge.toRegion)?.mapCoords;
       if (from == null || to == null) continue;
 
-      final p1 = Offset(from.$1 * size.width, from.$2 * size.height);
-      final p2 = Offset(to.$1 * size.width, to.$2 * size.height);
+      final p1 = heroProjectPoint(size, from);
+      final p2 = heroProjectPoint(size, to);
       final sw = (0.7 + edge.channelCount * 0.25).clamp(0.7, 2.2);
 
       final mid = (p1 + p2) / 2;
       final dist = (p1 - p2).distance;
-      final control = Offset(mid.dx, mid.dy - dist * 0.20);
+      final control = Offset(mid.dx, mid.dy - dist * 0.26 - size.height * 0.05);
+      final path = Path()
+        ..moveTo(p1.dx, p1.dy)
+        ..quadraticBezierTo(control.dx, control.dy, p2.dx, p2.dy);
 
       canvas.drawPath(
-        Path()
-          ..moveTo(p1.dx, p1.dy)
-          ..quadraticBezierTo(control.dx, control.dy, p2.dx, p2.dy),
+        path,
         Paint()
-          ..color = GwpColors.actionPrimary.withValues(alpha: 0.38)
+          ..color = GwpColors.actionPrimary.withValues(alpha: 0.16)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = sw + 1.1
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.6),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = GwpColors.actionPrimary.withValues(alpha: 0.40)
           ..style = PaintingStyle.stroke
           ..strokeWidth = sw,
       );
@@ -1593,8 +1662,7 @@ class _DotWorldPainter extends CustomPainter {
     for (final node in nodes) {
       final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
       if (coords == null) continue;
-      final center =
-          Offset(coords.$1 * size.width, coords.$2 * size.height);
+      final center = heroProjectPoint(size, coords);
 
       final ratio =
           maxVal > 0 ? (node.value / maxVal).clamp(0.0, 1.0) : 0.5;
@@ -1664,8 +1732,9 @@ class _DotWorldPainter extends CustomPainter {
       final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
       if (coords == null) continue;
 
-      final cx = coords.$1 * size.width;
-      final cy = coords.$2 * size.height;
+      final projected = heroProjectPoint(size, coords);
+      final cx = projected.dx;
+      final cy = projected.dy;
       final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final badgeColor =
           kContinentColors[continent] ?? GwpColors.actionPrimary;
@@ -1703,8 +1772,9 @@ class _DotWorldPainter extends CustomPainter {
       final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
       if (coords == null) continue;
 
-      final cx = coords.$1 * size.width;
-      final cy = coords.$2 * size.height;
+      final projected = heroProjectPoint(size, coords);
+      final cx = projected.dx;
+      final cy = projected.dy;
 
       final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final labelColor =
@@ -1736,10 +1806,27 @@ class _DotWorldPainter extends CustomPainter {
 
   // ── Edge vignette ─────────────────────────────────────────────
   void _drawVignette(Canvas canvas, Size size) {
+    final focusRect = Rect.fromCenter(
+      center: Offset(size.width * 0.5, size.height * 0.18),
+      width: size.width * 0.92,
+      height: size.height * 0.54,
+    );
+    canvas.drawOval(
+      focusRect,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            GwpColors.actionPrimary.withValues(alpha: 0.14),
+            const Color(0x00141414),
+          ],
+          stops: const [0.0, 1.0],
+        ).createShader(focusRect),
+    );
+
     const bg = GwpColors.surface1;
     const bgT = Color(0x00141414);
-    final sw = size.width * 0.07;
-    final sh = size.height * 0.16;
+    final sw = size.width * 0.08;
+    final sh = size.height * 0.18;
 
     final lR = Rect.fromLTWH(0, 0, sw, size.height);
     canvas.drawRect(lR,
@@ -1759,14 +1846,17 @@ class _DotWorldPainter extends CustomPainter {
             colors: [bg, bgT],
           ).createShader(tR));
 
-    final bR = Rect.fromLTWH(0, size.height - sh, size.width, sh);
+    final bR = Rect.fromLTWH(0, size.height - sh * 1.2, size.width, sh * 1.2);
     canvas.drawRect(
         bR,
         Paint()
-          ..shader = const LinearGradient(
+          ..shader = LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [bgT, bg],
+            colors: [
+              bgT,
+              bg.withValues(alpha: 0.92),
+            ],
           ).createShader(bR));
   }
 

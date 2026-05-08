@@ -37,12 +37,12 @@ abstract interface class DictRepository {
     String? nameEn,
     int? sortOrder,
     // 地区 UI 元数据（仅 sovereigntyRegion 使用）
-    Object? flagEmoji = const _Absent(),
-    Object? continent = const _Absent(),
-    Object? colorHex = const _Absent(),
-    Object? mapLon = const _Absent(),
-    Object? mapLat = const _Absent(),
-    Object? parentRegion = const _Absent(),
+    Object? flagEmoji = const DictFieldAbsent(),
+    Object? continent = const DictFieldAbsent(),
+    Object? colorHex = const DictFieldAbsent(),
+    Object? mapLon = const DictFieldAbsent(),
+    Object? mapLat = const DictFieldAbsent(),
+    Object? parentRegion = const DictFieldAbsent(),
   });
 
   /// 删除自定义条目。拒绝删除 `isBuiltin = true` 的条目。
@@ -50,6 +50,6 @@ abstract interface class DictRepository {
 }
 
 /// Sentinel used to distinguish "not passed" from `null` in [DictRepository.updateEntry].
-class _Absent {
-  const _Absent();
+class DictFieldAbsent {
+  const DictFieldAbsent();
 }

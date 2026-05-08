@@ -74,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -383,7 +383,7 @@ class AppDatabase extends _$AppDatabase {
             " created_at, updated_at) "
             "VALUES ('builtin_sr_crypto', 'SOVEREIGNTY_REGION', 'CRYPTO', "
             "        '加密', 'Crypto', 160, 1, 0, "
-            "        '🔐', '数字', '0xFF38BDF8', 0.0, 0.0, "
+            "        '🔐', '数字', '0xFF38BDF8', 18.0, -82.0, "
             "        $now18, $now18)",
           );
           // 回填其余 5 个内置地区的 UI 元数据（只写 NULL 列，不覆盖用户改动）。
@@ -412,6 +412,14 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'UPDATE account_channels SET updated_at = created_at '
             'WHERE updated_at IS NULL',
+          );
+        }
+        if (from < 21) {
+          await customStatement(
+            "UPDATE dict_entries SET map_lon = 18.0, map_lat = -82.0 "
+            "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO' "
+            "AND is_builtin = 1 AND continent = '数字' "
+            "AND map_lon = 0.0 AND map_lat = 0.0",
           );
         }
       }); // end transaction
@@ -491,7 +499,7 @@ Future<void> _backfillRegionMeta(AppDatabase db) async {
     ['US', '🇺🇸', '美洲', '0xFF64748B', -100.0, 40.0],
     ['SG', '🇸🇬', '亚太', '0xFF22C55E', 104.0, 1.0],
     ['GB', '🇬🇧', '欧洲', '0xFFA78BFA', 0.0, 51.0],
-    ['CRYPTO', '🔐', '数字', '0xFF38BDF8', 0.0, 0.0],
+    ['CRYPTO', '🔐', '数字', '0xFF38BDF8', 18.0, -82.0],
   ];
   for (final r in regions) {
     await db.customStatement(

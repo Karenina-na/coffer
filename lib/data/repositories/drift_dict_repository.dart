@@ -119,24 +119,24 @@ class DriftDictRepository implements DictRepository {
     String? name,
     String? nameEn,
     int? sortOrder,
-    Object? flagEmoji = const _Absent(),
-    Object? continent = const _Absent(),
-    Object? colorHex = const _Absent(),
-    Object? mapLon = const _Absent(),
-    Object? mapLat = const _Absent(),
-    Object? parentRegion = const _Absent(),
+    Object? flagEmoji = const DictFieldAbsent(),
+    Object? continent = const DictFieldAbsent(),
+    Object? colorHex = const DictFieldAbsent(),
+    Object? mapLon = const DictFieldAbsent(),
+    Object? mapLat = const DictFieldAbsent(),
+    Object? parentRegion = const DictFieldAbsent(),
   }) async {
     try {
       final ts = _now();
 
       Value<String?> toStringValue(Object? v) {
-        if (v is _Absent) return const Value.absent();
+        if (v is DictFieldAbsent) return const Value.absent();
         final s = v as String?;
         return Value(s?.trim().isEmpty == true ? null : s?.trim());
       }
 
       Value<double?> toDoubleValue(Object? v) {
-        if (v is _Absent) return const Value.absent();
+        if (v is DictFieldAbsent) return const Value.absent();
         return Value(v as double?);
       }
 
@@ -181,6 +181,6 @@ class DriftDictRepository implements DictRepository {
   }
 }
 
-class _Absent {
-  const _Absent();
+class DictFieldAbsent {
+  const DictFieldAbsent();
 }
