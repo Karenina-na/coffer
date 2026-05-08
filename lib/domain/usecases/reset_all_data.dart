@@ -4,7 +4,8 @@ import '../../core/result.dart';
 import '../repositories/db_snapshot_repository.dart';
 
 /// 重置所有本地数据：
-/// - 通过 [DbSnapshotRepository.truncateAll] 在单个事务里截断全部业务表；
+/// - 通过 [DbSnapshotRepository.truncateAll] 在单个事务里清空用户数据；
+/// - 内置字典种子（如内置地区 / 转账协议 / 货币）保留，不参与 reset；
 /// - 可选：清空 `PinStore`（PIN 哈希 / 盐 / 失败计数 / 生物识别开关）；
 /// - **不**删除 SQLCipher 主密钥（设备绑定、用于继续读写空库），也**不**删除
 ///   数据库文件本身——事务截断即可让下次查询返回空。

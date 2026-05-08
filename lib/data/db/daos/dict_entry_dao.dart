@@ -55,6 +55,10 @@ class DictEntryDao extends DatabaseAccessor<AppDatabase>
     return (update(dictEntries)..where((t) => t.id.equals(id))).write(patch);
   }
 
+  Future<int> deleteAllCustom() {
+    return (delete(dictEntries)..where((t) => t.isBuiltin.equals(false))).go();
+  }
+
   /// 仅允许删除非内置条目。内置项由 UI 端拒绝触发；这里再加一层兜底。
   Future<int> deleteCustomById(int id) {
     return (delete(dictEntries)

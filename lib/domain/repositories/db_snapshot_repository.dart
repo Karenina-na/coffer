@@ -16,6 +16,8 @@ abstract class DbSnapshotRepository {
   /// 读取快照的轻量摘要，用于恢复前预览。
   Map<String, int> summarize(Map<String, List<Map<String, dynamic>>> snap);
 
-  /// 在单个事务里截断全部业务表（按 child → parent 顺序避免外键冲突）。
+  /// 在单个事务里清空用户数据（按 child → parent 顺序避免外键冲突）。
+  ///
+  /// 内置字典种子由 migration 预置，调用方执行 reset 时应保留这些条目。
   Future<void> truncateAll();
 }

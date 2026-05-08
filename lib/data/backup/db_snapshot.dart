@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../../core/errors.dart';
 import '../../domain/repositories/db_snapshot_repository.dart';
 import '../crypto_service.dart';
+import '../db/daos/dict_entry_dao.dart';
 import '../db/database.dart';
 
 /// 所有业务表 → 行 JSON 的快照导出/导入。
@@ -21,10 +22,12 @@ import '../db/database.dart';
 /// - 外层备份包本身仍然通过 Argon2id(password) → AES-GCM 包裹，保障即便 JSON
 ///   被拿到也不可读。
 class DbSnapshotService implements DbSnapshotRepository {
-  DbSnapshotService(this._db, this._crypto);
+  DbSnapshotService(this._db, this._crypto)
+      : _dictEntryDao = _db.dictEntryDao;
 
   final AppDatabase _db;
   final CryptoService _crypto;
+  final DictEntryDao _dictEntryDao;
 
   static const _cardBackupPlaintextField = 'cardNoBackup';
 
@@ -303,7 +306,9 @@ class DbSnapshotService implements DbSnapshotRepository {
     });
   }
 
-  /// 在单个事务里截断全部业务表（按 child → parent 顺序避免外键冲突）。
+  /// 在单个事务里清空用户数据（按 child → parent 顺序避免外键冲突）。
+  ///
+  /// 内置字典项由 migration 预置，reset 时保留；仅删除用户新增的自定义字典项。
   @override
   Future<void> truncateAll() async {
     await _db.transaction(() async {
@@ -314,7 +319,7 @@ class DbSnapshotService implements DbSnapshotRepository {
       await _db.delete(_db.exchangeRates).go();
       await _db.delete(_db.watchedPairs).go();
       await _db.delete(_db.searchHistoryEntries).go();
-      await _db.delete(_db.dictEntries).go();
+      await _dictEntryDao.deleteAllCustom();
       await _db.delete(_db.cards).go();
       await _db.delete(_db.assets).go();
       await _db.delete(_db.channels).go();
