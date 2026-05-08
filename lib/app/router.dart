@@ -19,7 +19,9 @@ import '../features/account/presentation/account_providers.dart';
 import '../features/asset/presentation/asset_create_page.dart';
 import '../features/asset/presentation/asset_detail_page.dart';
 import '../features/asset/presentation/asset_providers.dart';
+import '../features/backup/presentation/backup_export_page.dart';
 import '../features/backup/presentation/backup_page.dart';
+import '../features/backup/presentation/backup_restore_page.dart';
 import '../features/card/presentation/card_create_page.dart';
 import '../features/card/presentation/card_list_page.dart';
 import '../features/card/presentation/card_providers.dart';
@@ -156,6 +158,14 @@ GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
         GoRoute(
           path: '/backup',
           builder: (_, _) => const BackupPage(),
+        ),
+        GoRoute(
+          path: '/backup/export',
+          builder: (_, _) => const BackupExportPage(),
+        ),
+        GoRoute(
+          path: '/backup/restore',
+          builder: (_, _) => const BackupRestorePage(),
         ),
         GoRoute(
           path: '/settings',

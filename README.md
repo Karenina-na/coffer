@@ -152,7 +152,7 @@ UI 永远消费 freezed 领域实体，不直接接触 Drift 行对象。
 - 主密钥：首启生成 32B 随机密钥 → HKDF 派生用途子密钥（`field.card_no` / `field.cvv` / `backup.payload` / `db.sqlcipher`）
 - 主密钥托管：Android Keystore / iOS Keychain（`first_unlock_this_device`）
 - 应用锁：生物识别（`local_auth`）+ 口令兜底（`PasswordKDF`）
-- 备份 / 恢复：加密 JSON 快照（`DbSnapshot`）
+- 备份 / 恢复：手动文件型加密备份（`/backup` 备份中心）；导出包使用 Argon2id + AES-GCM，卡号可迁移恢复，CVV 不进入备份
 
 ## 运行
 
@@ -472,5 +472,5 @@ dart run build_runner build --delete-conflicting-outputs
 - [x] 10. 全量实体 CRUD 闭环（编辑路由 + 软/硬删除 + 卡片部分字段更新重加密）
 - [x] 11. 仪表盘深度优化（多维度 KPI / 趋势 delta 区间切换 / 信用账单提醒 / 活动 feed / 今日汇率提醒横幅）
 - [x] 12. 体验与可维护性补齐：事件中心快捷操作、本地通知、资产成本历史审计
-- [x] 13. 分层/精度/安全整固：Provider 抽象移入 `domain/`（AssetPriceProvider / FxRateProvider / pairKeyOf）；WatchedPair 阈值 `REAL → TEXT(Decimal)`（schema v12）；仪表盘累加全程 Decimal；备份剥离卡号 / CVV 密文
+- [x] 13. 分层/精度/安全整固：Provider 抽象移入 `domain/`（AssetPriceProvider / FxRateProvider / pairKeyOf）；WatchedPair 阈值 `REAL → TEXT(Decimal)`（schema v12）；仪表盘累加全程 Decimal；备份不直接携带设备绑定密文，卡号走可迁移恢复、CVV 继续排除
 - [ ] 14. UI 打磨：主题完善、空 / 错误态细化、国际化

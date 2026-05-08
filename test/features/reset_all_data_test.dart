@@ -4,6 +4,7 @@ import 'package:gwp/core/auth/pin_store.dart';
 import 'package:gwp/core/crypto/password_kdf.dart';
 import 'package:gwp/core/errors.dart';
 import 'package:gwp/data/backup/db_snapshot.dart';
+import 'package:gwp/data/crypto_service.dart';
 import 'package:gwp/data/db/database.dart';
 import 'package:gwp/domain/usecases/reset_all_data.dart';
 
@@ -184,7 +185,7 @@ void main() {
       expect(await _count(db, t), 1, reason: '前置插入 $t 应为 1 行');
     }
 
-    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db), pinStore: pin);
+    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db, CryptoService()), pinStore: pin);
     final r = await uc();
     expect(r.isOk, isTrue);
 
@@ -197,7 +198,7 @@ void main() {
     await pin.setPin('123456');
     expect(await pin.hasPin(), isTrue);
 
-    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db), pinStore: pin);
+    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db, CryptoService()), pinStore: pin);
 
     // clearPin 默认 false → 数据清了但 PIN 保留
     final r1 = await uc();
@@ -211,7 +212,7 @@ void main() {
   });
 
   test('空库 reset 幂等：依然返回 Ok，表计数仍为 0', () async {
-    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db), pinStore: pin);
+    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db, CryptoService()), pinStore: pin);
     final r = await uc();
     expect(r.isOk, isTrue);
     for (final t in _allTables) {
@@ -225,7 +226,7 @@ void main() {
       storage: _ThrowingKv(),
       kdf: PasswordKdf(memoryKib: 1024, iterations: 1, hashLength: 32),
     );
-    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db), pinStore: throwingPin);
+    final uc = ResetAllDataUseCase(snapshot: DbSnapshotService(db, CryptoService()), pinStore: throwingPin);
 
     // 默认 clearPin=false 不会触碰 PIN，应成功。
     expect((await uc()).isOk, isTrue);

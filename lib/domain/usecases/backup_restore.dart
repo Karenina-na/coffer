@@ -8,6 +8,16 @@ import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../repositories/db_snapshot_repository.dart';
 
+class BackupPreview {
+  const BackupPreview({
+    required this.version,
+    required this.tableCounts,
+  });
+
+  final int version;
+  final Map<String, int> tableCounts;
+}
+
 /// 加密备份包的结构版本。
 ///
 /// - v1（旧）：密文未绑定 KDF 元数据，攻击者可改 `kdf.params` 降低迭代数后
@@ -116,6 +126,23 @@ class ImportBackupUseCase {
     required String package,
     required String password,
   }) async {
+    final inspected = await _inspect(package: package, password: password);
+    if (inspected.isErr) {
+      return Err(inspected.errorOrNull!);
+    }
+    try {
+      await _snapshot.restore(inspected.valueOrNull!.$2);
+      return const Ok(null);
+    } catch (e) {
+      return Err(StorageError('import failed: $e'));
+    }
+  }
+
+  Future<Result<(BackupPreview, Map<String, List<Map<String, dynamic>>>), AppError>>
+  _inspect({
+    required String package,
+    required String password,
+  }) async {
     final passwordError = validateBackupPassword(password);
     if (passwordError != null) {
       return Err(passwordError);
@@ -123,9 +150,6 @@ class ImportBackupUseCase {
     if (package.isEmpty) {
       return const Err(ValidationError('empty backup package'));
     }
-    // 备份包为 JSON 字符串，其内容均为 ASCII/Base64，UTF-8 字节数与
-    // String.length（UTF-16 代码单元数）近似相等，无需实体化字节数组做比较。
-    // 直接用 length 可避免 2× 峰值内存占用（尤其是接近 backupMaxBytes 上限时）。
     if (package.length > backupMaxBytes) {
       return const Err(ValidationError('backup package too large'));
     }
@@ -153,10 +177,7 @@ class ImportBackupUseCase {
         return const Err(ValidationError('backup kdf missing or invalid params'));
       }
       final params = paramsRaw.cast<String, dynamic>();
-      // 校验 KDF 参数范围，防止恶意备份包通过极大 memoryKib 触发 OOM 崩溃。
-      // AAD 绑定虽可防止 MAC 校验通过，但 PasswordKdf 构造发生在解密之前，
-      // 因此必须在实例化前做服务端范围限制。
-      const maxMemoryKib = 512 * 1024; // 512 MiB
+      const maxMemoryKib = 512 * 1024;
       const maxIterations = 20;
       const maxParallelism = 8;
       const maxHashLength = 64;
@@ -182,11 +203,9 @@ class ImportBackupUseCase {
       if (blobRaw is! String) {
         return const Err(ValidationError('backup cipher blob missing or invalid'));
       }
-      final blob = blobRaw;
-      // v2 始终使用 kdf 元数据作为 AAD；任何对元数据的篡改都会导致 MAC 校验失败。
       final aad = utf8.encode(jsonEncode(kdfMeta));
       final plain = await _cipher.decryptString(
-        blob,
+        blobRaw,
         derived.valueOrNull!,
         aad: aad,
       );
@@ -201,23 +220,49 @@ class ImportBackupUseCase {
         if (v is! List) {
           throw ValidationError('backup structure invalid: table "$k" is not a list');
         }
-        // 逐元素校验，确保类型不符时立即抛 ValidationError（而非惰性 CastError）
         final typed = <Map<String, dynamic>>[];
         for (var i = 0; i < v.length; i++) {
           final item = v[i];
           if (item is! Map<String, dynamic>) {
             throw ValidationError(
-                'backup structure invalid: table "$k"[$i] is not a map (got ${item.runtimeType})');
+              'backup structure invalid: table "$k"[$i] is not a map (got ${item.runtimeType})',
+            );
           }
           typed.add(item);
         }
         return MapEntry(k, typed);
       });
-      await _snapshot.restore(snap);
-      return const Ok(null);
+      return Ok((
+        BackupPreview(
+          version: version,
+          tableCounts: _snapshot.summarize(snap),
+        ),
+        snap,
+      ));
     } catch (e) {
       return Err(StorageError('import failed: $e'));
     }
+  }
+}
+
+class InspectBackupUseCase {
+  InspectBackupUseCase(DbSnapshotRepository snapshot, {FieldCipher? cipher})
+    : _import = ImportBackupUseCase(snapshot, cipher: cipher);
+
+  final ImportBackupUseCase _import;
+
+  Future<Result<BackupPreview, AppError>> call({
+    required String package,
+    required String password,
+  }) async {
+    final inspected = await _import._inspect(
+      package: package,
+      password: password,
+    );
+    if (inspected.isErr) {
+      return Err(inspected.errorOrNull!);
+    }
+    return Ok(inspected.valueOrNull!.$1);
   }
 }
 

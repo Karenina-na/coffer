@@ -53,6 +53,8 @@ dependencies:
   graphview: ^1.2.1
   flutter_local_notifications: ^18.0.1
   flutter_native_splash: ^2.4.7
+  file_picker: ^10.3.2
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:

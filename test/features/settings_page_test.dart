@@ -51,6 +51,7 @@ void main() {
     expect(find.text('安全'), findsOneWidget);
     expect(find.text('关于'), findsOneWidget);
     expect(find.text('备份与恢复'), findsOneWidget);
+    expect(find.text('导出加密备份文件，或从备份恢复全部数据'), findsOneWidget);
     expect(find.text('PIN 与指纹'), findsOneWidget);
     expect(find.text('立即锁定'), findsOneWidget);
     expect(find.text('v0.1.0 (1)'), findsOneWidget);

@@ -11,6 +11,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gwp/core/crypto/password_kdf.dart';
 import 'package:gwp/data/backup/db_snapshot.dart';
+import 'package:gwp/data/crypto_service.dart';
 import 'package:gwp/data/db/database.dart';
 import 'package:gwp/data/repositories/drift_account_repository.dart';
 import 'package:gwp/data/repositories/drift_asset_repository.dart';
@@ -27,13 +28,15 @@ import 'package:gwp/domain/utils/pair_key.dart';
 void main() {
   late AppDatabase db;
   late DbSnapshotService snapshot;
+  late CryptoService crypto;
 
   final fastKdf = PasswordKdf(memoryKib: 4096, iterations: 2, parallelism: 1);
   final now = DateTime.utc(2025, 6, 15);
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    snapshot = DbSnapshotService(db);
+    crypto = CryptoService();
+    snapshot = DbSnapshotService(db, crypto);
 
     // Seed account
     final accountRepo = DriftAccountRepository(db.accountDao);

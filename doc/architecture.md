@@ -131,7 +131,7 @@ lib/
 - 密钥体系：主密钥存 Keystore / Keychain，通过 HKDF 派生出 SQLCipher 密钥与字段加密密钥
 - 禁止日志打印敏感字段；Release 构建关闭 `debugPrint`
 - 平台兜底：iOS 设置 `NSFileProtectionComplete`，Android 使用 `EncryptedFile`
-- 备份导出文件必须经用户口令加密（Argon2id 派生密钥 + AES-GCM），不进入系统明文备份；快照导出会剥离 `cards.card_no_ciphertext` / `cvv_ciphertext`（跨设备无法解密，避免无效密文随包外泄）
+- 备份导出文件必须经用户口令加密（Argon2id 派生密钥 + AES-GCM），不进入系统明文备份；卡号不会直接以设备绑定密文出包，而是以可迁移字段导出并在恢复时重新加密，`cvv_ciphertext` 继续排除在备份之外
 
 ## 9. 实施路线
 

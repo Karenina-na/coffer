@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/errors.dart';
 import '../../domain/repositories/db_snapshot_repository.dart';
+import '../crypto_service.dart';
 import '../db/database.dart';
 
 /// 所有业务表 → 行 JSON 的快照导出/导入。
@@ -12,26 +13,54 @@ import '../db/database.dart';
 /// 导入时先 `deleteAll` 清空各表再 `batch insert`，以保证副本一致。
 ///
 /// 安全约束：
-/// - 卡号 / CVV 的 AES-GCM 密文（`card_no_ciphertext` / `cvv_ciphertext`）
-///   是用设备 Keystore 中的主密钥派生子密钥加密的，跨设备恢复时不可能
-///   解密；因此在快照中**直接剥离**，避免把无效密文随备份外泄。导入后
-///   用户需在新设备重新录入卡号 / CVV。
-/// - 外层备份包本身仍然通过 Argon2id(password) → AES-GCM（
-///   [CryptoPurpose.backup]）包裹，保障即便 JSON 被拿到也不可读。
+/// - CVV 的 AES-GCM 密文（`cvv_ciphertext`）仍然不进入快照，避免把高度敏感
+///   的校验码跨设备迁移；恢复后用户需重新录入 CVV。
+/// - 卡号密文本身是设备绑定的，不能直接跨设备恢复；因此导出时会解密出卡号
+///   明文并以 `card_no_backup` 形式进入快照，导入时再用当前设备密钥重新加密为
+///   `card_no_ciphertext`。
+/// - 外层备份包本身仍然通过 Argon2id(password) → AES-GCM 包裹，保障即便 JSON
+///   被拿到也不可读。
 class DbSnapshotService implements DbSnapshotRepository {
-  const DbSnapshotService(this._db);
+  DbSnapshotService(this._db, this._crypto);
 
   final AppDatabase _db;
+  final CryptoService _crypto;
 
-  static const _cardSensitiveFields = {
-    'card_no_ciphertext',
-    'cvv_ciphertext',
-  };
+  static const _cardBackupPlaintextField = 'cardNoBackup';
 
-  Map<String, dynamic> _stripCard(Map<String, dynamic> json) {
+  Future<Map<String, dynamic>> _portableCard(Map<String, dynamic> json) async {
     final copy = Map<String, dynamic>.of(json);
-    for (final k in _cardSensitiveFields) {
-      copy.remove(k);
+    copy.remove('cvvCiphertext');
+    final cardCt = copy['cardNoCiphertext'];
+    if (cardCt is String && cardCt.isNotEmpty) {
+      final clear = await _crypto.decryptField(
+        purpose: CryptoPurpose.cardNo,
+        ciphertext: cardCt,
+      );
+      if (clear.isErr) {
+        throw StorageError('export: failed to decrypt card number for backup');
+      }
+      copy[_cardBackupPlaintextField] = clear.valueOrNull!;
+    }
+    copy.remove('cardNoCiphertext');
+    return copy;
+  }
+
+  Future<Map<String, dynamic>> _restoreCard(Map<String, dynamic> json) async {
+    final copy = Map<String, dynamic>.of(json);
+    copy.remove('cvvCiphertext');
+    final backupCardNo = copy.remove(_cardBackupPlaintextField);
+    if (backupCardNo is String && backupCardNo.isNotEmpty) {
+      final encrypted = await _crypto.encryptField(
+        purpose: CryptoPurpose.cardNo,
+        plaintext: backupCardNo,
+      );
+      if (encrypted.isErr) {
+        throw StorageError('restore: failed to encrypt card number on target device');
+      }
+      copy['cardNoCiphertext'] = encrypted.valueOrNull!;
+    } else {
+      copy.remove('cardNoCiphertext');
     }
     return copy;
   }
@@ -48,9 +77,9 @@ class DbSnapshotService implements DbSnapshotRepository {
       'asset_cost_history': (await _db.select(_db.assetCostHistory).get())
           .map((r) => r.toJson())
           .toList(),
-      'cards': (await _db.select(_db.cards).get())
-          .map((r) => _stripCard(r.toJson()))
-          .toList(),
+      'cards': await Future.wait(
+        (await _db.select(_db.cards).get()).map((r) => _portableCard(r.toJson())),
+      ),
       'channels': (await _db.select(_db.channels).get())
           .map((r) => r.toJson())
           .toList(),
@@ -119,9 +148,9 @@ class DbSnapshotService implements DbSnapshotRepository {
     );
     await appendTable(
       'cards',
-      () async => (await _db.select(_db.cards).get())
-          .map((r) => _stripCard(r.toJson()))
-          .toList(),
+      () async => Future.wait(
+        (await _db.select(_db.cards).get()).map((r) => _portableCard(r.toJson())),
+      ),
     );
     await appendTable(
       'channels',
@@ -176,10 +205,26 @@ class DbSnapshotService implements DbSnapshotRepository {
     return buffer.toString();
   }
 
+  @override
+  Map<String, int> summarize(Map<String, List<Map<String, dynamic>>> snap) {
+    return {
+      'accounts': (snap['accounts'] ?? const []).length,
+      'assets': (snap['assets'] ?? const []).length,
+      'cards': (snap['cards'] ?? const []).length,
+      'events': (snap['events'] ?? const []).length,
+      'channels': (snap['channels'] ?? const []).length,
+      'exchange_rates': (snap['exchange_rates'] ?? const []).length,
+      'watched_pairs': (snap['watched_pairs'] ?? const []).length,
+    };
+  }
+
   /// 以快照覆盖当前数据库；外键按 accounts → cards/assets，channels / rates 独立，
   /// events 与 asset_price_history 最后写入。
   @override
   Future<void> restore(Map<String, List<Map<String, dynamic>>> snap) async {
+    final restoredCards = await Future.wait(
+      (snap['cards'] ?? const []).map(_restoreCard),
+    );
     await _db.transaction(() async {
       // 清空顺序：子 → 父（account_channels 依赖 accounts/channels）
       await _db.delete(_db.assetPriceHistory).go();
@@ -212,7 +257,7 @@ class DbSnapshotService implements DbSnapshotRepository {
       );
       await _batchInsert(
         _db.cards,
-        snap['cards'] ?? const [],
+        restoredCards,
         CardRow.fromJson,
       );
       await _batchInsert(

@@ -13,6 +13,9 @@ abstract class DbSnapshotRepository {
   /// 以快照覆盖当前数据库（事务保证原子性）。
   Future<void> restore(Map<String, List<Map<String, dynamic>>> snap);
 
+  /// 读取快照的轻量摘要，用于恢复前预览。
+  Map<String, int> summarize(Map<String, List<Map<String, dynamic>>> snap);
+
   /// 在单个事务里截断全部业务表（按 child → parent 顺序避免外键冲突）。
   Future<void> truncateAll();
 }

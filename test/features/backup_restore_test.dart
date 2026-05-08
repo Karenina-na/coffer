@@ -4,7 +4,10 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gwp/core/crypto/password_kdf.dart';
+import 'package:gwp/core/errors.dart';
+import 'package:gwp/core/result.dart';
 import 'package:gwp/data/backup/db_snapshot.dart';
+import 'package:gwp/data/crypto_service.dart';
 import 'package:gwp/data/db/database.dart';
 import 'package:gwp/data/repositories/drift_account_repository.dart';
 import 'package:gwp/domain/entities/account_enums.dart';
@@ -14,13 +17,15 @@ import 'package:gwp/domain/usecases/create_account.dart';
 void main() {
   late AppDatabase db;
   late DbSnapshotService snapshot;
+  late CryptoService crypto;
 
   // 降低 Argon2id 档位，避免测试过慢。
   final fastKdf = PasswordKdf(memoryKib: 4096, iterations: 2, parallelism: 1);
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    snapshot = DbSnapshotService(db);
+    crypto = _FakeCryptoService();
+    snapshot = DbSnapshotService(db, crypto);
     final repo = DriftAccountRepository(db.accountDao);
     final createAccount = CreateAccountUseCase(
       repo,
@@ -149,34 +154,115 @@ void main() {
     expect(r.isErr, true);
   });
 
-  test('卡号 / CVV 密文不纳入快照导出', () async {
-    // 直接塞一行带密文的 Card，验证 export 会剥离敏感列。
-    await db
-        .into(db.cards)
-        .insert(
-          CardsCompanion.insert(
-            id: 'c-1',
-            accountId: 'acc-backup',
-            cardOrganization: 'VISA',
-            cardNoMasked: '**** **** **** 1234',
-            cardType: 'credit',
-            expireMonth: 12,
-            expireYear: 2030,
-            issuerName: 'ICBC',
-            status: 'active',
-            cardNoCiphertext: const Value('FAKE_CN_CT'),
-            cvvCiphertext: const Value('FAKE_CVV_CT'),
-            createdAt: DateTime.utc(2024, 1, 1),
-            updatedAt: DateTime.utc(2024, 1, 1),
-          ),
-        );
+  test('卡号以可迁移明文进入快照，CVV 不进入快照', () async {
+    final cardNoCt = await crypto.encryptField(
+      purpose: CryptoPurpose.cardNo,
+      plaintext: '4111111111111234',
+    );
+    final cvvCt = await crypto.encryptField(
+      purpose: CryptoPurpose.cvv,
+      plaintext: '123',
+    );
+    expect(cardNoCt.isOk, isTrue);
+    expect(cvvCt.isOk, isTrue);
+
+    await db.into(db.cards).insert(
+      CardsCompanion.insert(
+        id: 'c-1',
+        accountId: 'acc-backup',
+        cardOrganization: 'VISA',
+        cardNoMasked: '**** **** **** 1234',
+        cardType: 'credit',
+        expireMonth: 12,
+        expireYear: 2030,
+        issuerName: 'ICBC',
+        status: 'active',
+        cardNoCiphertext: Value(cardNoCt.valueOrNull!),
+        cvvCiphertext: Value(cvvCt.valueOrNull!),
+        createdAt: DateTime.utc(2024, 1, 1),
+        updatedAt: DateTime.utc(2024, 1, 1),
+      ),
+    );
 
     final snap = await snapshot.export();
     final cards = snap['cards']!;
     expect(cards, hasLength(1));
-    expect(cards.single.containsKey('card_no_ciphertext'), isFalse);
-    expect(cards.single.containsKey('cvv_ciphertext'), isFalse);
+    expect(cards.single['cardNoBackup'], '4111111111111234');
+    expect(cards.single.containsKey('cardNoCiphertext'), isFalse);
+    expect(cards.single.containsKey('cvvCiphertext'), isFalse);
     expect(cards.single['id'], 'c-1');
+  });
+
+  test('导入后会重新加密卡号，CVV 保持为空', () async {
+    final snap = <String, List<Map<String, dynamic>>>{
+      'accounts': [
+        {
+          'id': 'acc-backup',
+          'accountType': 'bank',
+          'sovereigntyRegion': 'CN',
+          'institutionName': 'ICBC',
+          'status': 'active',
+          'createdAt': '2024-01-01T00:00:00.000Z',
+          'updatedAt': '2024-01-01T00:00:00.000Z',
+          'isDeleted': false,
+        },
+      ],
+      'assets': const [],
+      'asset_cost_history': const [],
+      'cards': [
+        {
+          'id': 'c-restore',
+          'accountId': 'acc-backup',
+          'cardOrganization': 'VISA',
+          'cardNoMasked': '**** **** **** 1234',
+          'cardType': 'credit',
+          'expireMonth': 12,
+          'expireYear': 2030,
+          'issuerName': 'ICBC',
+          'supportsAllCurrencies': false,
+          'isVirtual': false,
+          'status': 'active',
+          'createdAt': '2024-01-01T00:00:00.000Z',
+          'updatedAt': '2024-01-01T00:00:00.000Z',
+          'cardNoBackup': '4111111111111234',
+        },
+      ],
+      'channels': const [],
+      'dict_entries': const [],
+      'account_channels': const [],
+      'exchange_rates': const [],
+      'events': const [],
+      'asset_price_history': const [],
+      'watched_pairs': const [],
+      'search_history_entries': const [],
+    };
+
+    await snapshot.restore(snap);
+    final row = await (db.select(db.cards)..where((t) => t.id.equals('c-restore'))).getSingle();
+    expect(row.cardNoCiphertext != null, isTrue);
+    expect(row.cvvCiphertext == null, isTrue);
+
+    final decrypted = await crypto.decryptField(
+      purpose: CryptoPurpose.cardNo,
+      ciphertext: row.cardNoCiphertext!,
+    );
+    expect(decrypted.isOk, isTrue);
+    expect(decrypted.valueOrNull, '4111111111111234');
+  });
+
+  test('inspect backup 返回摘要', () async {
+    final exporter = ExportBackupUseCase(snapshot, kdf: fastKdf);
+    final packed = await exporter(password: 'inspect-pass-1');
+    expect(packed.isOk, isTrue);
+
+    final inspect = InspectBackupUseCase(snapshot);
+    final preview = await inspect(
+      package: packed.valueOrNull!,
+      password: 'inspect-pass-1',
+    );
+    expect(preview.isOk, isTrue);
+    expect(preview.valueOrNull!.version, backupFormatVersion);
+    expect(preview.valueOrNull!.tableCounts['accounts'], 1);
   });
 
   test('v1 备份包被拒绝（Bug 10：KDF 降级攻击防护）', () async {
@@ -352,4 +438,32 @@ void main() {
     );
     expect(r.isOk, isTrue, reason: '合法备份包应正常导入');
   });
+}
+
+class _FakeCryptoService extends CryptoService {
+  _FakeCryptoService();
+
+  final Map<String, String> _cipherToPlain = {};
+
+  @override
+  Future<Result<String, AppError>> encryptField({
+    required String purpose,
+    required String plaintext,
+  }) async {
+    final ciphertext = 'ct::$purpose::$plaintext';
+    _cipherToPlain[ciphertext] = plaintext;
+    return Ok(ciphertext);
+  }
+
+  @override
+  Future<Result<String, AppError>> decryptField({
+    required String purpose,
+    required String ciphertext,
+  }) async {
+    final plaintext = _cipherToPlain[ciphertext];
+    if (plaintext == null) {
+      return const Err(CryptoError('fake decrypt failed'));
+    }
+    return Ok(plaintext);
+  }
 }

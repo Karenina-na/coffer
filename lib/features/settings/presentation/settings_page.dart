@@ -80,6 +80,7 @@ class SettingsPage extends ConsumerWidget {
               _EntryRow(
                 icon: Icons.backup_outlined,
                 title: '备份与恢复',
+                subtitle: '导出加密备份文件，或从备份恢复全部数据',
                 onTap: () => context.push('/backup'),
               ),
             ],
