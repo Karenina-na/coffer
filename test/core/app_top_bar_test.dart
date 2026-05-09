@@ -99,20 +99,29 @@ void main() {
 
     expect(find.text('更多操作'), findsOneWidget);
     expect(find.byTooltip('关闭'), findsOneWidget);
+    expect(find.text('新建'), findsOneWidget);
+    expect(find.text('账户'), findsOneWidget);
+    expect(find.text('资产'), findsOneWidget);
+    expect(find.text('卡片'), findsOneWidget);
+    expect(find.text('通道'), findsOneWidget);
+    expect(find.text('事件'), findsOneWidget);
     expect(find.text('数据同步'), findsOneWidget);
     expect(find.text('本位币'), findsOneWidget);
     expect(find.text('刷新全部'), findsNothing);
     expect(find.text('当前本位币'), findsNothing);
     expect(find.text('设置'), findsNothing);
+    expect(find.byType(Divider), findsAtLeastNWidgets(2));
 
+    await tester.ensureVisible(find.text('数据同步'));
     await tester.tap(find.text('数据同步'));
     await tester.pumpAndSettle();
 
-    expect(find.text('刷新全部'), findsOneWidget);
+    expect(find.text('刷新全部 · 行情 + 汇率'), findsOneWidget);
     expect(find.text('仅汇率'), findsOneWidget);
     expect(find.text('仅资产'), findsOneWidget);
 
-    await tester.tap(find.text('刷新全部'));
+    await tester.ensureVisible(find.byTooltip('刷新全部 · 行情 + 汇率'));
+    await tester.tap(find.byTooltip('刷新全部 · 行情 + 汇率'));
     await tester.pumpAndSettle();
 
     expect(find.text('8日'), findsOneWidget);
@@ -123,6 +132,9 @@ void main() {
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('本位币'));
     await tester.tap(find.text('本位币'));
     await tester.pumpAndSettle();
 
@@ -146,6 +158,11 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
+    expect(find.text('账户'), findsOneWidget);
+    expect(find.text('资产'), findsOneWidget);
+    expect(find.text('卡片'), findsOneWidget);
+    expect(find.text('通道'), findsOneWidget);
+    expect(find.text('事件'), findsOneWidget);
     expect(find.text('数据同步'), findsOneWidget);
     expect(find.text('本位币'), findsOneWidget);
     expect(find.text('刷新全部'), findsNothing);
@@ -177,5 +194,38 @@ void main() {
     expect(find.byTooltip('搜索'), findsOneWidget);
     expect(find.byTooltip('设置'), findsOneWidget);
     expect(find.byTooltip('更多'), findsOneWidget);
+  });
+
+  testWidgets('overflow create section stays stable across pages', (tester) async {
+    final router = _buildRouter();
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MediaQuery(
+          data: const MediaQueryData(size: Size(320, 800)),
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    expect(find.text('账户'), findsOneWidget);
+    expect(find.text('事件'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('关闭'));
+    await tester.pumpAndSettle();
+
+    router.go('/b');
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    expect(find.text('账户'), findsOneWidget);
+    expect(find.text('事件'), findsOneWidget);
   });
 }

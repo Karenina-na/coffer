@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/valuation/asset_valuator.dart';
 import '../../features/sync/presentation/sync_providers.dart';
@@ -7,6 +8,7 @@ import '../valuation/valuation_currency_provider.dart';
 import 'base_currency_switcher.dart';
 import 'settings_action.dart';
 import 'sync_window_menu_button.dart';
+import 'top_create_action.dart';
 import 'top_search_action.dart';
 
 /// 全局统一的顶部 AppBar。
@@ -164,6 +166,7 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
     final panelWidth = width < 420 ? width * 0.86 : 360.0;
     final sync = ref.watch(syncStatusProvider);
     final currentCurrency = ref.watch(valuationCurrencyProvider);
+    final createActions = ref.watch(currentTopBarCreateActionsProvider);
 
     return SafeArea(
       child: Align(
@@ -204,79 +207,150 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _PanelSection(
-                      icon: _syncIcon(sync),
-                      iconColor: _syncColor(context, sync),
-                      title: '数据同步',
-                      expanded: _syncExpanded,
-                      onToggle: () {
-                        setState(() => _syncExpanded = !_syncExpanded);
-                      },
-                      children: [
-                        _PanelInfoRow(
+                    if (createActions.isNotEmpty) ...[
+                      _PanelSection(
+                        icon: Icons.add_circle_outline,
+                        iconColor: Theme.of(context).colorScheme.primary,
+                        title: '新建',
+                        expanded: true,
+                        onToggle: () {},
+                        collapsible: false,
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final action in createActions)
+                              _PanelActionChip(
+                                icon: action.icon,
+                                title: action.label,
+                                onTap: () => _runCreateAction(context, action),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Divider(height: 1),
+                      ),
+                    ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final syncSection = _PanelSection(
                           icon: _syncIcon(sync),
-                          title: _syncTitle(sync),
-                          subtitle: _syncSubtitle(sync),
-                        ),
-                        _SyncRangeActionRow(
-                          icon: Icons.sync,
-                          title: '刷新全部',
-                          subtitle: '行情 + 汇率',
-                          enabled: !sync.isSyncing,
-                          onSelected: (window) =>
-                              _runSync(context, ref, scope: SyncScope.all, window: window),
-                        ),
-                        _SyncRangeActionRow(
-                          icon: Icons.currency_exchange,
-                          title: '仅汇率',
-                          enabled: !sync.isSyncing,
-                          onSelected: (window) => _runSync(
-                            context,
-                            ref,
-                            scope: SyncScope.ratesOnly,
-                            window: window,
+                          iconColor: _syncColor(context, sync),
+                          title: '数据同步',
+                          expanded: _syncExpanded,
+                          onToggle: () {
+                            setState(() => _syncExpanded = !_syncExpanded);
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _PanelInfoCard(
+                                icon: _syncIcon(sync),
+                                title: _syncTitle(sync),
+                                subtitle: _syncSubtitle(sync),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  _SyncRangeActionChip(
+                                    icon: Icons.sync,
+                                    title: '刷新全部 · 行情 + 汇率',
+                                    enabled: !sync.isSyncing,
+                                    maxWidth: 220,
+                                    onSelected: (window) => _runSync(
+                                      context,
+                                      ref,
+                                      scope: SyncScope.all,
+                                      window: window,
+                                    ),
+                                  ),
+                                  _SyncRangeActionChip(
+                                    icon: Icons.currency_exchange,
+                                    title: '仅汇率',
+                                    enabled: !sync.isSyncing,
+                                    onSelected: (window) => _runSync(
+                                      context,
+                                      ref,
+                                      scope: SyncScope.ratesOnly,
+                                      window: window,
+                                    ),
+                                  ),
+                                  _SyncRangeActionChip(
+                                    icon: Icons.stacked_line_chart,
+                                    title: '仅资产',
+                                    enabled: !sync.isSyncing,
+                                    onSelected: (window) => _runSync(
+                                      context,
+                                      ref,
+                                      scope: SyncScope.assetsOnly,
+                                      window: window,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ),
-                        _SyncRangeActionRow(
-                          icon: Icons.stacked_line_chart,
-                          title: '仅资产',
-                          enabled: !sync.isSyncing,
-                          onSelected: (window) => _runSync(
-                            context,
-                            ref,
-                            scope: SyncScope.assetsOnly,
-                            window: window,
+                        );
+                        final currencySection = _PanelSection(
+                          icon: Icons.language,
+                          iconColor: Theme.of(context).colorScheme.primary,
+                          title: '本位币',
+                          expanded: _currencyExpanded,
+                          onToggle: () {
+                            setState(() => _currencyExpanded = !_currencyExpanded);
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _PanelInfoCard(
+                                icon: Icons.currency_exchange,
+                                title: '当前本位币',
+                                subtitle: currentCurrency,
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  for (final code in kSupportedBaseCurrencies)
+                                    _PanelChoiceChip(
+                                      icon: code == currentCurrency
+                                          ? Icons.radio_button_checked
+                                          : Icons.radio_button_unchecked,
+                                      title: code,
+                                      selected: code == currentCurrency,
+                                      onTap: () => ref
+                                          .read(valuationCurrencyProvider.notifier)
+                                          .set(code),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _PanelSection(
-                      icon: Icons.language,
-                      iconColor: Theme.of(context).colorScheme.primary,
-                      title: '本位币',
-                      expanded: _currencyExpanded,
-                      onToggle: () {
-                        setState(() => _currencyExpanded = !_currencyExpanded);
+                        );
+                        final canSplit = constraints.maxWidth >= 300;
+                        if (!canSplit) {
+                          return Column(
+                            children: [
+                              syncSection,
+                              const SizedBox(height: 12),
+                              currencySection,
+                            ],
+                          );
+                        }
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: syncSection),
+                            const SizedBox(width: 12),
+                            Expanded(child: currencySection),
+                          ],
+                        );
                       },
-                      children: [
-                        _PanelInfoRow(
-                          icon: Icons.currency_exchange,
-                          title: '当前本位币',
-                          subtitle: currentCurrency,
-                        ),
-                        for (final code in kSupportedBaseCurrencies)
-                          _PanelChoiceRow(
-                            icon: code == currentCurrency
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_unchecked,
-                            title: code,
-                            selected: code == currentCurrency,
-                            onTap: () => ref
-                                .read(valuationCurrencyProvider.notifier)
-                                .set(code),
-                          ),
-                      ],
                     ),
                   ],
                 ),
@@ -301,6 +375,14 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
       rateMode: mode,
       window: window,
     );
+  }
+
+  void _runCreateAction(
+    BuildContext context,
+    TopBarCreateActionItem action,
+  ) {
+    Navigator.of(context).pop();
+    context.push(action.route);
   }
 
   IconData _syncIcon(SyncState sync) {
@@ -349,7 +431,8 @@ class _PanelSection extends StatelessWidget {
     required this.title,
     required this.expanded,
     required this.onToggle,
-    required this.children,
+    required this.child,
+    this.collapsible = true,
   });
 
   final IconData icon;
@@ -357,7 +440,8 @@ class _PanelSection extends StatelessWidget {
   final String title;
   final bool expanded;
   final VoidCallback onToggle;
-  final List<Widget> children;
+  final Widget child;
+  final bool collapsible;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +458,7 @@ class _PanelSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
-            onTap: onToggle,
+            onTap: collapsible ? onToggle : null,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
@@ -393,22 +477,22 @@ class _PanelSection extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Icon(
-                    expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: iconColor,
-                  ),
+                  if (collapsible)
+                    Icon(
+                      expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
+                      color: iconColor,
+                    ),
                 ],
               ),
             ),
           ),
           if (expanded) ...[
             Divider(height: 1, color: dividerColor),
-            for (var i = 0; i < children.length; i++) ...[
-              children[i],
-              if (i < children.length - 1)
-                Divider(height: 1, indent: 56, color: dividerColor),
-            ],
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: child,
+            ),
           ],
         ],
       ),
@@ -416,8 +500,8 @@ class _PanelSection extends StatelessWidget {
   }
 }
 
-class _PanelInfoRow extends StatelessWidget {
-  const _PanelInfoRow({
+class _PanelInfoCard extends StatelessWidget {
+  const _PanelInfoCard({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -430,8 +514,13 @@ class _PanelInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -439,7 +528,7 @@ class _PanelInfoRow extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: cs.surfaceContainerHigh,
+              color: cs.surface,
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
@@ -474,20 +563,43 @@ class _PanelInfoRow extends StatelessWidget {
   }
 }
 
-class _SyncRangeActionRow extends StatelessWidget {
-  const _SyncRangeActionRow({
+class _PanelActionChip extends StatelessWidget {
+  const _PanelActionChip({
     required this.icon,
     required this.title,
-    this.subtitle,
-    required this.enabled,
-    required this.onSelected,
+    required this.onTap,
   });
 
   final IconData icon;
   final String title;
-  final String? subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return _OverflowActionChip(
+      icon: icon,
+      title: title,
+      onTap: onTap,
+      trailing: Icon(Icons.chevron_right, size: 16, color: cs.outline),
+    );
+  }
+}
+
+class _SyncRangeActionChip extends StatelessWidget {
+  const _SyncRangeActionChip({
+    required this.icon,
+    required this.title,
+    required this.enabled,
+    required this.onSelected,
+    this.maxWidth,
+  });
+
+  final IconData icon;
+  final String title;
   final bool enabled;
   final ValueChanged<SyncWindow> onSelected;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -496,69 +608,19 @@ class _SyncRangeActionRow extends StatelessWidget {
       enabled: enabled,
       tooltip: title,
       onSelected: onSelected,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                icon,
-                size: 16,
-                color: enabled ? cs.onSurfaceVariant : cs.outline,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: enabled ? cs.onSurface : cs.onSurfaceVariant,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Text(
-              '选择范围',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: enabled ? cs.primary : cs.outline,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down, size: 18, color: cs.outline),
-          ],
-        ),
+      child: _OverflowActionChip(
+        icon: icon,
+        title: title,
+        enabled: enabled,
+        maxWidth: maxWidth,
+        trailing: Icon(Icons.arrow_drop_down, size: 18, color: cs.outline),
       ),
     );
   }
 }
 
-class _PanelChoiceRow extends StatelessWidget {
-  const _PanelChoiceRow({
+class _PanelChoiceChip extends StatelessWidget {
+  const _PanelChoiceChip({
     required this.icon,
     required this.title,
     required this.selected,
@@ -573,40 +635,83 @@ class _PanelChoiceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return InkWell(
+    return _OverflowActionChip(
+      icon: icon,
+      title: title,
+      selected: selected,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                icon,
-                size: 16,
-                color: selected ? cs.primary : cs.onSurfaceVariant,
-              ),
+      trailing: selected ? Icon(Icons.check, size: 16, color: cs.primary) : null,
+    );
+  }
+}
+
+class _OverflowActionChip extends StatelessWidget {
+  const _OverflowActionChip({
+    required this.icon,
+    required this.title,
+    this.enabled = true,
+    this.selected = false,
+    this.onTap,
+    this.trailing,
+    this.maxWidth,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool enabled;
+  final bool selected;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final double? maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final borderColor = selected ? cs.primary : cs.outlineVariant;
+    final backgroundColor = selected
+        ? cs.primary.withValues(alpha: 0.08)
+        : cs.surfaceContainerLow;
+    final foregroundColor = enabled ? cs.onSurface : cs.onSurfaceVariant;
+    final iconColor = selected ? cs.primary : cs.onSurfaceVariant;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth ?? 152),
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: borderColor),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  color: cs.onSurface,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: iconColor),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: foregroundColor,
+                    ),
+                  ),
                 ),
-              ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 6),
+                  trailing!,
+                ],
+              ],
             ),
-            if (selected)
-              Icon(Icons.check, size: 18, color: cs.primary),
-          ],
+          ),
         ),
       ),
     );
