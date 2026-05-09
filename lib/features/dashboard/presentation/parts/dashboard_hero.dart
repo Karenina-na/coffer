@@ -282,8 +282,8 @@ bool _pointInPolygon(
 
 const _heroArcVerticalLift = 0.14;
 const _heroArcEdgeCompression = 0.12;
-const _heroMapTopInset = 0.05;
-const _heroMapBottomInset = 0.04;
+const _heroMapTopInset = 0.025;
+const _heroMapBottomInset = 0.065;
 
 @visibleForTesting
 Offset heroProjectPoint(Size size, (double, double) norm) {

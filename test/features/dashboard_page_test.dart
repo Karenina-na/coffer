@@ -142,6 +142,12 @@ void main() {
         expect(point.dy, inInclusiveRange(0.0, size.height));
       }
     });
+
+    test('低纬点整体比高纬点更靠下', () {
+      final north = heroProjectPoint(size, (0.5, 0.25));
+      final south = heroProjectPoint(size, (0.5, 0.75));
+      expect(north.dy, lessThan(south.dy));
+    });
   });
 
   group('orderedContinentLabels', () {
