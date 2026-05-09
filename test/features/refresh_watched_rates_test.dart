@@ -6,8 +6,11 @@ import 'package:gwp/core/result.dart';
 import 'package:gwp/data/db/database.dart';
 import 'package:gwp/data/repositories/drift_exchange_rate_repository.dart';
 import 'package:gwp/data/repositories/drift_watched_pair_repository.dart';
+import 'package:gwp/domain/entities/exchange_rate.dart';
+import 'package:gwp/domain/entities/exchange_rate_enums.dart';
 import 'package:gwp/domain/providers/fx_rate_provider.dart';
 import 'package:gwp/domain/usecases/refresh_watched_rates.dart';
+import 'package:gwp/domain/utils/pair_key.dart';
 import 'package:gwp/domain/valuation/asset_valuator.dart';
 
 void main() {
@@ -28,6 +31,25 @@ void main() {
       watchedRepo: watchedRepo,
       rateRepo: rateRepo,
       provider: provider,
+    );
+  }
+
+  ExchangeRate makeRate({
+    required String base,
+    required String quote,
+    required String rate,
+    required DateTime asOfTime,
+  }) {
+    return ExchangeRate(
+      id: 'r-${base}_${quote}_${asOfTime.microsecondsSinceEpoch}',
+      pairKey: pairKeyOf(base, quote),
+      baseCurrency: base,
+      quoteCurrency: quote,
+      rate: Decimal.parse(rate),
+      asOfTime: asOfTime,
+      updatedAt: asOfTime,
+      source: 'test',
+      snapshotType: SnapshotType.daily,
     );
   }
 
@@ -154,12 +176,38 @@ void main() {
 
       final rates = await rateRepo.watchAll().first;
       expect(rates, hasLength(1));
-      // updatedAt should match the injected clock, not DateTime.now()
       expect(
         rates.single.updatedAt.isAtSameMomentAs(fixedNow),
         isTrue,
         reason: 'updatedAt 应使用注入的 clock 而不是 DateTime.now()',
       );
+    });
+
+    test('删除关注币对时同时清除该币对已同步缓存', () async {
+      final day1 = DateTime.utc(2025, 6, 14);
+      final day2 = DateTime.utc(2025, 6, 15);
+      await watchedRepo.add(baseCurrency: 'USD', quoteCurrency: 'CNY');
+      await rateRepo.upsert(
+        makeRate(base: 'USD', quote: 'CNY', rate: '7.1', asOfTime: day1),
+      );
+      await rateRepo.upsert(
+        makeRate(base: 'USD', quote: 'CNY', rate: '7.2', asOfTime: day2),
+      );
+
+      final remove = await watchedRepo.remove('USD/CNY');
+      expect(remove.isOk, isTrue);
+      expect(await watchedRepo.listAll(), isEmpty);
+      expect(
+        await rateRepo.querySeriesForPair(
+          pairKey: 'USD/CNY',
+          since: DateTime.utc(2025, 6, 1),
+        ),
+        isEmpty,
+      );
+
+      final latest = await rateRepo.latestFor(baseCurrency: 'USD', quoteCurrency: 'CNY');
+      expect(latest.isErr, isTrue);
+      expect(latest.errorOrNull, isA<NotFoundError>());
     });
   });
 }

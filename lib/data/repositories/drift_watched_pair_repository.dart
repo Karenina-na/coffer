@@ -72,8 +72,13 @@ class DriftWatchedPairRepository implements WatchedPairRepository {
 
   @override
   Future<Result<void, AppError>> remove(String pairKey) async {
+    final key = pairKey.trim().toUpperCase();
     try {
-      await _dao.deleteByKey(pairKey);
+      final db = _dao.attachedDatabase;
+      await db.transaction(() async {
+        await (db.delete(db.exchangeRates)..where((t) => t.pairKey.equals(key))).go();
+        await _dao.deleteByKey(key);
+      });
       return const Ok(null);
     } catch (e) {
       return Err(StorageError('remove watched pair failed: $e'));
