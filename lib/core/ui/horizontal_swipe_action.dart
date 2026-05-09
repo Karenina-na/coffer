@@ -8,43 +8,63 @@ typedef HorizontalSwipeHandler = FutureOr<bool> Function(
   HorizontalSwipeDirection direction,
 );
 
+class HorizontalSwipeBinding {
+  const HorizontalSwipeBinding({required this.owner, required this.handler});
+
+  final Object owner;
+  final HorizontalSwipeHandler? handler;
+}
+
 /// 当前主页面注册到壳层浮动导航的横向滑动处理器。
 ///
 /// - 返回 `true` 表示当前页面已消费本次滑动（如切换二级 Tab）
 /// - 返回 `false` 表示当前页面处于边界，应交由壳层切换主导航
-class HorizontalSwipeAction extends Notifier<HorizontalSwipeHandler?> {
+class HorizontalSwipeAction extends Notifier<HorizontalSwipeBinding?> {
   @override
-  HorizontalSwipeHandler? build() => null;
+  HorizontalSwipeBinding? build() => null;
 
-  void set(HorizontalSwipeHandler? handler) => state = handler;
+  void set(Object owner, HorizontalSwipeHandler? handler) {
+    state = HorizontalSwipeBinding(owner: owner, handler: handler);
+  }
 
-  void clearLater() {
+  void clearLater(Object owner) {
     Future<void>.microtask(() {
-      if (ref.mounted) state = null;
+      if (!ref.mounted) return;
+      if (state?.owner == owner) state = null;
     });
   }
 }
 
 final horizontalSwipeActionProvider =
-    NotifierProvider<HorizontalSwipeAction, HorizontalSwipeHandler?>(
+    NotifierProvider<HorizontalSwipeAction, HorizontalSwipeBinding?>(
   HorizontalSwipeAction.new,
 );
 
+class MainNavigationSwipeBinding {
+  const MainNavigationSwipeBinding({required this.owner, required this.handler});
+
+  final Object owner;
+  final HorizontalSwipeHandler? handler;
+}
+
 /// 壳层主导航注册给页面使用的横向切换处理器。
-class MainNavigationSwipeAction extends Notifier<HorizontalSwipeHandler?> {
+class MainNavigationSwipeAction extends Notifier<MainNavigationSwipeBinding?> {
   @override
-  HorizontalSwipeHandler? build() => null;
+  MainNavigationSwipeBinding? build() => null;
 
-  void set(HorizontalSwipeHandler? handler) => state = handler;
+  void set(Object owner, HorizontalSwipeHandler? handler) {
+    state = MainNavigationSwipeBinding(owner: owner, handler: handler);
+  }
 
-  void clearLater() {
+  void clearLater(Object owner) {
     Future<void>.microtask(() {
-      if (ref.mounted) state = null;
+      if (!ref.mounted) return;
+      if (state?.owner == owner) state = null;
     });
   }
 }
 
 final mainNavigationSwipeActionProvider =
-    NotifierProvider<MainNavigationSwipeAction, HorizontalSwipeHandler?>(
+    NotifierProvider<MainNavigationSwipeAction, MainNavigationSwipeBinding?>(
   MainNavigationSwipeAction.new,
 );

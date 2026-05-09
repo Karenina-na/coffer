@@ -8,6 +8,7 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../data/providers/dict_providers.dart';
@@ -42,14 +43,17 @@ class CardListPage extends ConsumerStatefulWidget {
 
 class _CardListPageState extends ConsumerState<CardListPage> {
   _CardSort _sort = _CardSort.expiry;
+  late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
 
   @override
   void initState() {
     super.initState();
+    _horizontalSwipeAction = ref.read(horizontalSwipeActionProvider.notifier);
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _horizontalSwipeAction.set(this, null);
       _topSearchOpener.set(this, _openSearch);
     });
   }
@@ -57,6 +61,7 @@ class _CardListPageState extends ConsumerState<CardListPage> {
   @override
   void dispose() {
     _topSearchOpener.clearLater(this);
+    _horizontalSwipeAction.clearLater(this);
     super.dispose();
   }
 

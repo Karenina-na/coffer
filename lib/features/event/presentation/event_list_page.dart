@@ -115,7 +115,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _topSearchOpener.set(this, _openSearch);
-      _horizontalSwipeAction.set(_handleHorizontalSwipe);
+      _horizontalSwipeAction.set(this, _handleHorizontalSwipe);
       // 进入事件页时检查是否有资产超过阈值未同步，有则写一条聚合提醒
       // （`ASSET_SYNC_OUTDATED`）；sourceKey 按天去重，不会刷屏。
       unawaited(() async {
@@ -142,7 +142,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
   @override
   void dispose() {
     _topSearchOpener.clearLater(this);
-    _horizontalSwipeAction.clearLater();
+    _horizontalSwipeAction.clearLater(this);
     _tabController.dispose();
     super.dispose();
   }
@@ -201,7 +201,8 @@ class _EventListPageState extends ConsumerState<EventListPage>
         direction == HorizontalSwipeDirection.forward;
     if (!isAtLeadingEdge && !isAtTrailingEdge) return false;
 
-    final handler = ref.read(mainNavigationSwipeActionProvider);
+    final binding = ref.read(mainNavigationSwipeActionProvider);
+    final handler = binding?.handler;
     if (handler == null) return false;
     _boundaryHandoffLocked = true;
     Future<void>.microtask(() async {

@@ -226,9 +226,8 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
     _rememberLocation(widget.location);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _mainNavigationSwipeAction.set((direction) async {
-        _switchMainTab(context, direction);
-        return true;
+      _mainNavigationSwipeAction.set(this, (direction) async {
+        return _switchMainTab(context, direction);
       });
     });
   }
@@ -236,7 +235,7 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
   @override
   void dispose() {
     _navTransitionTimer?.cancel();
-    _mainNavigationSwipeAction.clearLater();
+    _mainNavigationSwipeAction.clearLater(this);
     super.dispose();
   }
 
@@ -312,7 +311,8 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
   Widget build(BuildContext context) {
     final ref = this.ref;
     final unread = ref.watch(unreadEventCountProvider);
-    final horizontalSwipeHandler = ref.watch(horizontalSwipeActionProvider);
+    final horizontalSwipeBinding = ref.watch(horizontalSwipeActionProvider);
+    final horizontalSwipeHandler = horizontalSwipeBinding?.handler;
     final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final showNav = keyboardInset == 0;
@@ -387,7 +387,7 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
     openGlobalSearch(context: context, ref: ref, current: f);
   }
 
-  void _switchMainTab(
+  bool _switchMainTab(
     BuildContext context,
     HorizontalSwipeDirection direction,
   ) {
@@ -395,7 +395,7 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
       HorizontalSwipeDirection.backward => _index - 1,
       HorizontalSwipeDirection.forward => _index + 1,
     };
-    _requestMainTabChange(context, nextIndex);
+    return _requestMainTabChange(context, nextIndex);
   }
 }
 
@@ -422,10 +422,10 @@ class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
     _swipeTriggered = false;
   }
 
-  void _handlePointerMove(PointerMoveEvent event) {
+  void _handleHorizontalDragUpdate(DragUpdateDetails details) {
     final startX = _dragStartX;
     if (startX == null || _swipeTriggered) return;
-    final delta = event.position.dx - startX;
+    final delta = details.globalPosition.dx - startX;
     if (delta.abs() < _HomeShellState._shellSwipeDistanceThreshold) return;
     _swipeTriggered = true;
     final direction = delta > 0
@@ -442,10 +442,15 @@ class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
         _dragStartX = event.position.dx;
         _swipeTriggered = false;
       },
-      onPointerMove: _handlePointerMove,
       onPointerUp: (_) => _resetDrag(),
       onPointerCancel: (_) => _resetDrag(),
-      child: widget.child,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragUpdate: _handleHorizontalDragUpdate,
+        onHorizontalDragEnd: (_) => _resetDrag(),
+        onHorizontalDragCancel: _resetDrag,
+        child: widget.child,
+      ),
     );
   }
 }

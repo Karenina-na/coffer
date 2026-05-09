@@ -53,7 +53,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncTopSearch();
-      _horizontalSwipeAction.set(_handleHorizontalSwipe);
+      _horizontalSwipeAction.set(this, _handleHorizontalSwipe);
     });
   }
 
@@ -71,7 +71,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   @override
   void dispose() {
     _topSearchOpener.clearLater(this);
-    _horizontalSwipeAction.clearLater();
+    _horizontalSwipeAction.clearLater(this);
     _tab.dispose();
     super.dispose();
   }
@@ -130,7 +130,8 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
         direction == HorizontalSwipeDirection.forward;
     if (!isAtLeadingEdge && !isAtTrailingEdge) return false;
 
-    final handler = ref.read(mainNavigationSwipeActionProvider);
+    final binding = ref.read(mainNavigationSwipeActionProvider);
+    final handler = binding?.handler;
     if (handler == null) return false;
     _boundaryHandoffLocked = true;
     Future<void>.microtask(() async {

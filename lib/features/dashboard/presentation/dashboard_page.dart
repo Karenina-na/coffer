@@ -15,6 +15,7 @@ import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_kpi_tile.dart';
 import '../../../core/ui/gwp_node_map.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/domain_event.dart';
@@ -57,14 +58,17 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
+  late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
 
   @override
   void initState() {
     super.initState();
+    _horizontalSwipeAction = ref.read(horizontalSwipeActionProvider.notifier);
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _horizontalSwipeAction.set(this, null);
       _topSearchOpener.set(this, _openSearch);
     });
   }
@@ -72,6 +76,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
   void dispose() {
     _topSearchOpener.clearLater(this);
+    _horizontalSwipeAction.clearLater(this);
     super.dispose();
   }
 

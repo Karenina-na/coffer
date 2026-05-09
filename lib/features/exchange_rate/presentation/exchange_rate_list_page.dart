@@ -14,6 +14,7 @@ import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_heat_strip.dart';
 import '../../../core/ui/gwp_number_text.dart';
+import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/exchange_rate_enums.dart';
@@ -32,14 +33,17 @@ class ExchangeRateListPage extends ConsumerStatefulWidget {
 }
 
 class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
+  late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
 
   @override
   void initState() {
     super.initState();
+    _horizontalSwipeAction = ref.read(horizontalSwipeActionProvider.notifier);
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _horizontalSwipeAction.set(this, null);
       _topSearchOpener.set(this, _openSearch);
     });
   }
@@ -47,6 +51,7 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
   @override
   void dispose() {
     _topSearchOpener.clearLater(this);
+    _horizontalSwipeAction.clearLater(this);
     super.dispose();
   }
 
