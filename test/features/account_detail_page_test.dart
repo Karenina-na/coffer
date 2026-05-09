@@ -37,9 +37,33 @@ GoRouter _router() => GoRouter(
               AccountDetailPage(accountId: state.pathParameters['id']!),
         ),
         GoRoute(
+          path: '/channels/new',
+          builder: (context, state) => const Scaffold(body: Center(child: Text('CHANNEL_NEW'))),
+        ),
+        GoRoute(
           path: '/channels/:id',
           builder: (_, state) => Scaffold(
             body: Center(child: Text('CHANNEL:${state.pathParameters['id']}')),
+          ),
+        ),
+        GoRoute(
+          path: '/assets/new',
+          builder: (_, state) => Scaffold(
+            body: Center(
+              child: Text(
+                'ASSET_NEW:${state.uri.queryParameters['accountId']}:${state.uri.queryParameters['lockAccount']}',
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/cards/new',
+          builder: (_, state) => Scaffold(
+            body: Center(
+              child: Text(
+                'CARD_NEW:${state.uri.queryParameters['accountId']}:${state.uri.queryParameters['lockAccount']}',
+              ),
+            ),
           ),
         ),
       ],
@@ -50,6 +74,8 @@ Future<void> _pumpPage(
   SaveAccountChannelConfigUseCase? saveConfigUseCase,
   List<DictEntry>? currencies,
   List<Asset>? assets,
+  List<AccountChannel>? links,
+  List<Channel>? channels,
   bool settle = true,
 }) async {
   tester.view.physicalSize = const Size(1080, 2400);
@@ -109,8 +135,12 @@ Future<void> _pumpPage(
           ),
         ),
         cardsByAccountProvider('acc-1').overrideWith((ref) => Stream.value(const [])),
-        accountChannelsByAccountProvider('acc-1').overrideWith((ref) => Stream.value([link])),
-        channelListProvider.overrideWith((ref) => Stream.value([channel])),
+        accountChannelsByAccountProvider('acc-1').overrideWith(
+          (ref) => Stream.value(links ?? [link]),
+        ),
+        channelListProvider.overrideWith(
+          (ref) => Stream.value(channels ?? [channel]),
+        ),
         dictEntriesProvider(DictType.currency).overrideWith(
           (ref) => Stream.value(currencyEntries),
         ),
@@ -128,11 +158,17 @@ Future<void> _pumpPage(
   }
 }
 
+Future<void> _scrollToText(WidgetTester tester, String text) async {
+  final scrollable = find.byType(Scrollable).first;
+  await tester.scrollUntilVisible(find.text(text), 200, scrollable: scrollable);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('账户详情页通道卡片点击信息区可进入通道详情', (tester) async {
     await _pumpPage(tester);
 
-    expect(find.text('SWIFT Main'), findsOneWidget);
+    await _scrollToText(tester, 'SWIFT Main');
     await tester.tap(find.text('SWIFT Main'));
     await tester.pumpAndSettle();
 
@@ -164,6 +200,7 @@ void main() {
       ],
     );
 
+    await _scrollToText(tester, '配置费用');
     await tester.tap(find.text('配置费用'));
     await tester.pumpAndSettle();
 
@@ -208,6 +245,54 @@ void main() {
     expect(find.text('1个月'), findsOneWidget);
     expect(find.text('1年'), findsOneWidget);
     expect(find.text('5年'), findsOneWidget);
+  });
+
+  testWidgets('账户详情资产区块提供带账户上下文的添加入口', (tester) async {
+    await _pumpPage(tester);
+
+    await _scrollToText(tester, '添加资产');
+    await tester.tap(find.text('添加资产'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ASSET_NEW:acc-1:1'), findsOneWidget);
+  });
+
+  testWidgets('账户详情卡片区块提供带账户上下文的添加入口', (tester) async {
+    await _pumpPage(tester);
+
+    await _scrollToText(tester, '添加卡片');
+    await tester.tap(find.text('添加卡片'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CARD_NEW:acc-1:1'), findsOneWidget);
+  });
+
+  testWidgets('无可关联通道时账户详情入口跳转到新建通道', (tester) async {
+    final now = DateTime.utc(2026, 1, 1);
+    final channel = Channel(
+      id: 'ch-1',
+      name: 'SWIFT Main',
+      transferProtocol: 'SWIFT',
+      status: ChannelStatus.enabled,
+      createdAt: now,
+      updatedAt: now,
+    );
+    final link = AccountChannel(
+      accountId: 'acc-1',
+      channelId: 'ch-1',
+      createdAt: now,
+    );
+
+    await _pumpPage(
+      tester,
+      links: [link],
+      channels: [channel],
+    );
+
+    await _scrollToText(tester, '新建通道');
+    await tester.tap(find.text('新建通道'));
+    await tester.pumpAndSettle();
+    expect(find.text('CHANNEL_NEW'), findsOneWidget);
   });
 }
 

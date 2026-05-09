@@ -19,9 +19,16 @@ import 'asset_providers.dart';
 /// - `initial != null`：编辑，保留 id / createdAt，调用 `repository.update`。
 ///   在编辑态归属账户字段置为只读（跨账户迁移不在本页支持）。
 class AssetCreatePage extends ConsumerStatefulWidget {
-  const AssetCreatePage({super.key, this.initial});
+  const AssetCreatePage({
+    super.key,
+    this.initial,
+    this.initialAccountId,
+    this.lockAccountSelection = false,
+  });
 
   final Asset? initial;
+  final String? initialAccountId;
+  final bool lockAccountSelection;
 
   @override
   ConsumerState<AssetCreatePage> createState() => _AssetCreatePageState();
@@ -40,6 +47,7 @@ class _AssetCreatePageState extends ConsumerState<AssetCreatePage> {
   bool _submitting = false;
 
   bool get _isEdit => widget.initial != null;
+  bool get _isAccountLocked => _isEdit || widget.lockAccountSelection;
 
   @override
   void initState() {
@@ -51,7 +59,7 @@ class _AssetCreatePageState extends ConsumerState<AssetCreatePage> {
     _priceCtrl = TextEditingController(text: a?.currentPrice?.toString() ?? '');
     _currency = a?.currency ?? 'CNY';
     _type = a?.assetType ?? AssetType.stock;
-    _accountId = a?.accountId;
+    _accountId = a?.accountId ?? widget.initialAccountId;
   }
 
   @override
@@ -210,14 +218,26 @@ class _AssetCreatePageState extends ConsumerState<AssetCreatePage> {
             accounts.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('账户加载失败: ${errorToMessage(e)}'),
-              data: (list) => _AccountPicker(
-                accounts: list,
-                selected: _accountId,
-                onChanged: _isEdit
-                    ? null
-                    : (v) => setState(() => _accountId = v),
-                readOnly: _isEdit,
-              ),
+              data: (list) {
+                final hasSelected = _accountId != null && list.any((a) => a.id == _accountId);
+                if (!hasSelected && !_isEdit && widget.initialAccountId != null && _accountId != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() => _accountId = null);
+                  });
+                }
+                return _AccountPicker(
+                  accounts: list,
+                  selected: hasSelected ? _accountId : null,
+                  onChanged: _isAccountLocked
+                      ? null
+                      : (v) => setState(() => _accountId = v),
+                  readOnly: _isAccountLocked && hasSelected,
+                  helperText: widget.lockAccountSelection && !hasSelected
+                      ? '预选账户不可用，请重新选择'
+                      : null,
+                );
+              },
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<AssetType>(
@@ -316,12 +336,14 @@ class _AccountPicker extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.readOnly = false,
+    this.helperText,
   });
 
   final List<Account> accounts;
   final String? selected;
   final ValueChanged<String?>? onChanged;
   final bool readOnly;
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +354,7 @@ class _AccountPicker extends StatelessWidget {
       initialValue: selected,
       decoration: InputDecoration(
         labelText: '归属账户',
-        helperText: readOnly ? '编辑时不可迁移账户' : null,
+        helperText: helperText ?? (readOnly ? '当前入口已锁定归属账户' : null),
       ),
       items: accounts
           .map((a) => DropdownMenuItem(

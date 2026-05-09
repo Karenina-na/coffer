@@ -103,7 +103,10 @@ GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
         ),
         GoRoute(
           path: '/assets/new',
-          builder: (_, _) => const AssetCreatePage(),
+          builder: (_, state) => AssetCreatePage(
+            initialAccountId: state.uri.queryParameters['accountId'],
+            lockAccountSelection: state.uri.queryParameters['lockAccount'] == '1',
+          ),
         ),
         GoRoute(
           path: '/assets/:id/edit',
@@ -121,7 +124,10 @@ GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
         ),
         GoRoute(
           path: '/cards/new',
-          builder: (_, _) => const CardCreatePage(),
+          builder: (_, state) => CardCreatePage(
+            initialAccountId: state.uri.queryParameters['accountId'],
+            lockAccountSelection: state.uri.queryParameters['lockAccount'] == '1',
+          ),
         ),
         GoRoute(
           path: '/cards/:id/edit',

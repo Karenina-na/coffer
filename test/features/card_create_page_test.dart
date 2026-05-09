@@ -11,6 +11,45 @@ import 'package:gwp/features/account/presentation/account_providers.dart';
 import 'package:gwp/features/card/presentation/card_create_page.dart';
 
 void main() {
+  testWidgets('卡片创建页可预选并锁定归属账户', (tester) async {
+    final now = DateTime.utc(2026, 1, 1);
+    final account = Account(
+      id: 'acc-1',
+      accountType: AccountType.bank,
+      sovereigntyRegion: 'CN',
+      institutionName: 'ICBC',
+      status: AccountStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountListProvider.overrideWith((ref) => Stream.value([account])),
+          dictEntriesProvider(DictType.currency).overrideWith(
+            (ref) => Stream.value(const <DictEntry>[]),
+          ),
+        ],
+        child: const MaterialApp(
+          home: CardCreatePage(
+            initialAccountId: 'acc-1',
+            lockAccountSelection: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('当前入口已锁定归属账户'), findsOneWidget);
+    final accountField = tester.widget<DropdownButtonFormField<String>>(
+      find.byType(DropdownButtonFormField<String>).first,
+    );
+    expect(accountField.initialValue, 'acc-1');
+    expect(accountField.onChanged, isNull);
+  });
+
   testWidgets('卡片创建页其他支持币种来自字典而非手动输入', (tester) async {
     final now = DateTime.utc(2026, 1, 1);
     final account = Account(

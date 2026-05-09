@@ -21,9 +21,16 @@ import 'card_providers.dart';
 ///   - 卡号字段留空 = 保留原有加密卡号；输入新卡号则重新加密并刷新 masked。
 ///   - CVV 字段留空 = 保留原有（可能为空）。
 class CardCreatePage extends ConsumerStatefulWidget {
-  const CardCreatePage({super.key, this.initial});
+  const CardCreatePage({
+    super.key,
+    this.initial,
+    this.initialAccountId,
+    this.lockAccountSelection = false,
+  });
 
   final BankCard? initial;
+  final String? initialAccountId;
+  final bool lockAccountSelection;
 
   @override
   ConsumerState<CardCreatePage> createState() => _CardCreatePageState();
@@ -47,6 +54,7 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
   bool _submitting = false;
 
   bool get _isEdit => widget.initial != null;
+  bool get _isAccountLocked => _isEdit || widget.lockAccountSelection;
 
   @override
   void initState() {
@@ -65,7 +73,7 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
     );
     _billingAddressCtrl = TextEditingController(text: c?.billingAddress ?? '');
     _type = c?.cardType ?? CardType.credit;
-    _accountId = c?.accountId;
+    _accountId = c?.accountId ?? widget.initialAccountId;
     _primaryCurrency = c?.currency ?? 'CNY';
     _supportsAll = c?.supportsAllCurrencies ?? false;
     if (c != null) _extraCurrencies.addAll(c.supportedCurrencies);
@@ -174,13 +182,24 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
             accounts.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('账户加载失败: ${errorToMessage(e)}'),
-              data: (list) => _AccountPicker(
-                accounts: list,
-                selected: _accountId,
-                onChanged:
-                    _isEdit ? null : (v) => setState(() => _accountId = v),
-                readOnly: _isEdit,
-              ),
+              data: (list) {
+                final hasSelected = _accountId != null && list.any((a) => a.id == _accountId);
+                if (!hasSelected && !_isEdit && widget.initialAccountId != null && _accountId != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() => _accountId = null);
+                  });
+                }
+                return _AccountPicker(
+                  accounts: list,
+                  selected: hasSelected ? _accountId : null,
+                  onChanged: _isAccountLocked ? null : (v) => setState(() => _accountId = v),
+                  readOnly: _isAccountLocked && hasSelected,
+                  helperText: widget.lockAccountSelection && !hasSelected
+                      ? '预选账户不可用，请重新选择'
+                      : null,
+                );
+              },
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<CardType>(
@@ -422,12 +441,14 @@ class _AccountPicker extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.readOnly = false,
+    this.helperText,
   });
 
   final List<Account> accounts;
   final String? selected;
   final ValueChanged<String?>? onChanged;
   final bool readOnly;
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) {
@@ -454,7 +475,7 @@ class _AccountPicker extends StatelessWidget {
         labelText: '归属账户 *',
         prefixIcon: const Icon(Icons.account_balance_outlined),
         border: const OutlineInputBorder(),
-        helperText: readOnly ? '编辑时不可迁移账户' : '卡片必须绑定到一个账户',
+        helperText: helperText ?? (readOnly ? '当前入口已锁定归属账户' : '卡片必须绑定到一个账户'),
       ),
       validator: (v) => v == null ? '请选择归属账户' : null,
       items: accounts

@@ -440,7 +440,10 @@ class _Body extends StatelessWidget {
           _NetWorthTrendSection(accountId: accountId),
           const SizedBox(height: GwpSpacing.base),
         ],
-        _AssetListSection(valuedAssets: valuedAssets),
+        _AssetListSection(
+          accountId: accountId,
+          valuedAssets: valuedAssets,
+        ),
         const SizedBox(height: GwpSpacing.base),
         _CardGallerySection(
           cardsAsync: cardsAsync,
@@ -1414,7 +1417,11 @@ class _AccountTrendChart extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _AssetListSection extends StatefulWidget {
-  const _AssetListSection({required this.valuedAssets});
+  const _AssetListSection({
+    required this.accountId,
+    required this.valuedAssets,
+  });
+  final String accountId;
   final List<ValuedAsset> valuedAssets;
 
   @override
@@ -1434,9 +1441,13 @@ class _AssetListSectionState extends State<_AssetListSection> {
       icon: Icons.view_list_outlined,
       iconColor: GwpColors.info,
       title: '资产明细 (${assets.length})',
-      child: assets.isEmpty
-          ? const _EmptyHint('账户下暂无资产')
-          : Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (assets.isEmpty)
+            const _EmptyHint('账户下暂无资产')
+          else
+            Column(
               children: [
                 for (var i = 0; i < visible.length; i++) ...[
                   _AssetRow(asset: visible[i]),
@@ -1450,6 +1461,15 @@ class _AssetListSectionState extends State<_AssetListSection> {
                   ),
               ],
             ),
+          const SizedBox(height: GwpSpacing.sm),
+          _SectionAddButton(
+            label: '添加资产',
+            onPressed: () => context.push(
+              '/assets/new?accountId=${widget.accountId}&lockAccount=1',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1601,23 +1621,35 @@ class _CardGallerySection extends StatelessWidget {
       icon: Icons.credit_card_outlined,
       iconColor: const Color(0xFFF59E0B),
       title: '银行卡',
-      child: cardsAsync.when(
-        loading: () => const SizedBox(
-          height: 80,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-        error: (e, _) => Text(
-          '加载卡片失败: ${errorToMessage(e)}',
-          style: const TextStyle(color: GwpColors.negative, fontSize: 12),
-        ),
-        data: (cards) {
-          if (cards.isEmpty) return const _EmptyHint('账户下暂无卡片');
-          return Wrap(
-            spacing: GwpSpacing.sm,
-            runSpacing: GwpSpacing.sm,
-            children: [for (final c in cards) _VisualCard(card: c, account: account)],
-          );
-        },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          cardsAsync.when(
+            loading: () => const SizedBox(
+              height: 80,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (e, _) => Text(
+              '加载卡片失败: ${errorToMessage(e)}',
+              style: const TextStyle(color: GwpColors.negative, fontSize: 12),
+            ),
+            data: (cards) {
+              if (cards.isEmpty) return const _EmptyHint('账户下暂无卡片');
+              return Wrap(
+                spacing: GwpSpacing.sm,
+                runSpacing: GwpSpacing.sm,
+                children: [for (final c in cards) _VisualCard(card: c, account: account)],
+              );
+            },
+          ),
+          const SizedBox(height: GwpSpacing.sm),
+          _SectionAddButton(
+            label: '添加卡片',
+            onPressed: () => context.push(
+              '/cards/new?accountId=${account.id}&lockAccount=1',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1825,15 +1857,15 @@ class _ChannelNetworkSection extends ConsumerWidget {
                       const SizedBox(height: GwpSpacing.sm),
                   ],
                 const SizedBox(height: GwpSpacing.sm),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: available.isEmpty
-                        ? null
-                        : () => _pickAndLink(context, ref, available),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('添加通道', style: TextStyle(fontSize: 12)),
-                  ),
+                _SectionAddButton(
+                  label: available.isEmpty ? '新建通道' : '添加通道',
+                  onPressed: () {
+                    if (available.isEmpty) {
+                      context.push('/channels/new');
+                      return;
+                    }
+                    _pickAndLink(context, ref, available);
+                  },
                 ),
               ],
             );
@@ -2318,6 +2350,28 @@ class _EmptyHint extends StatelessWidget {
       child: Text(
         message,
         style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+      ),
+    );
+  }
+}
+
+class _SectionAddButton extends StatelessWidget {
+  const _SectionAddButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add, size: 16),
+        label: Text(label, style: const TextStyle(fontSize: 12)),
       ),
     );
   }
