@@ -10,8 +10,8 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_heat_strip.dart';
 import '../../../core/ui/gwp_number_text.dart';
+import '../../../core/ui/gwp_status_badge.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/dict_type.dart';
@@ -102,10 +102,8 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
               bottom: FloatingNavLayout.totalFloatingHeight(context) + 24,
             ),
             children: [
-              // Heat strip overview card
-              _HeatStripCard(pairs: list),
+              _RatesSummaryCard(pairs: list),
               const SizedBox(height: GwpSpacing.sm),
-              // Rate cards
               for (final pair in list)
                 _PairRateCard(pair: pair),
             ],
@@ -117,104 +115,191 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Heat strip overview (card style)
+// Page summary
 // ──────────────────────────────────────────────────────────────
 
-class _HeatStripCard extends ConsumerWidget {
-  const _HeatStripCard({required this.pairs});
+class _RatesSummaryCard extends ConsumerWidget {
+  const _RatesSummaryCard({required this.pairs});
+
   final List<WatchedPair> pairs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final summaries = pairs
+        .map((pair) => ref.watch(pairRateSeriesProvider(pair.pairKey)))
+        .map(_pairSeriesSummaryFromAsync)
+        .toList(growable: false);
+    final ready = summaries.whereType<_PairSeriesSummary>().toList(growable: false);
+    final upCount = ready.where((item) => item.changePct > 0).length;
+    final downCount = ready.where((item) => item.changePct < 0).length;
+    final latestUpdatedAt = ready
+        .map((item) => item.updatedAt)
+        .whereType<DateTime>()
+        .fold<DateTime?>(null, (latest, current) {
+          if (latest == null) return current;
+          return current.isAfter(latest) ? current : latest;
+        });
+    final maxSwing = ready.fold<double>(0, (current, item) {
+      final abs = item.changePct.abs();
+      return abs > current ? abs : current;
+    });
+
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        GwpSpacing.base, GwpSpacing.sm, GwpSpacing.base, 0,
+        GwpSpacing.base,
+        GwpSpacing.xs,
+        GwpSpacing.base,
+        0,
       ),
-      padding: const EdgeInsets.all(GwpSpacing.md),
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
-      ),
+      padding: const EdgeInsets.all(GwpSpacing.base),
+      decoration: _cardDeco,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.thermostat_outlined,
-                  size: 14, color: GwpColors.textMuted),
-              const SizedBox(width: 6),
-              const Text(
-                '7日波动概览',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: GwpColors.textSecondary,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${pairs.length} 币对',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: GwpColors.textMuted,
+              Expanded(
+                child: Wrap(
+                  spacing: GwpSpacing.sm,
+                  runSpacing: GwpSpacing.xs,
+                  children: [
+                    _SummaryMetricChip(
+                      icon: Icons.swap_horiz,
+                      label: '币对',
+                      value: '${pairs.length}',
+                      tone: StatusVariant.neutral,
+                    ),
+                    _SummaryMetricChip(
+                      icon: Icons.trending_up,
+                      label: '涨',
+                      value: '$upCount',
+                      tone: StatusVariant.positive,
+                    ),
+                    _SummaryMetricChip(
+                      icon: Icons.trending_down,
+                      label: '跌',
+                      value: '$downCount',
+                      tone: StatusVariant.negative,
+                    ),
+                    _SummaryMetricChip(
+                      icon: Icons.show_chart,
+                      label: '波动',
+                      value: ready.isEmpty ? '—' : '${maxSwing.toStringAsFixed(2)}%',
+                      tone: StatusVariant.info,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.sm),
-          for (final pair in pairs)
-            _HeatStripRow(pairKey: pair.pairKey),
+          if (latestUpdatedAt != null) ...[
+            const SizedBox(height: GwpSpacing.sm),
+            Text(
+              '最近更新 ${_fmtRelativeTime(latestUpdatedAt)}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: GwpColors.textMuted,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _HeatStripRow extends ConsumerWidget {
-  const _HeatStripRow({required this.pairKey});
-  final String pairKey;
+class _SummaryMetricChip extends StatelessWidget {
+  const _SummaryMetricChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.tone,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final StatusVariant tone;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final seriesAsync = ref.watch(pairRateSeriesProvider(pairKey));
-    return seriesAsync.when(
-      loading: () => const SizedBox(height: 20),
-      error: (_, _) => const SizedBox(height: 20),
-      data: (series) {
-        if (series.length < 2) return const SizedBox(height: 20);
-        final first = series.first.rate.toDouble();
-        final last = series.last.rate.toDouble();
-        final changePct = first != 0 ? (last - first) / first * 100 : 0.0;
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 72,
-                child: Text(
-                  pairKey,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: GwpColors.textSecondary,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GwpHeatStrip(
-                  value: changePct,
-                  maxAbsValue: 1.0,
-                  label:
-                      '${changePct >= 0 ? '+' : ''}${changePct.toStringAsFixed(2)}%',
-                ),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    final variantColor = switch (tone) {
+      StatusVariant.positive => GwpColors.positive,
+      StatusVariant.negative => GwpColors.negative,
+      StatusVariant.warning => GwpColors.warning,
+      StatusVariant.info => GwpColors.info,
+      StatusVariant.neutral => GwpColors.textPrimary,
+      StatusVariant.muted => GwpColors.textMuted,
+    };
+    final variantBg = switch (tone) {
+      StatusVariant.positive => GwpColors.positiveBg,
+      StatusVariant.negative => GwpColors.negativeBg,
+      StatusVariant.warning => GwpColors.warningBg,
+      StatusVariant.info => GwpColors.infoBg,
+      StatusVariant.neutral => GwpColors.surface3,
+      StatusVariant.muted => GwpColors.surface2,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: variantBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: variantColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: variantColor,
+            ),
           ),
-        );
-      },
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: GwpTypo.monoFont,
+              fontFeatures: GwpTypo.tabularFigures,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: variantColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
+
+class _PairSeriesSummary {
+  const _PairSeriesSummary({
+    required this.changePct,
+    required this.updatedAt,
+  });
+
+  final double changePct;
+  final DateTime? updatedAt;
+}
+
+_PairSeriesSummary? _pairSeriesSummaryFromAsync(AsyncValue<List<ExchangeRate>> async) {
+  return async.maybeWhen(
+    data: (series) {
+      if (series.length < 2) return null;
+      final first = series.first.rate.toDouble();
+      final last = series.last.rate.toDouble();
+      final changePct = first == 0 ? 0.0 : (last - first) / first * 100;
+      return _PairSeriesSummary(
+        changePct: changePct,
+        updatedAt: series.last.updatedAt,
+      );
+    },
+    orElse: () => null,
+  );
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -240,33 +325,20 @@ class _PairRateCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.xs,
+        vertical: 3,
       ),
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      padding: const EdgeInsets.all(GwpSpacing.sm),
       decoration: _cardDeco,
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  pair.pairKey,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  errorText ?? '加载中...',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: GwpColors.textMuted,
-                  ),
-                ),
-              ],
+            child: Text(
+              '${pair.pairKey}  ${errorText ?? '加载中...'}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: GwpColors.textMuted,
+              ),
             ),
           ),
         ],
@@ -293,8 +365,13 @@ class _PairRateCard extends ConsumerWidget {
     final sign = changePct == null
         ? ValueSign.neutral
         : (isUp ? ValueSign.positive : ValueSign.negative);
+    final statusLabel = changePct == null
+        ? '待同步'
+        : (isUp ? '7日走强' : '7日走弱');
+    final statusVariant = changePct == null
+        ? StatusVariant.muted
+        : (isUp ? StatusVariant.positive : StatusVariant.negative);
 
-    // 7-day high/low
     double? high;
     double? low;
     if (points.length >= 2) {
@@ -305,7 +382,7 @@ class _PairRateCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.xs,
+        vertical: 3,
       ),
       child: Material(
         color: GwpColors.surface1,
@@ -322,99 +399,109 @@ class _PairRateCard extends ConsumerWidget {
               border: Border.all(color: GwpColors.border, width: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: const EdgeInsets.all(GwpSpacing.base),
+            padding: const EdgeInsets.all(GwpSpacing.sm),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: pair name + rate + change
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left: pair key + currency labels
                     Expanded(
-                      flex: 2,
+                      flex: 4,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             pair.pairKey,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: GwpColors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            latest == null
-                                ? '暂无数据'
-                                : _fmtTime(latest.updatedAt),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: GwpColors.textMuted,
-                            ),
+                          GwpStatusBadge(
+                            label: statusLabel,
+                            variant: statusVariant,
                           ),
                         ],
                       ),
                     ),
-                    // Right: rate value + change
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          latest == null
-                              ? '—'
-                              : _fmtRate(latest.rate.toDouble()),
-                          style: const TextStyle(
-                            fontFamily: GwpTypo.monoFont,
-                            fontFeatures: GwpTypo.tabularFigures,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: GwpColors.textPrimary,
-                          ),
+                    const SizedBox(width: GwpSpacing.sm),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        latest == null ? '—' : _fmtRate(latest.rate.toDouble()),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: GwpTypo.monoFont,
+                          fontFeatures: GwpTypo.tabularFigures,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: GwpColors.textPrimary,
                         ),
-                        const SizedBox(height: 2),
-                        GwpNumberText(
-                          value: changePct == null
-                              ? '—'
-                              : '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
-                          sign: sign,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          showIcon: changePct != null,
-                        ),
-                      ],
+                      ),
+                    ),
+                    const SizedBox(width: GwpSpacing.sm),
+                    Expanded(
+                      flex: 3,
+                      child: GwpNumberText(
+                        value: changePct == null
+                            ? '—'
+                            : '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+                        sign: sign,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        showIcon: changePct != null,
+                        textAlign: TextAlign.end,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: GwpSpacing.md),
-                // Sparkline (wider + taller)
+                const SizedBox(height: 8),
                 SizedBox(
-                  height: 48,
+                  height: 34,
                   width: double.infinity,
                   child: RateSparkline(
                     points: points,
                     isUp: isUp,
                     width: double.infinity,
-                    height: 48,
+                    height: 34,
                   ),
                 ),
-                // H/L row
-                if (high != null && low != null) ...[
-                  const SizedBox(height: GwpSpacing.sm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _StatChip(label: '7日高', value: _fmtRate(high)),
-                      _StatChip(label: '7日低', value: _fmtRate(low)),
-                      _StatChip(
-                        label: '振幅',
-                        value: low > 0 && high - low > 0
-                            ? '${((high - low) / low * 100).toStringAsFixed(2)}%'
-                            : '—',
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _StatChip(label: '7日高', value: high == null ? '—' : _fmtRate(high)),
+                          _StatChip(label: '7日低', value: low == null ? '—' : _fmtRate(low)),
+                          _StatChip(
+                            label: '振幅',
+                            value: high != null && low != null && low > 0 && high - low > 0
+                                ? '${((high - low) / low * 100).toStringAsFixed(2)}%'
+                                : '—',
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: GwpSpacing.sm),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        latest == null ? '暂无数据' : _fmtTime(latest.updatedAt),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: GwpColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -423,16 +510,7 @@ class _PairRateCard extends ConsumerWidget {
     );
   }
 
-  String _fmtTime(DateTime t) {
-    final l = t.toLocal();
-    final now = DateTime.now();
-    final diff = now.difference(l);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
-    if (diff.inHours < 24) return '${diff.inHours} 小时前';
-    String p(int n) => n.toString().padLeft(2, '0');
-    return '${l.month}-${p(l.day)} ${p(l.hour)}:${p(l.minute)}';
-  }
+  String _fmtTime(DateTime t) => _fmtRelativeTime(t);
 
   String _fmtRate(double v) {
     if (v >= 100) return v.toStringAsFixed(2);
@@ -448,25 +526,32 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontFeatures: GwpTypo.tabularFigures,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: GwpColors.textSecondary,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: GwpColors.surface2,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
           ),
-        ),
-      ],
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontFamily: GwpTypo.monoFont,
+              fontFeatures: GwpTypo.tabularFigures,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: GwpColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -476,6 +561,17 @@ final _cardDeco = BoxDecoration(
   borderRadius: BorderRadius.circular(12),
   border: Border.all(color: GwpColors.border, width: 0.5),
 );
+
+String _fmtRelativeTime(DateTime t) {
+  final l = t.toLocal();
+  final now = DateTime.now();
+  final diff = now.difference(l);
+  if (diff.inMinutes < 1) return '刚刚';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
+  if (diff.inHours < 24) return '${diff.inHours} 小时前';
+  String p(int n) => n.toString().padLeft(2, '0');
+  return '${l.month}-${p(l.day)} ${p(l.hour)}:${p(l.minute)}';
+}
 
 // ──────────────────────────────────────────────────────────────
 // Watched pairs manager page

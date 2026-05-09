@@ -22,6 +22,15 @@ void main() {
 
     expect(find.text('录入'), findsNothing);
     expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.text('汇率观察中心'), findsNothing);
+    expect(find.textContaining('按币对查看最新汇率'), findsNothing);
+    expect(find.text('USD → CNY'), findsNothing);
+    expect(find.text('USD/CNY'), findsOneWidget);
+    expect(find.text('待同步'), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.text('7日高'), findsOneWidget);
+    expect(find.text('7日低'), findsOneWidget);
+    expect(find.text('振幅'), findsOneWidget);
   });
 
   testWidgets('添加币对弹窗使用货币字典选择基准与报价币种', (tester) async {
