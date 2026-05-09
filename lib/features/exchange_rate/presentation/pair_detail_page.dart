@@ -267,7 +267,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
             onPressed: _fetching ? null : _openAlertEditor,
           ),
           PopupMenuButton<SyncMode>(
-            tooltip: '同步汇率',
+            tooltip: '同步当前币对',
             enabled: !_fetching,
             icon: _fetching
                 ? const SizedBox(

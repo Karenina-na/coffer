@@ -168,7 +168,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
         elevation: 0,
         actions: [
           PopupMenuButton<SyncMode>(
-            tooltip: '同步价格',
+            tooltip: '同步当前资产',
             enabled: !(_fetchingLatest || _fetchingHistory),
             icon: (_fetchingLatest || _fetchingHistory)
                 ? const SizedBox(
