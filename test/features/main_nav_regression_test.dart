@@ -409,6 +409,12 @@ void main() {
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=2');
+    expect(find.text('日历'), findsWidgets);
+    expect(find.text('待办'), findsWidgets);
+    expect(find.text('失败'), findsWidgets);
+    expect(find.byIcon(Icons.calendar_month_outlined), findsNothing);
+    expect(find.byIcon(Icons.check_circle_outline), findsNothing);
+    expect(find.byIcon(Icons.error_outline), findsNothing);
     expect(find.text('没有失败事件'), findsOneWidget);
   });
 

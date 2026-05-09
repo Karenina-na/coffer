@@ -248,16 +248,10 @@ class _EventListPageState extends ConsumerState<EventListPage>
         showAppIcon: true,
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
-            const Tab(icon: Icon(Icons.calendar_month_outlined), text: '日历'),
-            Tab(
-              icon: const Icon(Icons.check_circle_outline),
-              child: _TabLabel(label: '待办', count: pending.length),
-            ),
-            Tab(
-              icon: const Icon(Icons.error_outline),
-              child: _TabLabel(label: '失败', count: failed.length),
-            ),
+          tabs: const [
+            Tab(text: '日历'),
+            Tab(text: '待办'),
+            Tab(text: '失败'),
           ],
         ),
       ),
@@ -289,43 +283,6 @@ class _EventListPageState extends ConsumerState<EventListPage>
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TabLabel extends StatelessWidget {
-  const _TabLabel({required this.label, required this.count});
-  final String label;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(label),
-        if (count > 0) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: GwpColors.warning,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            constraints: const BoxConstraints(minWidth: 18),
-            alignment: Alignment.center,
-            child: Text(
-              count > 99 ? '99+' : '$count',
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }
