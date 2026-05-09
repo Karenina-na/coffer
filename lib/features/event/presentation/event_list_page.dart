@@ -114,7 +114,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _topSearchOpener.set(_openSearch);
+      _topSearchOpener.set(this, _openSearch);
       _horizontalSwipeAction.set(_handleHorizontalSwipe);
       // 进入事件页时检查是否有资产超过阈值未同步，有则写一条聚合提醒
       // （`ASSET_SYNC_OUTDATED`）；sourceKey 按天去重，不会刷屏。
@@ -141,7 +141,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
 
   @override
   void dispose() {
-    _topSearchOpener.clearLater();
+    _topSearchOpener.clearLater(this);
     _horizontalSwipeAction.clearLater();
     _tabController.dispose();
     super.dispose();

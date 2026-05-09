@@ -7,15 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
-import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
-import '../../../domain/valuation/asset_valuator.dart';
 import '../../account/presentation/account_list_page.dart';
 import '../../asset/presentation/asset_list_page.dart';
-import '../../asset/presentation/asset_providers.dart';
 import '../../channel/presentation/transfer_simulate_page.dart';
 import 'portfolio_analysis_body.dart';
 
@@ -35,7 +32,6 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   late final TabController _tab;
   late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
-  bool _refreshing = false;
   bool _boundaryHandoffLocked = false;
   bool _syncingTabToRoute = false;
 
@@ -74,7 +70,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
 
   @override
   void dispose() {
-    _topSearchOpener.clearLater();
+    _topSearchOpener.clearLater(this);
     _horizontalSwipeAction.clearLater();
     _tab.dispose();
     super.dispose();
@@ -149,7 +145,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     final idx = _tab.index;
     ref
         .read(topSearchOpenerProvider.notifier)
-        .set(() => _openSearch(context, idx));
+        .set(this, () => _openSearch(context, idx));
   }
 
   @override
@@ -159,7 +155,7 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
       appBar: AppTopBar(
         title: const Text('资金'),
         showAppIcon: true,
-        actions: _actionsFor(context, idx),
+        actions: const <Widget>[],
         bottom: TabBar(
           controller: _tab,
           tabs: const [
@@ -183,81 +179,6 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
           ],
         ),
       ),
-    );
-  }
-
-  List<Widget> _actionsFor(BuildContext context, int idx) {
-    // 搜索按钮已上提至一级 Bar（由 [topSearchOpenerProvider] 动态显示）。
-    // 备份 / 恢复是 App 级全局能力，统一放到「设置」，不在本页显示。
-    // 账户 / 资产 / 分析 tab 共用「同步资产行情」入口：
-    // 调 `RefreshAssetPriceUseCase.refreshAll`，与汇率页一致的增量 / 全量选择。
-    return [
-      PopupMenuButton<SyncMode>(
-        tooltip: '同步资产行情',
-        enabled: !_refreshing,
-        onSelected: (mode) => _refreshAssets(mode),
-        itemBuilder: (_) => const [
-          PopupMenuItem(
-            value: SyncMode.incremental,
-            child: Row(
-              children: [
-                Icon(Icons.trending_up_outlined, size: 18),
-                SizedBox(width: 8),
-                Text('增量同步（仅最新）'),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: SyncMode.full,
-            child: Row(
-              children: [
-                Icon(Icons.timeline_outlined, size: 18),
-                SizedBox(width: 8),
-                Text('全量同步（近 30 日）'),
-              ],
-            ),
-          ),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: _refreshing
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: GwpColors.actionPrimary,
-                  ),
-                )
-              : const Icon(Icons.sync),
-        ),
-      ),
-    ];
-  }
-
-  Future<void> _refreshAssets(SyncMode mode) async {
-    if (_refreshing) return;
-    setState(() => _refreshing = true);
-    final useCase = ref.read(refreshAssetPriceUseCaseProvider);
-    final r = await useCase.refreshAll(mode: mode);
-    if (!mounted) return;
-    setState(() => _refreshing = false);
-    r.when(
-      ok: (res) {
-        final label = mode == SyncMode.incremental ? '增量' : '全量';
-        final msg = res.success.isEmpty && res.failed.isEmpty
-            ? '当前没有可同步的资产'
-            : '$label同步成功 ${res.success.length} 项'
-                '${res.failed.isEmpty ? '' : '，失败 ${res.failed.length} 项'}';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
-      },
-      err: (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('刷新失败：${errorToMessage(e)}')),
-        );
-      },
     );
   }
 

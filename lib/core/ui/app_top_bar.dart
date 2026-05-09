@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/valuation/asset_valuator.dart';
+import '../../features/sync/presentation/sync_providers.dart';
+import '../valuation/valuation_currency_provider.dart';
 import 'base_currency_switcher.dart';
 import 'settings_action.dart';
-import 'sync_status_pill.dart';
 import 'top_search_action.dart';
 
 /// 全局统一的顶部 AppBar。
@@ -33,11 +36,8 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final bool automaticallyImplyLeading;
   final bool showFixedActions;
-  /// 是否在左侧显示应用图标（主 Tab 页使用）。
   final bool showAppIcon;
 
-  /// 顶部栏高度。Flutter 默认 `kToolbarHeight = 56`；用户反馈顶部有多余空白，
-  /// 在保证 44dp 可触达下限的基础上压到 44，进一步贴近内容。
   static const double toolbarHeight = 44;
 
   @override
@@ -50,12 +50,8 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final width = MediaQuery.sizeOf(context).width;
-    // 分级阈值：
-    // - compact：常见窄屏（小屏手机竖屏），压缩右侧分隔与间距
-    // - tiny：极窄（横屏或超小屏），title 空间会被严重挤压
     final compact = width < 380;
     final tiny = width < 340;
-    // 用 Flexible 包裹 title，保证 actions 过多时至少显示省略号而不是被整段裁掉
     final wrappedTitle = DefaultTextStyle.merge(
       overflow: TextOverflow.ellipsis,
       softWrap: false,
@@ -77,16 +73,26 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               )
             : null);
+    final fixedActions = showFixedActions
+        ? const <Widget>[
+            TopSearchAction(),
+            SettingsAction(),
+            _TopBarOverflowAction(),
+            SizedBox(width: 4),
+          ]
+        : const <Widget>[];
+
     return AppBar(
       toolbarHeight: toolbarHeight,
       titleSpacing: compact ? 8 : null,
       title: wrappedTitle,
       leading: effectiveLeading,
-      automaticallyImplyLeading: effectiveLeading == null && automaticallyImplyLeading,
+      automaticallyImplyLeading:
+          effectiveLeading == null && automaticallyImplyLeading,
       bottom: bottom,
       actions: [
         ...actions,
-        if (actions.isNotEmpty && showFixedActions && !tiny)
+        if (actions.isNotEmpty && showFixedActions && !compact && !tiny)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: compact ? 2 : 4),
             child: VerticalDivider(
@@ -96,15 +102,506 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
               color: cs.outlineVariant,
             ),
           ),
-        if (showFixedActions) ...[
-          const SyncStatusPill(),
-          if (!compact) const SizedBox(width: 4),
-          const BaseCurrencySwitcher(),
-          const TopSearchAction(),
-          const SettingsAction(),
-          if (!compact) const SizedBox(width: 4),
-        ],
+        ...fixedActions,
       ],
+    );
+  }
+}
+
+class _TopBarOverflowAction extends StatelessWidget {
+  const _TopBarOverflowAction();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: '更多',
+      icon: const Icon(Icons.more_horiz),
+      onPressed: () {
+        showGeneralDialog<void>(
+          context: context,
+          useRootNavigator: true,
+          barrierLabel: '更多',
+          barrierDismissible: true,
+          barrierColor: Colors.black45,
+          transitionDuration: const Duration(milliseconds: 220),
+          pageBuilder: (context, _, _) => const _TopBarOverflowSheet(),
+          transitionBuilder: (context, animation, _, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(curved),
+              child: FadeTransition(opacity: curved, child: child),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _TopBarOverflowSheet extends ConsumerStatefulWidget {
+  const _TopBarOverflowSheet();
+
+  @override
+  ConsumerState<_TopBarOverflowSheet> createState() =>
+      _TopBarOverflowSheetState();
+}
+
+class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
+  bool _syncExpanded = true;
+  bool _currencyExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final width = media.size.width;
+    final panelWidth = width < 420 ? width * 0.86 : 360.0;
+    final sync = ref.watch(syncStatusProvider);
+    final currentCurrency = ref.watch(valuationCurrencyProvider);
+
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Material(
+          color: Theme.of(context).colorScheme.surface,
+          elevation: 12,
+          child: SizedBox(
+            width: panelWidth,
+            height: double.infinity,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: 20 + media.viewInsets.bottom,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            '更多操作',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: '关闭',
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _PanelSection(
+                      icon: _syncIcon(sync),
+                      iconColor: _syncColor(context, sync),
+                      title: '数据同步',
+                      expanded: _syncExpanded,
+                      onToggle: () {
+                        setState(() => _syncExpanded = !_syncExpanded);
+                      },
+                      children: [
+                        _PanelInfoRow(
+                          icon: _syncIcon(sync),
+                          title: _syncTitle(sync),
+                          subtitle: _syncSubtitle(sync),
+                        ),
+                        _PanelActionRow(
+                          icon: Icons.sync,
+                          title: '刷新全部',
+                          subtitle: '行情 + 汇率',
+                          enabled: !sync.isSyncing,
+                          onTap: () => _runSync(context, ref, scope: SyncScope.all),
+                        ),
+                        _PanelActionRow(
+                          icon: Icons.trending_up_outlined,
+                          title: '仅汇率 · 增量',
+                          enabled: !sync.isSyncing,
+                          onTap: () => _runSync(
+                            context,
+                            ref,
+                            scope: SyncScope.ratesOnly,
+                            mode: SyncMode.incremental,
+                          ),
+                        ),
+                        _PanelActionRow(
+                          icon: Icons.timeline_outlined,
+                          title: '仅汇率 · 全量',
+                          subtitle: '补齐 8 日序列',
+                          enabled: !sync.isSyncing,
+                          onTap: () => _runSync(
+                            context,
+                            ref,
+                            scope: SyncScope.ratesOnly,
+                            mode: SyncMode.full,
+                          ),
+                        ),
+                        _PanelActionRow(
+                          icon: Icons.stacked_line_chart,
+                          title: '仅资产行情',
+                          enabled: !sync.isSyncing,
+                          onTap: () => _runSync(
+                            context,
+                            ref,
+                            scope: SyncScope.assetsOnly,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _PanelSection(
+                      icon: Icons.language,
+                      iconColor: Theme.of(context).colorScheme.primary,
+                      title: '本位币',
+                      expanded: _currencyExpanded,
+                      onToggle: () {
+                        setState(() => _currencyExpanded = !_currencyExpanded);
+                      },
+                      children: [
+                        _PanelInfoRow(
+                          icon: Icons.currency_exchange,
+                          title: '当前本位币',
+                          subtitle: currentCurrency,
+                        ),
+                        for (final code in kSupportedBaseCurrencies)
+                          _PanelChoiceRow(
+                            icon: code == currentCurrency
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            title: code,
+                            selected: code == currentCurrency,
+                            onTap: () => ref
+                                .read(valuationCurrencyProvider.notifier)
+                                .set(code),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _runSync(
+    BuildContext context,
+    WidgetRef ref, {
+    required SyncScope scope,
+    SyncMode mode = SyncMode.full,
+  }) {
+    Navigator.of(context).pop();
+    ref.read(globalRefreshProvider).run(scope: scope, rateMode: mode);
+  }
+
+  IconData _syncIcon(SyncState sync) {
+    if (sync.isSyncing) return Icons.sync;
+    if (sync.lastError != null) return Icons.sync_problem;
+    if (sync.lastSyncAt == null) return Icons.cloud_off_outlined;
+    return Icons.cloud_done_outlined;
+  }
+
+  Color _syncColor(BuildContext context, SyncState sync) {
+    final cs = Theme.of(context).colorScheme;
+    if (sync.isSyncing) return cs.primary;
+    if (sync.lastError != null) return cs.error;
+    if (sync.lastSyncAt == null) return cs.onSurfaceVariant;
+    return cs.primary;
+  }
+
+  String _syncTitle(SyncState sync) {
+    if (sync.isSyncing) return '正在同步';
+    if (sync.lastError != null) return '同步失败';
+    if (sync.lastSyncAt == null) return '尚未同步';
+    return '同步状态正常';
+  }
+
+  String _syncSubtitle(SyncState sync) {
+    if (sync.isSyncing) return '正在拉取行情与汇率';
+    if (sync.lastError != null) return sync.lastError!;
+    if (sync.lastSyncAt == null) return '点击下方操作拉取最新数据';
+    return '上次同步：${_formatRelative(sync.lastSyncAt!)}';
+  }
+
+  String _formatRelative(DateTime ts) {
+    final diff = DateTime.now().difference(ts);
+    if (diff.inSeconds < 30) return '刚刚';
+    if (diff.inMinutes < 1) return '${diff.inSeconds}s';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+}
+
+class _PanelSection extends StatelessWidget {
+  const _PanelSection({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.expanded,
+    required this.onToggle,
+    required this.children,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final dividerColor = Theme.of(context).colorScheme.outlineVariant;
+    final surface = Theme.of(context).colorScheme.surfaceContainerLowest;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: Row(
+                children: [
+                  Icon(icon, size: 16, color: iconColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: iconColor,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: iconColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expanded) ...[
+            Divider(height: 1, color: dividerColor),
+            for (var i = 0; i < children.length; i++) ...[
+              children[i],
+              if (i < children.length - 1)
+                Divider(height: 1, indent: 56, color: dividerColor),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PanelInfoRow extends StatelessWidget {
+  const _PanelInfoRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 16, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PanelActionRow extends StatelessWidget {
+  const _PanelActionRow({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                size: 16,
+                color: enabled ? cs.onSurfaceVariant : cs.outline,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: enabled ? cs.onSurface : cs.onSurfaceVariant,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: cs.outline),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelChoiceRow extends StatelessWidget {
+  const _PanelChoiceRow({
+    required this.icon,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                size: 16,
+                color: selected ? cs.primary : cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: cs.onSurface,
+                ),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check, size: 18, color: cs.primary),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -370,7 +370,8 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
 
   void _openGlobalSearchForCurrent(BuildContext context, WidgetRef ref) {
     // 若当前 Tab 已注册搜索入口，优先复用（会带该 Tab 的 override）。
-    final opener = ref.read(topSearchOpenerProvider);
+    final binding = ref.read(topSearchOpenerProvider);
+    final opener = binding?.opener;
     if (opener != null) {
       opener();
       return;

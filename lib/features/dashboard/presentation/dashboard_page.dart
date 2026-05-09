@@ -65,13 +65,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _topSearchOpener.set(_openSearch);
+      _topSearchOpener.set(this, _openSearch);
     });
   }
 
   @override
   void dispose() {
-    _topSearchOpener.clearLater();
+    _topSearchOpener.clearLater(this);
     super.dispose();
   }
 

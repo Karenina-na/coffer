@@ -40,13 +40,13 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
     _topSearchOpener = ref.read(topSearchOpenerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _topSearchOpener.set(_openSearch);
+      _topSearchOpener.set(this, _openSearch);
     });
   }
 
   @override
   void dispose() {
-    _topSearchOpener.clearLater();
+    _topSearchOpener.clearLater(this);
     super.dispose();
   }
 
@@ -111,7 +111,7 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
             return const GwpEmptyState(
               icon: Icons.currency_exchange,
               title: '还没有关注的币对',
-              subtitle: '点右上「管理币对」添加，再点「拉取最新」同步数据',
+              subtitle: '点右上「管理币对」添加，再从「更多 → 数据同步」拉取最新数据',
             );
           }
           return ListView(
@@ -700,7 +700,7 @@ class _WatchedPairsPage extends ConsumerWidget {
             return const GwpEmptyState(
               icon: Icons.currency_exchange,
               title: '还没有关注的币对',
-              subtitle: '添加后，点汇率页右上的「拉取最新」一次性拉取所有币对',
+              subtitle: '添加后，从「更多 → 数据同步」一次性拉取所有币对',
             );
           }
           return ListView.builder(
