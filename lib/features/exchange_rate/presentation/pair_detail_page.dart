@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_heat_strip.dart';
 import '../../../core/ui/gwp_mini_chart.dart';
@@ -32,19 +33,9 @@ const _snapshotTypeLabels = <SnapshotType, String>{
 // Value formatters
 // ──────────────────────────────────────────────────────────────
 
-String _fmtRate(double v) {
-  if (v >= 100) return v.toStringAsFixed(2);
-  if (v >= 1) return v.toStringAsFixed(4);
-  return v.toStringAsFixed(6);
-}
+String _fmtRate(double v) => displayDouble(v);
 
-String _heroRate(double v) {
-  // Preserve full precision in hero display.
-  if (v >= 1000) return v.toStringAsFixed(2);
-  if (v >= 100) return v.toStringAsFixed(3);
-  if (v >= 1) return v.toStringAsFixed(4);
-  return v.toStringAsFixed(6);
-}
+String _heroRate(double v) => displayDouble(v);
 
 String _fmtDate(DateTime t) {
   final l = t.toLocal();
@@ -602,7 +593,7 @@ class _PairHero extends StatelessWidget {
                   color: changeColor,
                 ),
                 Text(
-                  '${isUp ? '+' : ''}${changeAbs.toStringAsFixed(4)}',
+                  displayDouble(changeAbs, alwaysShowSign: true),
                   style: TextStyle(
                     fontFamily: GwpTypo.monoFont,
                     fontSize: 13,
@@ -620,7 +611,7 @@ class _PairHero extends StatelessWidget {
                   ),
                   child: Text(
                     changePct != null
-                        ? '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%'
+                        ? displayPercentDouble(changePct, alwaysShowSign: true)
                         : '—',
                     style: TextStyle(
                       fontFamily: GwpTypo.monoFont,
@@ -1098,7 +1089,7 @@ class _RangeStats extends StatelessWidget {
           icon: Icons.show_chart_outlined,
           iconColor: GwpColors.warning,
           label: '波动率',
-          value: '${vol.toStringAsFixed(2)}%',
+          value: displayPercentDouble(vol),
         ),
       ],
     );
@@ -1224,8 +1215,7 @@ class _VolatilityHeat extends StatelessWidget {
                   child: GwpHeatStrip(
                     value: r.$2,
                     maxAbsValue: scale,
-                    label:
-                        '${r.$2 >= 0 ? '+' : ''}${r.$2.toStringAsFixed(2)}%',
+                    label: displayPercentDouble(r.$2, alwaysShowSign: true),
                     height: 8,
                   ),
                 ),
@@ -1453,7 +1443,7 @@ class _HistoryRow extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+                      displayPercentDouble(changePct, alwaysShowSign: true),
                       style: TextStyle(
                         fontFamily: GwpTypo.monoFont,
                         fontSize: 10,

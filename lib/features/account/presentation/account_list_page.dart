@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
 import '../../../core/valuation/valuation_currency_provider.dart';
+import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/region_meta.dart';
@@ -477,7 +478,7 @@ class _MiniDonut extends StatelessWidget {
   }
 
   Widget _legendRow(_DonutSlice s, double total) {
-    final pct = total > 0 ? (s.value / total * 100).toStringAsFixed(0) : '0';
+    final pct = total > 0 ? displayPercentDouble(s.value / total * 100, fractionDigits: 4) : '0.0000%';
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(
@@ -503,7 +504,7 @@ class _MiniDonut extends StatelessWidget {
             ),
           ),
           Text(
-            '$pct%',
+            pct,
             style: const TextStyle(
               fontFamily: GwpTypo.monoFont,
               fontSize: 9,
@@ -587,7 +588,7 @@ class _RegionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = regionLabel(regionIndex, region);
     final pct = totalNetWorth > 0
-        ? (netWorth.toDouble() / totalNetWorth * 100).toStringAsFixed(1)
+        ? displayPercentDouble(netWorth.toDouble() / totalNetWorth * 100)
         : null;
     return GestureDetector(
       onTap: onToggle,
@@ -655,7 +656,7 @@ class _RegionHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '$pct%',
+                        pct,
                         style: TextStyle(
                           fontFamily: GwpTypo.monoFont,
                           fontSize: 10,
@@ -689,12 +690,7 @@ class _RegionHeader extends StatelessWidget {
     );
   }
 
-  static String _compactValue(Decimal val) {
-    final d = val.toDouble();
-    if (d >= 1e6) return '${(d / 1e6).toStringAsFixed(1)}M';
-    if (d >= 1e3) return '${(d / 1e3).toStringAsFixed(0)}K';
-    return d.toStringAsFixed(0);
-  }
+  static String _compactValue(Decimal val) => compactValue(val.toDouble());
 }
 
 

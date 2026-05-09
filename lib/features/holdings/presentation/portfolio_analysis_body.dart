@@ -336,7 +336,7 @@ class _AllocationCard extends StatelessWidget {
                       painter: _MiniDonutPainter(slices: slices),
                       child: Center(
                         child: Text(
-                          '${slices.first.percentage.toStringAsFixed(0)}%',
+                          displayPercentDouble(slices.first.percentage),
                           style: const TextStyle(
                             fontFamily: GwpTypo.monoFont,
                             fontFeatures: GwpTypo.tabularFigures,
@@ -446,7 +446,7 @@ class _LegendRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${pct.toStringAsFixed(0)}%',
+            displayPercentDouble(pct),
             style: const TextStyle(
               fontFamily: GwpTypo.monoFont,
               fontSize: 9,
@@ -507,7 +507,7 @@ class _AssetRankingSection extends ConsumerWidget {
                 height: (ranked.length * 24.0).clamp(120, 240),
                 child: GwpBarRank(
                   items: ranked,
-                  formatValue: (v) => '${total > 0 ? (v / total * 100).toStringAsFixed(1) : '0.0'}%  ${compactValueCJK(v)}',
+                  formatValue: (v) => '${total > 0 ? displayPercentDouble(v / total * 100) : '0.0000%'}  ${compactValueCJK(v)}',
                 ),
               ),
               const SizedBox(height: 8),
@@ -665,7 +665,7 @@ class _ProportionRow extends StatelessWidget {
         SizedBox(
           width: 40,
           child: Text(
-            '${slice.percentage.toStringAsFixed(1)}%',
+            displayPercentDouble(slice.percentage),
             textAlign: TextAlign.end,
             style: const TextStyle(
               fontFamily: GwpTypo.monoFont,
@@ -950,13 +950,13 @@ class _RiskOverviewSection extends ConsumerWidget {
                 const SizedBox(height: GwpSpacing.md),
                 _InfoRow(
                   'Top 3 占比',
-                  '${(m.top3Share * 100).toStringAsFixed(1)}%',
+                  displayPercentDouble(m.top3Share * 100),
                 ),
                 if (m.top3Labels.isNotEmpty)
                   _InfoRow('Top 3', m.top3Labels.join(' · ')),
                 _InfoRow(
                   '最大持仓',
-                  '${m.largestLabel} · ${(m.largestShare * 100).toStringAsFixed(1)}%',
+                  '${m.largestLabel} · ${displayPercentDouble(m.largestShare * 100)}',
                 ),
               ],
             ),
@@ -1139,7 +1139,7 @@ class _LiquidityLegend extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '$label ${pct.toStringAsFixed(0)}%',
+              '$label ${displayPercentDouble(pct)}',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,

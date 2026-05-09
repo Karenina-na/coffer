@@ -10,6 +10,7 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_number_text.dart';
 import '../../../core/ui/gwp_status_badge.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
@@ -184,7 +185,7 @@ class _RatesSummaryCard extends ConsumerWidget {
                     _SummaryMetricChip(
                       icon: Icons.show_chart,
                       label: '波动',
-                      value: ready.isEmpty ? '—' : '${maxSwing.toStringAsFixed(2)}%',
+                      value: ready.isEmpty ? '—' : displayPercentDouble(maxSwing),
                       tone: StatusVariant.info,
                     ),
                   ],
@@ -448,7 +449,7 @@ class _PairRateCard extends ConsumerWidget {
                       child: GwpNumberText(
                         value: changePct == null
                             ? '—'
-                            : '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+                            : displayPercent(changePct, alwaysShowSign: true),
                         sign: sign,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -483,7 +484,7 @@ class _PairRateCard extends ConsumerWidget {
                           _StatChip(
                             label: '振幅',
                             value: high != null && low != null && low > 0 && high - low > 0
-                                ? '${((high - low) / low * 100).toStringAsFixed(2)}%'
+                                ? displayPercentDouble((high - low) / low * 100)
                                 : '—',
                           ),
                         ],
@@ -512,11 +513,7 @@ class _PairRateCard extends ConsumerWidget {
 
   String _fmtTime(DateTime t) => _fmtRelativeTime(t);
 
-  String _fmtRate(double v) {
-    if (v >= 100) return v.toStringAsFixed(2);
-    if (v >= 1) return v.toStringAsFixed(4);
-    return v.toStringAsFixed(6);
-  }
+  String _fmtRate(double v) => displayDouble(v);
 }
 
 class _StatChip extends StatelessWidget {

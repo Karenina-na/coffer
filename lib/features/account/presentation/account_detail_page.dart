@@ -883,7 +883,7 @@ class _CurrencyRow extends StatelessWidget {
         SizedBox(
           width: 36,
           child: Text(
-            '${(pct * 100).toStringAsFixed(0)}%',
+            displayPercentDouble(pct * 100),
             textAlign: TextAlign.end,
             style: const TextStyle(
               fontFamily: GwpTypo.monoFont,
@@ -971,7 +971,7 @@ class _CostBasisSection extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${isProfit ? '+' : ''}${pnlPct.toStringAsFixed(2)}%',
+                displayPercent(pnlPct, alwaysShowSign: true),
                 style: TextStyle(
                   fontFamily: GwpTypo.monoFont,
                   fontSize: 14,
@@ -1243,7 +1243,7 @@ class _TrendStats extends StatelessWidget {
           child: _TrendKv(
             label: '区间变动',
             value:
-                '${delta.isUp ? '+' : ''}${(delta.deltaPct * 100).toStringAsFixed(2)}%',
+                displayPercentDouble(delta.deltaPct * 100, alwaysShowSign: true),
             color: delta.isUp ? GwpColors.positive : GwpColors.negative,
           ),
         ),
@@ -1563,7 +1563,7 @@ class _AssetRow extends ConsumerWidget {
                         ? '缺汇率'
                         : changePct == null
                             ? rawAsset.currency
-                        : '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+                        : displayPercent(changePct, alwaysShowSign: true),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
@@ -1724,7 +1724,7 @@ class _VisualCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '额度使用 ${(utilization * 100).toStringAsFixed(0)}%',
+                '额度使用 ${displayPercentDouble(utilization * 100)}',
                 style: const TextStyle(
                   fontSize: 9,
                   color: GwpColors.textMuted,
@@ -2093,11 +2093,11 @@ String _feeDesc({
 }) {
   String text = '';
   if (feeRate != null && feeRate > Decimal.zero) {
-    text += '${(feeRate.toDouble() * 100).toStringAsFixed(2)}%';
+    text += displayPercentDouble(feeRate.toDouble() * 100);
   }
   if (fixedFee != null && fixedFee > Decimal.zero) {
     if (text.isNotEmpty) text += ' + ';
-    text += '${currency ?? ''} ${fixedFee.toStringAsFixed(2)}';
+    text += '${currency ?? ''} ${displayNumber(fixedFee)}';
   }
   if (text.isEmpty) return '免费';
   return text;

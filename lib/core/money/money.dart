@@ -12,6 +12,7 @@ class Money {
   const Money._();
 
   static const int defaultRatioScale = 10;
+  static const int defaultDisplayFractionDigits = 4;
 
   /// 将 DB 中的文本列（可空）解析为 [Decimal]。
   static Decimal? parseOrNull(String? raw) {
@@ -52,9 +53,9 @@ class Money {
     );
   }
 
-  /// 按币种精度渲染展示文本。
+  /// 按统一显示精度渲染货币展示文本。
   ///
-  /// 通过 [currency] 决定分隔符与小数位数；默认 2 位小数。
+  /// 显示层默认统一为四位小数；仅在显式传入 [fractionDigits] 时覆盖。
   ///
   /// 实现不经 `Decimal.toDouble()`：
   ///  1. 在 Decimal 域内按目标精度取整；
@@ -67,7 +68,7 @@ class Money {
     String? locale,
     int? fractionDigits,
   }) {
-    final digits = fractionDigits ?? _defaultFractionDigits(currency);
+    final digits = fractionDigits ?? defaultDisplayFractionDigits;
     final rounded = value.round(scale: digits);
     final nf = NumberFormat.currency(
       locale: locale,
@@ -77,24 +78,83 @@ class Money {
     final groupSep = nf.symbols.GROUP_SEP;
     final decSep = nf.symbols.DECIMAL_SEP;
     final symbol = nf.currencySymbol;
+    final isNeg = rounded < Decimal.zero;
+    final body = formatDecimal(
+      isNeg ? -rounded : rounded,
+      fractionDigits: digits,
+      groupSeparator: groupSep,
+      decimalSeparator: decSep,
+    );
+    return isNeg ? '-$symbol $body' : '$symbol $body';
+  }
 
+  static String formatDecimal(
+    Decimal value, {
+    int fractionDigits = defaultDisplayFractionDigits,
+    String groupSeparator = ',',
+    String decimalSeparator = '.',
+    bool alwaysShowSign = false,
+  }) {
+    final rounded = value.round(scale: fractionDigits);
     final isNeg = rounded < Decimal.zero;
     final absStr = (isNeg ? -rounded : rounded).toString();
     final dotIdx = absStr.indexOf('.');
     final intPart = dotIdx >= 0 ? absStr.substring(0, dotIdx) : absStr;
     var fracPart = dotIdx >= 0 ? absStr.substring(dotIdx + 1) : '';
-    if (fracPart.length > digits) {
-      fracPart = fracPart.substring(0, digits);
-    } else if (fracPart.length < digits) {
-      fracPart = fracPart.padRight(digits, '0');
+    if (fracPart.length > fractionDigits) {
+      fracPart = fracPart.substring(0, fractionDigits);
+    } else if (fracPart.length < fractionDigits) {
+      fracPart = fracPart.padRight(fractionDigits, '0');
     }
+    final grouped = _groupThousands(intPart, groupSeparator);
+    final body = fractionDigits > 0
+        ? '$grouped$decimalSeparator$fracPart'
+        : grouped;
+    if (isNeg) return '-$body';
+    if (alwaysShowSign && rounded > Decimal.zero) return '+$body';
+    return body;
+  }
 
-    final grouped = _groupThousands(intPart, groupSep);
-    final body = digits > 0 ? '$grouped$decSep$fracPart' : grouped;
-    // 项目涉及币种（CNY/USD/HKD/EUR/GBP/JPY/SGD/AUD/加密）均为前缀符号格式，
-    // 统一 `{symbol}{signedNumber}`。如果后续新增后缀型币种，再按 locale
-    // pattern 拆分。
-    return isNeg ? '-$symbol $body' : '$symbol $body';
+  static String formatDouble(
+    double value, {
+    int fractionDigits = defaultDisplayFractionDigits,
+    String groupSeparator = ',',
+    String decimalSeparator = '.',
+    bool alwaysShowSign = false,
+  }) {
+    return formatDecimal(
+      Decimal.parse(value.toString()),
+      fractionDigits: fractionDigits,
+      groupSeparator: groupSeparator,
+      decimalSeparator: decimalSeparator,
+      alwaysShowSign: alwaysShowSign,
+    );
+  }
+
+  static String formatPercent(
+    Decimal value, {
+    int fractionDigits = defaultDisplayFractionDigits,
+    bool alwaysShowSign = false,
+  }) {
+    final body = formatDecimal(
+      value,
+      fractionDigits: fractionDigits,
+      alwaysShowSign: alwaysShowSign,
+    );
+    return '$body%';
+  }
+
+  static String formatPercentFromDouble(
+    double value, {
+    int fractionDigits = defaultDisplayFractionDigits,
+    bool alwaysShowSign = false,
+  }) {
+    final body = formatDouble(
+      value,
+      fractionDigits: fractionDigits,
+      alwaysShowSign: alwaysShowSign,
+    );
+    return '$body%';
   }
 
   static String _groupThousands(String digits, String sep) {
@@ -108,10 +168,4 @@ class Money {
     return buf.toString();
   }
 
-  static int _defaultFractionDigits(String currency) {
-    // 加密资产、贵金属等需要更高精度；法币默认 2 位。
-    const highPrecision = {'BTC', 'ETH', 'SOL', 'XAU', 'XAG'};
-    if (highPrecision.contains(currency.toUpperCase())) return 8;
-    return 2;
-  }
 }

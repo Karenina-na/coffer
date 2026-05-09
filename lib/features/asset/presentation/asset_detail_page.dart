@@ -72,11 +72,7 @@ const _typeColors = <AssetType, Color>{
 // ──────────────────────────────────────────────────────────────
 // heroFormat / compactValue 已提取到 lib/core/ui/format_utils.dart
 
-String _fmtPrice(double v) {
-  if (v >= 100) return v.toStringAsFixed(2);
-  if (v >= 1) return v.toStringAsFixed(4);
-  return v.toStringAsFixed(6);
-}
+String _fmtPrice(double v) => displayDouble(v);
 
 String _fmtDate(DateTime t) {
   final l = t.toLocal();
@@ -767,7 +763,7 @@ class _AssetHero extends StatelessWidget {
                   color: changeColor,
                 ),
                 Text(
-                  '${isUp ? '+' : ''}${changeAbs.toStringAsFixed(4)}',
+                  displayNumber(changeAbs, alwaysShowSign: true),
                   style: TextStyle(
                     fontFamily: GwpTypo.monoFont,
                     fontSize: 13,
@@ -787,7 +783,7 @@ class _AssetHero extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+                    displayPercent(changePct, alwaysShowSign: true),
                     style: TextStyle(
                       fontFamily: GwpTypo.monoFont,
                       fontSize: 11,
@@ -1285,7 +1281,7 @@ class _RangeStats extends StatelessWidget {
           icon: Icons.trending_up_outlined,
           iconColor: isUp ? GwpColors.positive : GwpColors.negative,
           label: '涨跌',
-          value: '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+          value: displayPercentDouble(changePct, alwaysShowSign: true),
         ),
       ],
     );
@@ -1410,7 +1406,7 @@ class _HoldingAnalysis extends StatelessWidget {
                 ),
                 if (pnlPct != null)
                   Text(
-                    '${isUp ? '+' : ''}${pnlPct.toStringAsFixed(2)}%',
+                    displayPercent(pnlPct, alwaysShowSign: true),
                     style: TextStyle(
                       fontFamily: GwpTypo.monoFont,
                       fontSize: 13,
@@ -1910,7 +1906,7 @@ class _HistoryRow extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      '${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%',
+                      displayPercentDouble(changePct, alwaysShowSign: true),
                       style: TextStyle(
                         fontFamily: GwpTypo.monoFont,
                         fontSize: 10,

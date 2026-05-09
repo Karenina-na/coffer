@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
+import 'format_utils.dart';
 
 /// A single item in the horizontal ranking bar chart.
 class RankItem {
@@ -155,9 +156,5 @@ class GwpBarRank extends StatelessWidget {
     );
   }
 
-  static String _compact(double val) {
-    if (val.abs() >= 1e6) return '${(val / 1e6).toStringAsFixed(1)}M';
-    if (val.abs() >= 1e3) return '${(val / 1e3).toStringAsFixed(0)}K';
-    return val.toStringAsFixed(0);
-  }
+  static String _compact(double val) => compactValue(val);
 }

@@ -16,15 +16,14 @@ void main() {
       expect(Money.parseOrNull(s), d);
     });
 
-    test('format uses currency default fraction digits', () {
+    test('format uses unified 4dp display precision by default', () {
       final cny =
           Money.format(Decimal.parse('1234.5'), currency: 'CNY', locale: 'en');
-      // NumberFormat.currency 在 locale=en + name=CNY 时使用 name 作为符号。
-      expect(cny, contains('1,234.50'));
+      expect(cny, contains('1,234.5000'));
 
       final btc =
           Money.format(Decimal.parse('0.12345678'), currency: 'BTC', locale: 'en');
-      expect(btc, contains('0.12345678'));
+      expect(btc, contains('0.1235'));
     });
 
     test('format keeps full precision for very large amounts (no double)', () {
@@ -42,7 +41,24 @@ void main() {
       final v =
           Money.format(Decimal.parse('-1234.5'), currency: 'USD', locale: 'en');
       expect(v.startsWith('-'), isTrue);
-      expect(v, contains('1,234.50'));
+      expect(v, contains('1,234.5000'));
+    });
+
+    test('formatDecimal rounds half-up to 4dp for display', () {
+      expect(Money.formatDecimal(Decimal.parse('1.23454')), '1.2345');
+      expect(Money.formatDecimal(Decimal.parse('1.23455')), '1.2346');
+    });
+
+    test('formatPercent helpers keep 4dp and optional sign', () {
+      expect(Money.formatPercent(Decimal.parse('12.3')), '12.3000%');
+      expect(
+        Money.formatPercent(Decimal.parse('12.3'), alwaysShowSign: true),
+        '+12.3000%',
+      );
+      expect(
+        Money.formatPercentFromDouble(-0.1256, alwaysShowSign: true),
+        '-0.1256%',
+      );
     });
 
     test('ratio handles infinite precision rationals', () {
