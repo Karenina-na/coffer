@@ -51,6 +51,7 @@ class RefreshWatchedRatesUseCase {
 
   Future<Result<RefreshRatesResult, AppError>> call({
     SyncMode mode = SyncMode.full,
+    SyncWindow? window,
   }) async {
     final List<WatchedPair> pairs;
     try {
@@ -114,9 +115,9 @@ class RefreshWatchedRatesUseCase {
         );
       }
     } else {
-      // 全量：拉取最近 8 天的日序列：覆盖周末 + 节假日，保证 sparkline 有多点。
-      final to = DateTime(now.year, now.month, now.day);
-      final from = to.subtract(const Duration(days: 8));
+      final range = (window ?? SyncWindow.days8).rangeFrom(now);
+      final from = range.from;
+      final to = range.to;
 
       for (final entry in groups.entries) {
         final base = entry.key;

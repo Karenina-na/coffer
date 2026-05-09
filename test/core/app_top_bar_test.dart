@@ -101,20 +101,32 @@ void main() {
     expect(find.byTooltip('关闭'), findsOneWidget);
     expect(find.text('数据同步'), findsOneWidget);
     expect(find.text('本位币'), findsOneWidget);
-    expect(find.text('刷新全部'), findsOneWidget);
-    expect(find.text('当前本位币'), findsOneWidget);
+    expect(find.text('刷新全部'), findsNothing);
+    expect(find.text('当前本位币'), findsNothing);
     expect(find.text('设置'), findsNothing);
 
     await tester.tap(find.text('数据同步'));
     await tester.pumpAndSettle();
 
-    expect(find.text('刷新全部'), findsNothing);
-    expect(find.text('当前本位币'), findsOneWidget);
+    expect(find.text('刷新全部'), findsOneWidget);
+    expect(find.text('仅汇率'), findsOneWidget);
+    expect(find.text('仅资产'), findsOneWidget);
+
+    await tester.tap(find.text('刷新全部'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('8日'), findsOneWidget);
+    expect(find.text('1个月'), findsOneWidget);
+    expect(find.text('1年'), findsOneWidget);
+    expect(find.text('5年'), findsOneWidget);
+
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('本位币'));
     await tester.pumpAndSettle();
 
-    expect(find.text('当前本位币'), findsNothing);
+    expect(find.text('当前本位币'), findsOneWidget);
   });
 
   testWidgets('wide top bar also keeps sync and currency in overflow only', (
@@ -136,6 +148,8 @@ void main() {
 
     expect(find.text('数据同步'), findsOneWidget);
     expect(find.text('本位币'), findsOneWidget);
+    expect(find.text('刷新全部'), findsNothing);
+    expect(find.text('当前本位币'), findsNothing);
   });
 
   testWidgets('switching pages does not drop the search action', (tester) async {

@@ -237,6 +237,39 @@ void main() {
       expect(provider.latestCalls, 1,
           reason: 'TTL 窗口内二次批量刷新不应再次打远端');
     });
+
+    test('window 会驱动批量历史刷新范围', () async {
+      await seedAsset(id: 'ast-1', assetCode: 'AAPL');
+      final provider = FakeAssetPriceProvider(
+        latest: AssetQuote(
+          symbol: 'AAPL',
+          price: Decimal.parse('100'),
+          currency: 'USD',
+          asOfTime: now,
+          source: 'test',
+        ),
+        series: AssetPriceSeries(
+          symbol: 'AAPL',
+          currency: 'USD',
+          source: 'test',
+          points: [
+            AssetPricePoint(
+              t: now.subtract(const Duration(days: 1)),
+              price: Decimal.parse('98'),
+              currency: 'USD',
+            ),
+          ],
+        ),
+      );
+      final useCase = buildUseCase(provider);
+
+      final r = await useCase.refreshAll(window: SyncWindow.year1);
+      expect(r.isOk, isTrue);
+      expect(provider.lastFrom, DateTime.utc(2024, 6, 15));
+      expect(provider.lastTo, DateTime.utc(2025, 6, 15));
+      expect(provider.seriesCalls, 1);
+      expect(provider.latestCalls, 1);
+    });
   });
 
   group('refreshHistory', () {

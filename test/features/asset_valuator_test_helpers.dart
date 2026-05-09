@@ -29,6 +29,8 @@ class FakeAssetPriceProvider implements AssetPriceProvider {
   int latestCalls = 0;
   int seriesCalls = 0;
   String? lastSymbol;
+  DateTime? lastFrom;
+  DateTime? lastTo;
 
   @override
   Future<Result<AssetQuote, AppError>> fetchLatest(String symbol) async {
@@ -46,6 +48,8 @@ class FakeAssetPriceProvider implements AssetPriceProvider {
   }) async {
     seriesCalls++;
     lastSymbol = symbol;
+    lastFrom = from;
+    lastTo = to;
     if (_series == null) return const Err(UnknownError('no data'));
     return Ok(_series);
   }

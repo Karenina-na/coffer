@@ -16,6 +16,26 @@ enum SyncMode {
   full,
 }
 
+enum SyncWindow {
+  days8('8日', 8),
+  month1('1个月', 30),
+  year1('1年', 365),
+  years5('5年', 365 * 5);
+
+  const SyncWindow(this.label, this.days);
+
+  final String label;
+  final int days;
+
+  ({DateTime from, DateTime to}) rangeFrom(DateTime now) {
+    final to = now.isUtc
+        ? DateTime.utc(now.year, now.month, now.day)
+        : DateTime(now.year, now.month, now.day);
+    final from = to.subtract(Duration(days: days));
+    return (from: from, to: to);
+  }
+}
+
 /// 单一资产的估值策略。
 ///
 /// 不同资产类别走不同策略：

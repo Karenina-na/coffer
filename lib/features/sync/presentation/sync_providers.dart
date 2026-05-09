@@ -64,6 +64,7 @@ class GlobalRefresh {
   Future<void> run({
     SyncScope scope = SyncScope.all,
     SyncMode rateMode = SyncMode.full,
+    SyncWindow? window,
   }) async {
     final notifier = _ref.read(syncStatusProvider.notifier);
     if (_ref.read(syncStatusProvider).isSyncing) return;
@@ -75,6 +76,7 @@ class GlobalRefresh {
         final fxResult =
             await _ref.read(refreshWatchedRatesUseCaseProvider).call(
                   mode: rateMode,
+                  window: window,
                 );
         await fxResult.when(
           ok: (_) async {
@@ -109,7 +111,9 @@ class GlobalRefresh {
     if (scope != SyncScope.ratesOnly) {
       try {
         final priceResult =
-            await _ref.read(refreshAssetPriceUseCaseProvider).refreshAll();
+            await _ref.read(refreshAssetPriceUseCaseProvider).refreshAll(
+                  window: window,
+                );
         priceResult.when(
           ok: (_) {},
           err: (e) => errors.add('行情：${e.message}'),

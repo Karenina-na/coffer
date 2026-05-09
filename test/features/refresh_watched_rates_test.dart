@@ -87,6 +87,7 @@ void main() {
     });
 
     test('全量模式：拉取时间序列并写入多条 rate', () async {
+      final fixedNow = DateTime.utc(2025, 6, 15, 10, 30);
       await watchedRepo.add(baseCurrency: 'USD', quoteCurrency: 'CNY');
       final provider = FakeFxRateProvider(
         seriesEntries: [
@@ -94,11 +95,18 @@ void main() {
           MapEntry(DateTime.utc(2025, 6, 15), {'CNY': Decimal.parse('7.20')}),
         ],
       );
-      final useCase = buildUseCase(provider);
+      final useCase = RefreshWatchedRatesUseCase(
+        watchedRepo: watchedRepo,
+        rateRepo: rateRepo,
+        provider: provider,
+        now: () => fixedNow,
+      );
 
       final r = await useCase.call(mode: SyncMode.full);
       expect(r.isOk, isTrue);
       expect(r.valueOrNull!.fetched, ['USD/CNY']);
+      expect(provider.lastFrom, DateTime.utc(2025, 6, 7));
+      expect(provider.lastTo, DateTime.utc(2025, 6, 15));
 
       final rates = await rateRepo.watchAll().first;
       expect(rates, hasLength(2));
@@ -174,6 +182,8 @@ class FakeFxRateProvider implements FxRateProvider {
   final List<MapEntry<DateTime, Map<String, Decimal>>>? _seriesEntries;
   final String? _latestError;
   final String? _timeSeriesError;
+  DateTime? lastFrom;
+  DateTime? lastTo;
 
   @override
   Future<Result<FxSnapshot, AppError>> fetchLatest({
@@ -203,6 +213,8 @@ class FakeFxRateProvider implements FxRateProvider {
     required DateTime from,
     required DateTime to,
   }) async {
+    lastFrom = from;
+    lastTo = to;
     if (_timeSeriesError != null) {
       return Err(UnknownError(_timeSeriesError));
     }

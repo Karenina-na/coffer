@@ -131,6 +131,7 @@ class RefreshAssetPriceUseCase {
   Future<Result<RefreshAssetsResult, AppError>> refreshAll({
     List<String>? assetIds,
     SyncMode mode = SyncMode.incremental,
+    SyncWindow? window,
   }) async {
     final ids = assetIds;
     List<Asset> targets = [];
@@ -156,14 +157,13 @@ class RefreshAssetPriceUseCase {
     final success = <String>[];
 
     for (final asset in targets) {
-      if (mode == SyncMode.full) {
-        final now = _now();
-        final to = DateTime(now.year, now.month, now.day);
-        final from = to.subtract(const Duration(days: 30));
+      final syncWindow = window;
+      if (mode == SyncMode.full || syncWindow != null) {
+        final range = (syncWindow ?? SyncWindow.month1).rangeFrom(_now());
         final hist = await refreshHistory(
           assetId: asset.id,
-          from: from,
-          to: to,
+          from: range.from,
+          to: range.to,
         );
         if (hist.isErr) {
           // 历史拉取失败则跳过 latest，避免随后的成功把它洗进 success

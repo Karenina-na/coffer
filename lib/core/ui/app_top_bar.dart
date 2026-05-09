@@ -6,6 +6,7 @@ import '../../features/sync/presentation/sync_providers.dart';
 import '../valuation/valuation_currency_provider.dart';
 import 'base_currency_switcher.dart';
 import 'settings_action.dart';
+import 'sync_window_menu_button.dart';
 import 'top_search_action.dart';
 
 /// 全局统一的顶部 AppBar。
@@ -153,8 +154,8 @@ class _TopBarOverflowSheet extends ConsumerStatefulWidget {
 }
 
 class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
-  bool _syncExpanded = true;
-  bool _currencyExpanded = true;
+  bool _syncExpanded = false;
+  bool _currencyExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -217,44 +218,34 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
                           title: _syncTitle(sync),
                           subtitle: _syncSubtitle(sync),
                         ),
-                        _PanelActionRow(
+                        _SyncRangeActionRow(
                           icon: Icons.sync,
                           title: '刷新全部',
                           subtitle: '行情 + 汇率',
                           enabled: !sync.isSyncing,
-                          onTap: () => _runSync(context, ref, scope: SyncScope.all),
+                          onSelected: (window) =>
+                              _runSync(context, ref, scope: SyncScope.all, window: window),
                         ),
-                        _PanelActionRow(
-                          icon: Icons.trending_up_outlined,
-                          title: '仅汇率 · 增量',
+                        _SyncRangeActionRow(
+                          icon: Icons.currency_exchange,
+                          title: '仅汇率',
                           enabled: !sync.isSyncing,
-                          onTap: () => _runSync(
+                          onSelected: (window) => _runSync(
                             context,
                             ref,
                             scope: SyncScope.ratesOnly,
-                            mode: SyncMode.incremental,
+                            window: window,
                           ),
                         ),
-                        _PanelActionRow(
-                          icon: Icons.timeline_outlined,
-                          title: '仅汇率 · 全量',
-                          subtitle: '补齐 8 日序列',
-                          enabled: !sync.isSyncing,
-                          onTap: () => _runSync(
-                            context,
-                            ref,
-                            scope: SyncScope.ratesOnly,
-                            mode: SyncMode.full,
-                          ),
-                        ),
-                        _PanelActionRow(
+                        _SyncRangeActionRow(
                           icon: Icons.stacked_line_chart,
-                          title: '仅资产行情',
+                          title: '仅资产',
                           enabled: !sync.isSyncing,
-                          onTap: () => _runSync(
+                          onSelected: (window) => _runSync(
                             context,
                             ref,
                             scope: SyncScope.assetsOnly,
+                            window: window,
                           ),
                         ),
                       ],
@@ -302,9 +293,14 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
     WidgetRef ref, {
     required SyncScope scope,
     SyncMode mode = SyncMode.full,
+    SyncWindow? window,
   }) {
     Navigator.of(context).pop();
-    ref.read(globalRefreshProvider).run(scope: scope, rateMode: mode);
+    ref.read(globalRefreshProvider).run(
+      scope: scope,
+      rateMode: mode,
+      window: window,
+    );
   }
 
   IconData _syncIcon(SyncState sync) {
@@ -478,26 +474,28 @@ class _PanelInfoRow extends StatelessWidget {
   }
 }
 
-class _PanelActionRow extends StatelessWidget {
-  const _PanelActionRow({
+class _SyncRangeActionRow extends StatelessWidget {
+  const _SyncRangeActionRow({
     required this.icon,
     required this.title,
     this.subtitle,
     required this.enabled,
-    required this.onTap,
+    required this.onSelected,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
   final bool enabled;
-  final VoidCallback onTap;
+  final ValueChanged<SyncWindow> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: enabled ? onTap : null,
+    return SyncWindowMenuButton(
+      enabled: enabled,
+      tooltip: title,
+      onSelected: onSelected,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -542,7 +540,16 @@ class _PanelActionRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: cs.outline),
+            Text(
+              '选择范围',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: enabled ? cs.primary : cs.outline,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_drop_down, size: 18, color: cs.outline),
           ],
         ),
       ),
