@@ -16,10 +16,13 @@ import 'package:gwp/domain/entities/asset.dart';
 import 'package:gwp/domain/entities/card.dart';
 import 'package:gwp/domain/entities/domain_event.dart';
 import 'package:gwp/domain/entities/event_enums.dart';
+import 'package:gwp/domain/entities/exchange_rate.dart';
+import 'package:gwp/domain/entities/exchange_rate_enums.dart';
 import 'package:gwp/domain/entities/watched_pair.dart';
 import 'package:gwp/domain/events/event_bus.dart';
 import 'package:gwp/domain/repositories/asset_repository.dart';
 import 'package:gwp/domain/repositories/event_repository.dart';
+import 'package:gwp/domain/repositories/exchange_rate_repository.dart';
 import 'package:gwp/domain/usecases/check_asset_sync_outdated.dart';
 import 'package:gwp/features/account/presentation/account_providers.dart';
 import 'package:gwp/features/asset/presentation/asset_providers.dart';
@@ -43,9 +46,42 @@ Future<void> _swipeRight(WidgetTester tester, Offset start) async {
   await _settleNav(tester);
 }
 
+final _ratesTestPair = WatchedPair(
+  pairKey: 'USD/CNY',
+  baseCurrency: 'USD',
+  quoteCurrency: 'CNY',
+  createdAt: DateTime(2026, 1, 1),
+);
+
+final _ratesTestSeries = <ExchangeRate>[
+  ExchangeRate(
+    id: 'rate-1',
+    pairKey: 'USD/CNY',
+    baseCurrency: 'USD',
+    quoteCurrency: 'CNY',
+    rate: Decimal.parse('7.1000'),
+    asOfTime: DateTime(2026, 1, 1, 9),
+    updatedAt: DateTime(2026, 1, 1, 9),
+    source: 'test',
+    snapshotType: SnapshotType.daily,
+  ),
+  ExchangeRate(
+    id: 'rate-2',
+    pairKey: 'USD/CNY',
+    baseCurrency: 'USD',
+    quoteCurrency: 'CNY',
+    rate: Decimal.parse('7.2000'),
+    asOfTime: DateTime(2026, 1, 2, 9),
+    updatedAt: DateTime(2026, 1, 2, 9),
+    source: 'test',
+    snapshotType: SnapshotType.daily,
+  ),
+];
+
 Future<GoRouter> _pumpShell(
   WidgetTester tester, {
   String initialLocation = '/rates',
+  bool seedRatesList = false,
 }) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 3.0;
@@ -68,7 +104,16 @@ Future<GoRouter> _pumpShell(
           (ref) => Stream.value(const <BankCard>[]),
         ),
         watchedPairListProvider.overrideWith(
-          (ref) => Stream.value(const <WatchedPair>[]),
+          (ref) => Stream.value(
+            seedRatesList ? <WatchedPair>[_ratesTestPair] : const <WatchedPair>[],
+          ),
+        ),
+        exchangeRateRepositoryProvider.overrideWith(
+          (ref) => _FakeExchangeRateRepository(
+            pairSeries: seedRatesList
+                ? <String, List<ExchangeRate>>{'USD/CNY': _ratesTestSeries}
+                : const <String, List<ExchangeRate>>{},
+          ),
         ),
         unreadEventCountProvider.overrideWith((ref) => 0),
         pendingAckEventsProvider.overrideWith(
@@ -189,6 +234,53 @@ class _FakeAssetRepository implements AssetRepository {
       Future.error(UnimplementedError());
 }
 
+class _FakeExchangeRateRepository implements ExchangeRateRepository {
+  _FakeExchangeRateRepository({required this.pairSeries});
+
+  final Map<String, List<ExchangeRate>> pairSeries;
+
+  @override
+  Future<Result<ExchangeRate, AppError>> latestFor({
+    required String baseCurrency,
+    required String quoteCurrency,
+  }) => Future.error(UnimplementedError());
+
+  @override
+  Stream<List<ExchangeRate>> watchAll({int limit = 200}) =>
+      Stream.value(const <ExchangeRate>[]);
+
+  @override
+  Stream<List<ExchangeRate>> watchSeriesForPair({
+    required String pairKey,
+    required DateTime since,
+  }) {
+    final series = pairSeries[pairKey] ?? const <ExchangeRate>[];
+    return Stream.value(
+      series.where((rate) => !rate.asOfTime.isBefore(since)).toList(),
+    );
+  }
+
+  @override
+  Future<List<ExchangeRate>> querySeriesForPair({
+    required String pairKey,
+    required DateTime since,
+  }) async {
+    final series = pairSeries[pairKey] ?? const <ExchangeRate>[];
+    return series.where((rate) => !rate.asOfTime.isBefore(since)).toList();
+  }
+
+  @override
+  Future<ExchangeRate?> queryForDate({
+    required String baseCurrency,
+    required String quoteCurrency,
+    required DateTime date,
+  }) => Future.error(UnimplementedError());
+
+  @override
+  Future<Result<ExchangeRate, AppError>> upsert(ExchangeRate rate) =>
+      Future.error(UnimplementedError());
+}
+
 class _FakeEventRepository implements EventRepository {
   @override
   Stream<List<DomainEvent>> watchRecent({int limit = 100}) =>
@@ -283,6 +375,26 @@ void main() {
     expect(find.text('还没有关注的币对'), findsOneWidget);
   });
 
+  testWidgets('vertical drag on rates list does not switch top-level pages', (
+    tester,
+  ) async {
+    final router = await _pumpShell(
+      tester,
+      initialLocation: '/rates',
+      seedRatesList: true,
+    );
+    await _settleNav(tester);
+
+    expect(find.text('USD/CNY'), findsWidgets);
+    expect(router.routeInformationProvider.value.uri.toString(), '/rates');
+
+    await tester.drag(find.byType(ListView).first, const Offset(18, -280));
+    await _settleNav(tester);
+
+    expect(router.routeInformationProvider.value.uri.toString(), '/rates');
+    expect(find.text('USD/CNY'), findsWidgets);
+  });
+
   testWidgets('holdings deep link restores selected secondary tab', (tester) async {
     final router = await _pumpShell(tester, initialLocation: '/holdings?tab=3');
     await _settleNav(tester);
@@ -313,5 +425,41 @@ void main() {
     await _swipeRight(tester, const Offset(180, 300));
     expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
     expect(find.text('资产 Top 10'), findsOneWidget);
+  });
+
+  testWidgets('leaving nested tabs does not break later shell fallback swipe', (
+    tester,
+  ) async {
+    final router = await _pumpShell(
+      tester,
+      initialLocation: '/events?tab=2',
+      seedRatesList: true,
+    );
+    await _settleNav(tester);
+
+    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=2');
+    expect(find.text('没有失败事件'), findsOneWidget);
+
+    await _swipeLeft(tester, const Offset(180, 300));
+    expect(router.routeInformationProvider.value.uri.toString(), '/rates');
+    expect(find.text('USD/CNY'), findsWidgets);
+
+    await _swipeRight(tester, const Offset(180, 300));
+    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=2');
+    expect(find.text('没有失败事件'), findsOneWidget);
+  });
+
+  testWidgets('rapid boundary swipes do not freeze nested handoff', (tester) async {
+    final router = await _pumpShell(tester, initialLocation: '/holdings?tab=3');
+    await _settleNav(tester);
+
+    await _swipeLeft(tester, const Offset(180, 300));
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
+
+    await _swipeRight(tester, const Offset(180, 300));
+    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+
+    await _swipeLeft(tester, const Offset(180, 300));
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
   });
 }
