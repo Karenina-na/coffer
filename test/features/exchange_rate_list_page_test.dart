@@ -15,6 +15,7 @@ import 'package:gwp/domain/repositories/watched_pair_repository.dart';
 import 'package:gwp/domain/usecases/manage_watched_pair.dart';
 import 'package:gwp/features/exchange_rate/presentation/exchange_rate_list_page.dart';
 import 'package:gwp/features/exchange_rate/presentation/exchange_rate_providers.dart';
+import 'package:gwp/features/exchange_rate/presentation/rate_sparkline.dart';
 
 void main() {
   testWidgets('汇率主页不再展示录入按钮', (tester) async {
@@ -26,11 +27,12 @@ void main() {
     expect(find.textContaining('按币对查看最新汇率'), findsNothing);
     expect(find.text('USD → CNY'), findsNothing);
     expect(find.text('USD/CNY'), findsOneWidget);
-    expect(find.text('待同步'), findsOneWidget);
+    expect(find.text('汇率总览'), findsOneWidget);
+    expect(find.text('1 个关注币对'), findsOneWidget);
+    expect(find.text('最近更新'), findsOneWidget);
+    expect(find.text('暂无数据'), findsWidgets);
     expect(find.byType(FilledButton), findsNothing);
-    expect(find.text('7日高'), findsOneWidget);
-    expect(find.text('7日低'), findsOneWidget);
-    expect(find.text('振幅'), findsOneWidget);
+    expect(find.byType(RateSparkline), findsOneWidget);
   });
 
   testWidgets('添加币对弹窗使用货币字典选择基准与报价币种', (tester) async {

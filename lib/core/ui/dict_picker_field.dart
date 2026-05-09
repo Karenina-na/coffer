@@ -22,6 +22,7 @@ class DictPickerField extends ConsumerWidget {
     this.validator,
     this.allowEmpty = false,
     this.emptyLabel = '未选择',
+    this.textStyle,
   });
 
   final DictType type;
@@ -32,6 +33,7 @@ class DictPickerField extends ConsumerWidget {
   final FormFieldValidator<String>? validator;
   final bool allowEmpty;
   final String emptyLabel;
+  final TextStyle? textStyle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,11 +63,25 @@ class DictPickerField extends ConsumerWidget {
 
   Widget _buildDropdown(List<DictEntry> entries) {
     final items = <DropdownMenuItem<String>>[
-      if (allowEmpty) DropdownMenuItem(value: '', child: Text(emptyLabel)),
+      if (allowEmpty)
+        DropdownMenuItem(
+          value: '',
+          child: Text(
+            emptyLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textStyle,
+          ),
+        ),
       for (final e in entries)
         DropdownMenuItem(
           value: e.code,
-          child: Text('${e.name}（${e.code}）'),
+          child: Text(
+            '${e.name}（${e.code}）',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textStyle,
+          ),
         ),
     ];
     // 兼容历史 / 已删除数据：若当前值不在字典内，补一条 fallback
@@ -74,7 +90,12 @@ class DictPickerField extends ConsumerWidget {
         !entries.any((e) => e.code == value)) {
       items.add(DropdownMenuItem(
         value: value,
-        child: Text('${value!}（已失效）'),
+        child: Text(
+          '${value!}（已失效）',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textStyle,
+        ),
       ));
     }
     return DropdownButtonFormField<String>(
@@ -85,6 +106,7 @@ class DictPickerField extends ConsumerWidget {
         labelText: label,
         helperText: helperText,
       ),
+      style: textStyle,
       validator: validator,
       isExpanded: true,
     );

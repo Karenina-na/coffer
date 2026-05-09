@@ -10,9 +10,9 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/gwp_kpi_tile.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_number_text.dart';
-import '../../../core/ui/gwp_status_badge.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/dict_type.dart';
@@ -133,6 +133,7 @@ class _RatesSummaryCard extends ConsumerWidget {
     final ready = summaries.whereType<_PairSeriesSummary>().toList(growable: false);
     final upCount = ready.where((item) => item.changePct > 0).length;
     final downCount = ready.where((item) => item.changePct < 0).length;
+    final neutralCount = pairs.length - upCount - downCount;
     final latestUpdatedAt = ready
         .map((item) => item.updatedAt)
         .whereType<DateTime>()
@@ -157,122 +158,209 @@ class _RatesSummaryCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: GwpSpacing.sm,
-                  runSpacing: GwpSpacing.xs,
-                  children: [
-                    _SummaryMetricChip(
-                      icon: Icons.swap_horiz,
-                      label: '币对',
-                      value: '${pairs.length}',
-                      tone: StatusVariant.neutral,
-                    ),
-                    _SummaryMetricChip(
-                      icon: Icons.trending_up,
-                      label: '涨',
-                      value: '$upCount',
-                      tone: StatusVariant.positive,
-                    ),
-                    _SummaryMetricChip(
-                      icon: Icons.trending_down,
-                      label: '跌',
-                      value: '$downCount',
-                      tone: StatusVariant.negative,
-                    ),
-                    _SummaryMetricChip(
-                      icon: Icons.show_chart,
-                      label: '波动',
-                      value: ready.isEmpty ? '—' : displayPercentDouble(maxSwing),
-                      tone: StatusVariant.info,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          _RatesOverviewHeader(
+            pairCount: pairs.length,
+            upCount: upCount,
+            downCount: downCount,
+            latestUpdatedAt: latestUpdatedAt,
           ),
-          if (latestUpdatedAt != null) ...[
-            const SizedBox(height: GwpSpacing.sm),
-            Text(
-              '最近更新 ${_fmtRelativeTime(latestUpdatedAt)}',
-              style: const TextStyle(
-                fontSize: 11,
-                color: GwpColors.textMuted,
-              ),
-            ),
-          ],
+          const SizedBox(height: GwpSpacing.base),
+          _RatesOverviewGrid(
+            pairCount: pairs.length,
+            upCount: upCount,
+            downCount: downCount,
+            neutralCount: neutralCount,
+            maxSwing: ready.isEmpty ? null : maxSwing,
+          ),
         ],
       ),
     );
   }
 }
 
-class _SummaryMetricChip extends StatelessWidget {
-  const _SummaryMetricChip({
+class _RatesOverviewHeader extends StatelessWidget {
+  const _RatesOverviewHeader({
+    required this.pairCount,
+    required this.upCount,
+    required this.downCount,
+    required this.latestUpdatedAt,
+  });
+
+  final int pairCount;
+  final int upCount;
+  final int downCount;
+  final DateTime? latestUpdatedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '汇率总览',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: GwpColors.textMuted,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$pairCount 个关注币对',
+                style: const TextStyle(
+                  fontFamily: GwpTypo.monoFont,
+                  fontFeatures: GwpTypo.tabularFigures,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: GwpColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$upCount 涨 / $downCount 跌',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: GwpColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: GwpSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: GwpColors.surface2,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text(
+                '最近更新',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: GwpColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                latestUpdatedAt == null ? '暂无数据' : _fmtRelativeTime(latestUpdatedAt!),
+                style: const TextStyle(
+                  fontFamily: GwpTypo.monoFont,
+                  fontFeatures: GwpTypo.tabularFigures,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: GwpColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RatesOverviewGrid extends StatelessWidget {
+  const _RatesOverviewGrid({
+    required this.pairCount,
+    required this.upCount,
+    required this.downCount,
+    required this.neutralCount,
+    required this.maxSwing,
+  });
+
+  final int pairCount;
+  final int upCount;
+  final int downCount;
+  final int neutralCount;
+  final double? maxSwing;
+
+  @override
+  Widget build(BuildContext context) {
+    final swing = maxSwing;
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _RatesOverviewTile(
+                icon: Icons.swap_horiz,
+                label: '币对数',
+                value: '$pairCount',
+                iconColor: GwpColors.actionPrimary,
+              ),
+            ),
+            const SizedBox(width: GwpSpacing.sm),
+            Expanded(
+              child: _RatesOverviewTile(
+                icon: Icons.trending_up,
+                label: '上涨',
+                value: '$upCount',
+                iconColor: GwpColors.positive,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: GwpSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _RatesOverviewTile(
+                icon: Icons.trending_down,
+                label: '下跌',
+                value: '$downCount',
+                iconColor: GwpColors.negative,
+                subtitle: neutralCount > 0 ? '$neutralCount 个待同步' : null,
+              ),
+            ),
+            const SizedBox(width: GwpSpacing.sm),
+            Expanded(
+              child: _RatesOverviewTile(
+                icon: Icons.show_chart,
+                label: '最大波动',
+                value: swing == null ? '—' : displayPercentDouble(swing),
+                iconColor: GwpColors.info,
+                subtitle: swing == null ? '尚无足够数据' : null,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _RatesOverviewTile extends StatelessWidget {
+  const _RatesOverviewTile({
     required this.icon,
     required this.label,
     required this.value,
-    required this.tone,
+    required this.iconColor,
+    this.subtitle,
   });
 
   final IconData icon;
   final String label;
   final String value;
-  final StatusVariant tone;
+  final Color iconColor;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
-    final variantColor = switch (tone) {
-      StatusVariant.positive => GwpColors.positive,
-      StatusVariant.negative => GwpColors.negative,
-      StatusVariant.warning => GwpColors.warning,
-      StatusVariant.info => GwpColors.info,
-      StatusVariant.neutral => GwpColors.textPrimary,
-      StatusVariant.muted => GwpColors.textMuted,
-    };
-    final variantBg = switch (tone) {
-      StatusVariant.positive => GwpColors.positiveBg,
-      StatusVariant.negative => GwpColors.negativeBg,
-      StatusVariant.warning => GwpColors.warningBg,
-      StatusVariant.info => GwpColors.infoBg,
-      StatusVariant.neutral => GwpColors.surface3,
-      StatusVariant.muted => GwpColors.surface2,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: variantBg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: variantColor),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: variantColor,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: variantColor,
-            ),
-          ),
-        ],
-      ),
+    return GwpKpiTile(
+      icon: icon,
+      label: label,
+      value: value,
+      subtitle: subtitle,
+      iconColor: iconColor,
     );
   }
 }
@@ -366,19 +454,6 @@ class _PairRateCard extends ConsumerWidget {
     final sign = changePct == null
         ? ValueSign.neutral
         : (isUp ? ValueSign.positive : ValueSign.negative);
-    final statusLabel = changePct == null
-        ? '待同步'
-        : (isUp ? '7日走强' : '7日走弱');
-    final statusVariant = changePct == null
-        ? StatusVariant.muted
-        : (isUp ? StatusVariant.positive : StatusVariant.negative);
-
-    double? high;
-    double? low;
-    if (points.length >= 2) {
-      high = points.reduce((a, b) => a > b ? a : b);
-      low = points.reduce((a, b) => a < b ? a : b);
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -401,107 +476,90 @@ class _PairRateCard extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(GwpSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pair.pairKey,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: GwpColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          GwpStatusBadge(
-                            label: statusLabel,
-                            variant: statusVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: GwpSpacing.sm),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        latest == null ? '—' : _fmtRate(latest.rate.toDouble()),
-                        textAlign: TextAlign.center,
+                Expanded(
+                  flex: 4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        pair.pairKey,
                         style: const TextStyle(
-                          fontFamily: GwpTypo.monoFont,
-                          fontFeatures: GwpTypo.tabularFigures,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: GwpColors.textPrimary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: GwpSpacing.sm),
-                    Expanded(
-                      flex: 3,
-                      child: GwpNumberText(
-                        value: changePct == null
-                            ? '—'
-                            : displayPercent(changePct, alwaysShowSign: true),
-                        sign: sign,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        showIcon: changePct != null,
-                        textAlign: TextAlign.end,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 34,
-                  width: double.infinity,
-                  child: RateSparkline(
-                    points: points,
-                    isUp: isUp,
-                    width: double.infinity,
-                    height: 34,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          _StatChip(label: '7日高', value: high == null ? '—' : _fmtRate(high)),
-                          _StatChip(label: '7日低', value: low == null ? '—' : _fmtRate(low)),
-                          _StatChip(
-                            label: '振幅',
-                            value: high != null && low != null && low > 0 && high - low > 0
-                                ? displayPercentDouble((high - low) / low * 100)
-                                : '—',
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: GwpSpacing.sm),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
+                      const SizedBox(height: 6),
+                      Text(
                         latest == null ? '暂无数据' : _fmtTime(latest.updatedAt),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11,
                           color: GwpColors.textMuted,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: GwpSpacing.sm),
+                Expanded(
+                  flex: 3,
+                  child: SizedBox(
+                    height: 40,
+                    child: RateSparkline(
+                      points: points,
+                      isUp: isUp,
+                      width: double.infinity,
+                      height: 40,
                     ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: GwpSpacing.sm),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          latest == null ? '—' : _fmtRate(latest.rate.toDouble()),
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(
+                            fontFamily: GwpTypo.monoFont,
+                            fontFeatures: GwpTypo.tabularFigures,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: GwpColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: GwpNumberText(
+                          value: changePct == null
+                              ? '—'
+                              : displayPercent(changePct, fractionDigits: 1, alwaysShowSign: true),
+                          sign: sign,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          showIcon: changePct != null,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -514,43 +572,6 @@ class _PairRateCard extends ConsumerWidget {
   String _fmtTime(DateTime t) => _fmtRelativeTime(t);
 
   String _fmtRate(double v) => displayDouble(v);
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: GwpColors.surface2,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: GwpColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 final _cardDeco = BoxDecoration(
@@ -779,14 +800,6 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
               color: GwpColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Frankfurter 支持 33 种 ECB 币种（USD/EUR/CNY/JPY/GBP/HKD 等）',
-            style: TextStyle(
-              fontSize: 12,
-              color: GwpColors.textMuted,
-            ),
-          ),
           const SizedBox(height: 16),
           Row(children: [
             Expanded(
@@ -795,6 +808,7 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
                 type: DictType.currency,
                 value: _baseCurrency,
                 label: '基准币种',
+                textStyle: const TextStyle(fontSize: 13),
                 onChanged: (v) {
                   if (v == null) return;
                   setState(() => _baseCurrency = v);
@@ -811,6 +825,7 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
                 type: DictType.currency,
                 value: _quoteCurrency,
                 label: '报价币种',
+                textStyle: const TextStyle(fontSize: 13),
                 onChanged: (v) {
                   if (v == null) return;
                   setState(() => _quoteCurrency = v);
