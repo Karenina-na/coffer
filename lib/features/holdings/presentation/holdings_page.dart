@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/app_top_bar.dart';
-import '../../../core/ui/design_tokens.dart';
-import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
@@ -44,8 +42,8 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     _tab = TabController(length: 4, vsync: this, initialIndex: initial)
       ..addListener(() {
         if (!mounted) return;
-        setState(() {}); // rebuild AppBar/FAB per active tab
-        _syncTopSearch(); // 转账 tab 走全局搜索，其它 tab 各自模块优先
+        setState(() {});
+        _syncTopSearch();
         if (!_tab.indexIsChanging) {
           unawaited(_syncRouteTab());
         }
@@ -151,7 +149,6 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
 
   @override
   Widget build(BuildContext context) {
-    final idx = _tab.index;
     return Scaffold(
       appBar: AppTopBar(
         title: const Text('资金'),
@@ -167,7 +164,6 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
           ],
         ),
       ),
-      floatingActionButton: _shellFabFor(context, idx),
       body: NotificationListener<ScrollNotification>(
         onNotification: _handleBoundaryScroll,
         child: TabBarView(
@@ -195,33 +191,4 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     );
   }
 
-  Widget? _fabFor(BuildContext context, int idx) {
-    switch (idx) {
-      case 0:
-        return FloatingActionButton.extended(
-          onPressed: () => context.push('/accounts/new'),
-          icon: const Icon(Icons.add),
-          label: const Text('新建账户'),
-        );
-      case 1:
-        return FloatingActionButton.extended(
-          onPressed: () => context.push('/assets/new'),
-          icon: const Icon(Icons.add),
-          label: const Text('新建资产'),
-        );
-      default:
-        return null; // transfer tab: 无 FAB（页面内有 "模拟报价" 按钮）
-    }
-  }
-
-  Widget? _shellFabFor(BuildContext context, int idx) {
-    final fab = _fabFor(context, idx);
-    if (fab == null) return null;
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: FloatingNavLayout.totalFloatingHeight(context) + GwpSpacing.md,
-      ),
-      child: fab,
-    );
-  }
 }

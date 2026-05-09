@@ -16,37 +16,44 @@ import '../../../domain/entities/dict_type.dart';
 /// - 右下 FAB 新增条目；条目右侧菜单提供「编辑 / 删除」
 /// - 主权地区类型额外展示 flag + continent + 地图坐标列
 /// - 主权地区编辑对话框额外暴露 emoji / 大洲 / 颜色 / 经纬度字段
-class DictManagePage extends ConsumerWidget {
+class DictManagePage extends ConsumerStatefulWidget {
   const DictManagePage({super.key, required this.type, required this.title});
 
   final DictType type;
   final String title;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DictManagePage> createState() => _DictManagePageState();
+}
+
+class _DictManagePageState extends ConsumerState<DictManagePage> {
+  DictType get type => widget.type;
+  String get title => widget.title;
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(dictEntriesProvider(type));
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        actions: _isRegion
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.cloud_download_outlined),
-                  tooltip: '从 API 同步国家/地区数据',
-                  onPressed: () => _syncCountries(context, ref),
-                ),
-              ]
-            : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: '新增条目',
+            onPressed: () => _showEditDialog(context, ref, entry: null),
+          ),
+          if (_isRegion)
+            IconButton(
+              icon: const Icon(Icons.cloud_download_outlined),
+              tooltip: '从 API 同步国家/地区数据',
+              onPressed: () => _syncCountries(context, ref),
+            ),
+        ],
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('加载失败：$e')),
         data: (entries) => _buildList(context, ref, entries),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showEditDialog(context, ref, entry: null),
-        icon: const Icon(Icons.add),
-        label: const Text('新增'),
       ),
     );
   }
@@ -135,7 +142,7 @@ class DictManagePage extends ConsumerWidget {
     List<DictEntry> entries,
   ) {
     if (entries.isEmpty) {
-      return const Center(child: Text('暂无条目，点击右下角新增'));
+      return const Center(child: Text('暂无条目，从右上「更多 → 新建」新增'));
     }
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),

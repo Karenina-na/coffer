@@ -88,14 +88,8 @@ class _EventListPageState extends ConsumerState<EventListPage>
   late final TabController _tabController;
   late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
-  final DateTime _fabDay = _today();
   bool _boundaryHandoffLocked = false;
   bool _syncingTabToRoute = false;
-
-  static DateTime _today() {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
 
   @override
   void initState() {
@@ -106,7 +100,6 @@ class _EventListPageState extends ConsumerState<EventListPage>
     _tabController = TabController(length: 3, vsync: this, initialIndex: initial);
     _tabController.addListener(() {
       if (!mounted) return;
-      // 仅在切 Tab 时刷新 FAB 显隐。
       setState(() {});
       if (!_tabController.indexIsChanging) {
         unawaited(_syncRouteTab());
@@ -255,23 +248,6 @@ class _EventListPageState extends ConsumerState<EventListPage>
           ],
         ),
       ),
-      floatingActionButton: _tabController.index == 0
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: FloatingNavLayout.totalFloatingHeight(context) + 4,
-              ),
-              child: FloatingActionButton.extended(
-              onPressed: () {
-                String two(int n) => n.toString().padLeft(2, '0');
-                final d = _calendarKey.currentState?.selectedDay ?? _fabDay;
-                final iso = '${d.year}-${two(d.month)}-${two(d.day)}';
-                context.push('/events/new?day=$iso');
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('新建事件'),
-            ),
-            )
-          : null,
       body: NotificationListener<ScrollNotification>(
         onNotification: _handleBoundaryScroll,
         child: TabBarView(
@@ -402,7 +378,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                   icon: Icons.event_busy_outlined,
                   title: rawDayEvents.isEmpty ? '当日无事件' : '当前筛选下无事件',
                   subtitle: rawDayEvents.isEmpty
-                      ? '选择其他日期或点击右下角新建'
+                      ? '选择其他日期或从右上「更多 → 新建」创建'
                       : '清除筛选或切换到"全部"查看',
                 ),
               )

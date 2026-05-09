@@ -481,18 +481,27 @@ final _cardDeco = BoxDecoration(
 // Watched pairs manager page
 // ──────────────────────────────────────────────────────────────
 
-class _WatchedPairsPage extends ConsumerWidget {
+class _WatchedPairsPage extends ConsumerStatefulWidget {
   const _WatchedPairsPage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WatchedPairsPage> createState() => _WatchedPairsPageState();
+}
+
+class _WatchedPairsPageState extends ConsumerState<_WatchedPairsPage> {
+  @override
+  Widget build(BuildContext context) {
     final pairs = ref.watch(watchedPairListProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('管理币对')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddSheet(context, ref),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('添加币对'),
+      appBar: AppTopBar(
+        title: const Text('管理币对'),
+        actions: [
+          IconButton(
+            tooltip: '添加币对',
+            onPressed: () => _openAddSheet(context),
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: pairs.when(
         loading: () => const Center(
@@ -520,7 +529,7 @@ class _WatchedPairsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _openAddSheet(BuildContext context, WidgetRef ref) async {
+  Future<void> _openAddSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

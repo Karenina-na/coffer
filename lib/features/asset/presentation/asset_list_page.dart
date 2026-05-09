@@ -39,7 +39,7 @@ class AssetListBody extends ConsumerWidget {
           return const GwpEmptyState(
             icon: Icons.show_chart_outlined,
             title: '还没有资产',
-            subtitle: '点击右下角按钮添加第一个资产',
+            subtitle: '从右上「更多 → 新建」添加第一个资产',
           );
         }
         final accounts = accountsAsync.when(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
@@ -147,16 +146,6 @@ class _CardListPageState extends ConsumerState<CardListPage> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: FloatingNavLayout.totalFloatingHeight(context) + 4,
-        ),
-        child: FloatingActionButton.extended(
-        onPressed: () => context.push('/cards/new'),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('新建'),
-      ),
-      ),
       body: cards.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: GwpColors.actionPrimary),
@@ -170,7 +159,7 @@ class _CardListPageState extends ConsumerState<CardListPage> {
             return const GwpEmptyState(
               icon: Icons.credit_card_outlined,
               title: '还没有卡片',
-              subtitle: '点击右下角按钮添加第一张卡',
+              subtitle: '从右上「更多 → 新建」添加第一张卡',
             );
           }
           final sorted = _applySort(raw);

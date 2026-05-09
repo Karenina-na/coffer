@@ -30,7 +30,7 @@ void main() {
 
     await tester.tap(find.byTooltip('管理币对'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('添加币对'));
+    await tester.tap(find.byTooltip('添加币对'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('pair-editor-base-currency-field')));

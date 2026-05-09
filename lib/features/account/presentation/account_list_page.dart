@@ -43,7 +43,7 @@ class AccountListBody extends ConsumerWidget {
           return const GwpEmptyState(
             icon: Icons.account_balance_outlined,
             title: '还没有账户',
-            subtitle: '点击右下角按钮添加第一个账户',
+            subtitle: '从右上「更多 → 新建」添加第一个账户',
           );
         }
         final assets = assetsAsync.when(

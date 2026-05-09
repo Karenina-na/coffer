@@ -11,19 +11,19 @@ import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
 import 'channel_providers.dart';
 
-class ChannelListPage extends ConsumerWidget {
+class ChannelListPage extends ConsumerStatefulWidget {
   const ChannelListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChannelListPage> createState() => _ChannelListPageState();
+}
+
+class _ChannelListPageState extends ConsumerState<ChannelListPage> {
+  @override
+  Widget build(BuildContext context) {
     final channels = ref.watch(channelListProvider);
     return Scaffold(
       appBar: const AppTopBar(title: Text('转账通道')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/channels/new'),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('新建'),
-      ),
       body: channels.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: GwpColors.actionPrimary),
@@ -37,7 +37,7 @@ class ChannelListPage extends ConsumerWidget {
             return const GwpEmptyState(
               icon: Icons.swap_horiz_outlined,
               title: '还没有通道',
-              subtitle: '点击右下角 "新建" 添加转账通道策略',
+              subtitle: '从右上「更多 → 新建」添加转账通道策略',
             );
           }
           final enabled = list.where((c) => c.status == ChannelStatus.enabled).length;
