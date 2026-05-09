@@ -10,6 +10,8 @@ import 'package:gwp/data/providers/dict_providers.dart';
 import 'package:gwp/domain/entities/account.dart';
 import 'package:gwp/domain/entities/account_channel.dart';
 import 'package:gwp/domain/entities/account_enums.dart';
+import 'package:gwp/domain/entities/asset.dart';
+import 'package:gwp/domain/entities/asset_enums.dart';
 import 'package:gwp/domain/entities/channel.dart';
 import 'package:gwp/domain/entities/channel_enums.dart';
 import 'package:gwp/domain/entities/dict_entry.dart';
@@ -47,6 +49,8 @@ Future<void> _pumpPage(
   WidgetTester tester, {
   SaveAccountChannelConfigUseCase? saveConfigUseCase,
   List<DictEntry>? currencies,
+  List<Asset>? assets,
+  bool settle = true,
 }) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 3.0;
@@ -93,7 +97,9 @@ Future<void> _pumpPage(
     ProviderScope(
       overrides: [
         accountListProvider.overrideWith((ref) => Stream.value([account])),
-        assetsByAccountProvider('acc-1').overrideWith((ref) => Stream.value(const [])),
+        assetsByAccountProvider('acc-1').overrideWith(
+          (ref) => Stream.value(assets ?? const []),
+        ),
         valuedAssetsByAccountProvider('acc-1').overrideWith(
           (ref) async => ValuedAssets(
             valuationCurrency: 'CNY',
@@ -115,7 +121,11 @@ Future<void> _pumpPage(
     ),
   );
   await tester.pump();
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump(const Duration(milliseconds: 300));
+  }
 }
 
 void main() {
@@ -167,6 +177,37 @@ void main() {
 
     expect(recorder.invocations, hasLength(1));
     expect(recorder.invocations.single.feeCurrencyOverride, isNull);
+  });
+
+  testWidgets('账户详情同步入口展示统一时间窗选项', (tester) async {
+    final now = DateTime.utc(2026, 1, 1);
+    await _pumpPage(
+      tester,
+      assets: [
+        Asset(
+          id: 'ast-1',
+          accountId: 'acc-1',
+          assetType: AssetType.stock,
+          assetCode: 'AAPL',
+          quantity: Decimal.fromInt(1),
+          currency: 'USD',
+          status: AssetStatus.holding,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ],
+      settle: false,
+    );
+
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.byTooltip('同步当前账户资产'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('8日'), findsOneWidget);
+    expect(find.text('1个月'), findsOneWidget);
+    expect(find.text('1年'), findsOneWidget);
+    expect(find.text('5年'), findsOneWidget);
   });
 }
 

@@ -27,6 +27,7 @@ import '../../../domain/entities/dict_type.dart';
 import '../../../core/errors.dart';
 import '../../../core/result.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/sync_window_menu_button.dart';
 import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../../domain/usecases/refresh_asset_price.dart';
 import '../../../domain/valuation/asset_valuator.dart';
@@ -188,7 +189,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
   }
 
   Future<void> _syncAllPrices(
-      BuildContext context, List<Asset> assets, SyncMode mode) async {
+      BuildContext context, List<Asset> assets, SyncWindow window) async {
     if (assets.isEmpty || _syncing) return;
     setState(() => _syncing = true);
     final useCase = ref.read(refreshAssetPriceUseCaseProvider);
@@ -198,7 +199,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     try {
       r = await useCase.refreshAll(
         assetIds: ids,
-        mode: mode,
+        mode: SyncMode.full,
+        window: window,
       );
     } finally {
       if (mounted) {
@@ -233,13 +235,12 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     }
 
     final failures = <String>[];
-    final label = mode == SyncMode.incremental ? '增量' : '全量';
     final msg = r.when(
       ok: (res) {
         failures.addAll(res.failed.entries.map((e) => '${e.key}: ${e.value}'));
         return res.failed.isEmpty
-            ? '$label同步成功 ${res.success.length} / ${assets.length} 条资产'
-            : '$label同步 ${res.success.length} / ${assets.length}，失败 ${res.failed.length} 条';
+            ? '已同步 ${res.success.length} / ${assets.length} 条资产'
+            : '已同步 ${res.success.length} / ${assets.length}，失败 ${res.failed.length} 条';
       },
       err: (e) => '同步失败：${e.message}',
     );
@@ -287,10 +288,11 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
         title: const Text('账户详情'),
         actions: [
           assetsAsync.maybeWhen(
-            data: (assets) => PopupMenuButton<SyncMode>(
-              tooltip: '同步资产价格',
+            data: (assets) => SyncWindowMenuButton(
+              tooltip: '同步当前账户资产',
               enabled: !(_syncing || assets.isEmpty),
-              icon: _syncing
+              onSelected: (window) => _syncAllPrices(context, assets, window),
+              child: _syncing
                   ? const SizedBox(
                       width: 18,
                       height: 18,
@@ -300,25 +302,6 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       ),
                     )
                   : const Icon(Icons.sync),
-              onSelected: (mode) => _syncAllPrices(context, assets, mode),
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: SyncMode.incremental,
-                  child: ListTile(
-                    leading: Icon(Icons.update),
-                    title: Text('增量同步（仅最新价）'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: SyncMode.full,
-                  child: ListTile(
-                    leading: Icon(Icons.history),
-                    title: Text('全量同步（历史+最新）'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
             ),
             orElse: () => const SizedBox.shrink(),
           ),
