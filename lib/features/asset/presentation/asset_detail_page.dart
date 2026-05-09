@@ -17,6 +17,7 @@ import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_mini_chart.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/sync_window_menu_button.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
@@ -167,10 +168,11 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
         foregroundColor: GwpColors.textPrimary,
         elevation: 0,
         actions: [
-          PopupMenuButton<SyncMode>(
+          SyncWindowMenuButton(
             tooltip: '同步当前资产',
             enabled: !(_fetchingLatest || _fetchingHistory),
-            icon: (_fetchingLatest || _fetchingHistory)
+            onSelected: (window) => _syncRange(context, window),
+            child: (_fetchingLatest || _fetchingHistory)
                 ? const SizedBox(
                     width: 18,
                     height: 18,
@@ -180,25 +182,6 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                     ),
                   )
                 : const Icon(Icons.sync),
-            onSelected: (mode) => _syncRange(context, mode),
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: SyncMode.incremental,
-                child: ListTile(
-                  leading: Icon(Icons.update),
-                  title: Text('增量同步（仅最新价）'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: SyncMode.full,
-                child: ListTile(
-                  leading: Icon(Icons.history),
-                  title: Text('全量同步（历史+最新）'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
           ),
           IconButton(
             tooltip: '手动输入价格',
@@ -428,32 +411,24 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
     );
   }
 
-  Future<void> _syncRange(BuildContext context, SyncMode mode) async {
+  Future<void> _syncRange(BuildContext context, SyncWindow window) async {
     setState(() {
       _fetchingLatest = true;
-      if (mode == SyncMode.full) _fetchingHistory = true;
+      _fetchingHistory = true;
     });
     final useCase = ref.read(refreshAssetPriceUseCaseProvider);
+    final range = window.rangeFrom(DateTime.now());
 
     Result<int, AppError>? histRes;
     Result<Asset, AppError>? latestRes;
     try {
-      if (mode == SyncMode.full) {
-        final now = DateTime.now();
-        final to = DateTime(now.year, now.month, now.day);
-        final from = _rangeDays <= 0
-            ? to.subtract(const Duration(days: 365 * 5))
-            : to.subtract(Duration(days: _rangeDays + 2));
-        histRes = await useCase.refreshHistory(
-          assetId: widget.assetId,
-          from: from,
-          to: to,
-        );
-      }
+      histRes = await useCase.refreshHistory(
+        assetId: widget.assetId,
+        from: range.from,
+        to: range.to,
+      );
       latestRes = await useCase.refreshLatest(widget.assetId);
     } catch (e) {
-      // refreshHistory 或 refreshLatest 意外抛出时，捕获为 Err 并继续展示错误，
-      // 避免未捕获异常直接退出函数导致 UI 无反馈。
       latestRes ??= Err(UnknownError('sync error: $e'));
     } finally {
       if (mounted) {
@@ -494,11 +469,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
       return;
     }
 
-    final msg = errs.isEmpty
-        ? mode == SyncMode.full
-              ? '已同步，补齐 $wrote 条历史点'
-              : '最新价格已同步'
-        : '同步出错：${errs.join('；')}';
+    final msg = errs.isEmpty ? '已同步，补齐 $wrote 条历史点' : '同步出错：${errs.join('；')}';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 

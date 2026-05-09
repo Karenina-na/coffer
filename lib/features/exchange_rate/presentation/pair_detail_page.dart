@@ -4,7 +4,6 @@ import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
@@ -12,6 +11,7 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_heat_strip.dart';
 import '../../../core/ui/gwp_mini_chart.dart';
+import '../../../core/ui/sync_window_menu_button.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/exchange_rate_enums.dart';
 import '../../../domain/entities/watched_pair.dart';
@@ -99,101 +99,28 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
     return parts.length >= 2 ? parts[1] : '';
   }
 
-  Future<void> _fetchRange(SyncMode mode) async {
+  Future<void> _fetchRange(SyncWindow window) async {
     if (_fetching) return;
     setState(() => _fetching = true);
 
-    final parts = widget.pairKey.split('/');
-    if (parts.length != 2) {
-      if (mounted) setState(() => _fetching = false);
-      return;
-    }
-    final base = parts[0];
-    final quote = parts[1];
-    final provider = ref.read(frankfurterProviderProvider);
-    final repo = ref.read(exchangeRateRepositoryProvider);
-    final now = DateTime.now();
-    const uuid = Uuid();
-
     try {
-      if (mode == SyncMode.incremental) {
-        final r = await provider.fetchLatest(base: base, symbols: [quote]);
-        if (!mounted) return;
-        await r.when(
-          ok: (snap) async {
-            final rate = snap.rates[quote];
-            if (rate != null) {
-              await repo.upsert(ExchangeRate(
-                id: uuid.v4(),
-                pairKey: widget.pairKey,
-                baseCurrency: base,
-                quoteCurrency: quote,
-                rate: rate,
-                asOfTime: snap.date,
-                updatedAt: now,
-                source: 'frankfurter',
-                snapshotType: SnapshotType.daily,
-              ));
-            }
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('最新汇率已同步')),
-              );
-            }
-          },
-          err: (e) async {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('拉取失败：${errorToMessage(e)}')),
-              );
-            }
-          },
-        );
-      } else {
-        final to = DateTime(now.year, now.month, now.day);
-        final from = _rangeDays <= 0
-            ? to.subtract(const Duration(days: 365 * 5))
-            : to.subtract(Duration(days: _rangeDays + 2));
-        final r = await provider.fetchTimeSeries(
-          base: base,
-          symbols: [quote],
-          from: from,
-          to: to,
-        );
-        if (!mounted) return;
-        await r.when(
-          ok: (ts) async {
-            for (final day in ts.series) {
-              final rate = day.value[quote];
-              if (rate == null) continue;
-              await repo.upsert(ExchangeRate(
-                id: uuid.v4(),
-                pairKey: widget.pairKey,
-                baseCurrency: base,
-                quoteCurrency: quote,
-                rate: rate,
-                asOfTime: day.key,
-                updatedAt: now,
-                source: 'frankfurter',
-                snapshotType: SnapshotType.daily,
-              ));
-              if (!mounted) return;
-            }
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('已拉取 ${ts.series.length} 天数据')),
-              );
-            }
-          },
-          err: (e) async {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('拉取失败：${errorToMessage(e)}')),
-              );
-            }
-          },
-        );
-      }
+      final r = await ref.read(refreshPairRateUseCaseProvider).call(
+        pairKey: widget.pairKey,
+        window: window,
+      );
+      if (!mounted) return;
+      r.when(
+        ok: (result) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('已同步，补齐 ${result.historyCount} 天历史点')),
+          );
+        },
+        err: (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('拉取失败：${errorToMessage(e)}')),
+          );
+        },
+      );
     } finally {
       if (mounted) setState(() => _fetching = false);
     }
@@ -266,10 +193,11 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
             icon: const Icon(Icons.notifications_outlined),
             onPressed: _fetching ? null : _openAlertEditor,
           ),
-          PopupMenuButton<SyncMode>(
+          SyncWindowMenuButton(
             tooltip: '同步当前币对',
             enabled: !_fetching,
-            icon: _fetching
+            onSelected: (window) => _fetchRange(window),
+            child: _fetching
                 ? const SizedBox(
                     width: 18,
                     height: 18,
@@ -279,25 +207,6 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                     ),
                   )
                 : const Icon(Icons.sync),
-            onSelected: (mode) => _fetchRange(mode),
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: SyncMode.incremental,
-                child: ListTile(
-                  leading: Icon(Icons.update),
-                  title: Text('增量同步（仅最新汇率）'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: SyncMode.full,
-                child: ListTile(
-                  leading: Icon(Icons.history),
-                  title: Text('全量同步（区间序列）'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
           ),
         ],
       ),

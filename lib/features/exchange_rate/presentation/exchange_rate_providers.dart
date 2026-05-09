@@ -6,9 +6,9 @@ import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/watched_pair.dart';
 import '../../../domain/usecases/check_rate_alerts.dart';
 import '../../../domain/usecases/manage_watched_pair.dart';
+import '../../../domain/usecases/refresh_pair_rate.dart';
 import '../../../domain/usecases/refresh_watched_rates.dart';
 import '../../../domain/usecases/save_manual_rate.dart';
-import '../../../domain/valuation/asset_valuator.dart';
 import '../../event/presentation/event_providers.dart';
 
 export '../../../data/providers/exchange_rate_providers.dart'
@@ -33,6 +33,13 @@ final refreshWatchedRatesUseCaseProvider =
   return RefreshWatchedRatesUseCase(
     watchedRepo: ref.watch(watchedPairRepositoryProvider),
     rateRepo: ref.watch(exchangeRateRepositoryProvider),
+    provider: ref.watch(frankfurterProviderProvider),
+  );
+});
+
+final refreshPairRateUseCaseProvider = Provider<RefreshPairRateUseCase>((ref) {
+  return RefreshPairRateUseCase(
+    rates: ref.watch(exchangeRateRepositoryProvider),
     provider: ref.watch(frankfurterProviderProvider),
   );
 });
@@ -63,17 +70,6 @@ final checkRateAlertsUseCaseProvider =
     events: ref.watch(eventRepositoryProvider),
   );
 });
-
-/// 当前汇率同步模式（增量 / 全量），由 UI 层切换。
-class RateSyncModeNotifier extends Notifier<SyncMode> {
-  @override
-  SyncMode build() => SyncMode.full;
-
-  void set(SyncMode m) => state = m;
-}
-
-final rateSyncModeProvider =
-    NotifierProvider<RateSyncModeNotifier, SyncMode>(RateSyncModeNotifier.new);
 
 /// 某币对在最近 7 天窗口内的快照序列（升序，供 sparkline 使用）。
 final pairRateSeriesProvider =
