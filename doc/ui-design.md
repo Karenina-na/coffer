@@ -104,7 +104,7 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 > **字典锚定约束**：地区、货币、转账协议相关输入必须优先使用字典选择器，而不是手填字符串。当前约定如下：
 >
 > - Channel 的 `transfer_protocol`、`limit_currency`、`allowedRegions`、`blockedRegions` 全部来自字典；地区规则使用多选而非 CSV 输入。
-> - 账户级 `fee_currency_override`、汇率手动录入的 `base/quote`、关注币对的 `base/quote`、卡片 `supported_currencies` 全部来自 `currency` 字典。
+> - 账户级 `fee_currency_override`、关注币对的 `base/quote`、卡片 `supported_currencies` 全部来自 `currency` 字典。
 > - 对于可空覆盖字段，选择器必须提供明确的“沿用默认值”空态，而不是把默认值预填成显式 override。
 >
 > **对比模式**：顶部 `SwitchListTile`「对比模式」开启后，一次点击并行跑两种目标，结果并排渲染；若二者得到同一条路径则合并为单卡并标注"两种目标一致"，否则给出 `ΔFee` / `ΔHops` 差值，便于用户权衡费用与合规/稳定性。
@@ -123,19 +123,18 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 
 ### 4.4 汇率 `/rates`
 
-定位：汇率快照管理，展示最近快照、支持手动录入与远端拉取。
+定位：汇率快照管理，展示最近快照与远端拉取能力。
 
 - **AppBar 动作**：
   - 「管理币对」→ 打开 `WatchedPairsPage`，用户维护关注的 `(base, quote)` 列表。
   - 「拉取最新」→ 调用 `RefreshWatchedRatesUseCase`，按 base 分组批量调用 Frankfurter，结果 upsert 到 `exchange_rates` 表。
-- **FAB「录入」**：保留手动录入能力作为离线兜底。
-- 手动录入与关注币对管理中的 `base_currency` / `quote_currency` 必须使用 `currency` 字典选择器，禁止手填自由字符串。
+- 关注币对管理中的 `base_currency` / `quote_currency` 必须使用 `currency` 字典选择器，禁止手填自由字符串。
 
 **远端数据源：Frankfurter**（`api.frankfurter.dev/v1/latest`）
 
 - 无需 API Key、无限额、ECB 官方参考汇率、33 种币种（含 CNY/USD/EUR/JPY/GBP/HKD 等）。
 - `SnapshotType = DAILY`，`source = 'frankfurter'`，`rawPayload` 保留原始 JSON 响应以便溯源。
-- 失败降级：任何网络/解析失败通过 SnackBar 反馈，不影响已有快照与手动录入。
+- 失败降级：任何网络/解析失败通过 SnackBar 反馈，不影响已有快照。
 
 **数据模型**
 

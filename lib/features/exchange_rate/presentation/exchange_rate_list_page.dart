@@ -1,13 +1,11 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/money/money.dart';
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/dict_picker_field.dart';
-import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
@@ -16,9 +14,8 @@ import '../../../core/ui/gwp_heat_strip.dart';
 import '../../../core/ui/gwp_number_text.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
-import '../../../domain/entities/exchange_rate.dart';
-import '../../../domain/entities/exchange_rate_enums.dart';
 import '../../../domain/entities/dict_type.dart';
+import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/watched_pair.dart';
 import 'exchange_rate_providers.dart';
 import 'pair_detail_page.dart';
@@ -63,15 +60,6 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
     );
   }
 
-  Future<void> _openEditor() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      builder: (_) => const _RateEditorSheet(),
-    );
-  }
-
   Future<void> _openPairManager() async {
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const _WatchedPairsPage()),
@@ -92,16 +80,6 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
             icon: const Icon(Icons.tune_outlined),
           ),
         ],
-      ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: FloatingNavLayout.totalFloatingHeight(context) + 4,
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: _openEditor,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('录入'),
-        ),
       ),
       body: pairs.when(
         loading: () => const Center(
@@ -498,182 +476,6 @@ final _cardDeco = BoxDecoration(
   borderRadius: BorderRadius.circular(12),
   border: Border.all(color: GwpColors.border, width: 0.5),
 );
-
-// ──────────────────────────────────────────────────────────────
-// Rate editor bottom sheet (unchanged logic)
-// ──────────────────────────────────────────────────────────────
-
-class _RateEditorSheet extends ConsumerStatefulWidget {
-  const _RateEditorSheet();
-
-  @override
-  ConsumerState<_RateEditorSheet> createState() => _RateEditorSheetState();
-}
-
-class _RateEditorSheetState extends ConsumerState<_RateEditorSheet> {
-  String _baseCurrency = 'USD';
-  String _quoteCurrency = 'CNY';
-  final _rateCtrl = TextEditingController();
-  final _sourceCtrl = TextEditingController(text: 'manual');
-  SnapshotType _snapshot = SnapshotType.realtime;
-  bool _busy = false;
-  String? _errorMsg;
-
-  @override
-  void dispose() {
-    _rateCtrl.dispose();
-    _sourceCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final base = _baseCurrency.trim().toUpperCase();
-    final quote = _quoteCurrency.trim().toUpperCase();
-    final rate = Decimal.tryParse(_rateCtrl.text.trim());
-    if (base.isEmpty ||
-        quote.isEmpty ||
-        rate == null ||
-        rate <= Decimal.zero) {
-      setState(() => _errorMsg = '请填写有效的币种与汇率（> 0）');
-      return;
-    }
-    if (base == quote) {
-      setState(() => _errorMsg = '基准与报价不能相同');
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _errorMsg = null;
-    });
-    final r = await ref.read(saveManualRateUseCaseProvider)(
-          baseCurrency: base,
-          quoteCurrency: quote,
-          rate: rate,
-          snapshotType: _snapshot,
-          source: _sourceCtrl.text.trim(),
-        );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (r.isErr) {
-      setState(() => _errorMsg = errorToMessage(r.errorOrNull!));
-      return;
-    }
-    if (!mounted) return;
-    Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            '录入汇率快照',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-              child: DictPickerField(
-                key: const Key('rate-editor-base-currency-field'),
-                type: DictType.currency,
-                value: _baseCurrency,
-                label: '基准币种',
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() => _baseCurrency = v);
-                },
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(Icons.swap_horiz, color: GwpColors.textMuted, size: 20),
-            ),
-            Expanded(
-              child: DictPickerField(
-                key: const Key('rate-editor-quote-currency-field'),
-                type: DictType.currency,
-                value: _quoteCurrency,
-                label: '报价币种',
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() => _quoteCurrency = v);
-                },
-              ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _rateCtrl,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-            ],
-            decoration: const InputDecoration(
-              labelText: '汇率',
-              helperText: '1 单位基准币可兑换的报价币数量',
-            ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<SnapshotType>(
-            initialValue: _snapshot,
-            decoration: const InputDecoration(labelText: '快照类型'),
-            dropdownColor: GwpColors.surface2,
-            items: SnapshotType.values
-                .map((t) =>
-                    DropdownMenuItem(value: t, child: Text(t.labelBilingual)))
-                .toList(),
-            onChanged: (v) => setState(() => _snapshot = v ?? _snapshot),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _sourceCtrl,
-            decoration: const InputDecoration(labelText: '来源'),
-          ),
-          if (_errorMsg != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _errorMsg!,
-              style: const TextStyle(
-                fontSize: 13,
-                color: GwpColors.negative,
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _busy ? null : _submit,
-            icon: _busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.save_outlined, size: 18),
-            label: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ──────────────────────────────────────────────────────────────
 // Watched pairs manager page

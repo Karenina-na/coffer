@@ -188,11 +188,6 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
         foregroundColor: GwpColors.textPrimary,
         elevation: 0,
         actions: [
-          IconButton(
-            tooltip: '编辑预警',
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: _fetching ? null : _openAlertEditor,
-          ),
           SyncWindowMenuButton(
             tooltip: '同步当前币对',
             enabled: !_fetching,
@@ -207,6 +202,11 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                     ),
                   )
                 : const Icon(Icons.sync),
+          ),
+          IconButton(
+            tooltip: '编辑预警',
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: _fetching ? null : _openAlertEditor,
           ),
         ],
       ),

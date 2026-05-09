@@ -9,41 +9,19 @@ import 'package:gwp/data/providers/dict_providers.dart';
 import 'package:gwp/domain/entities/dict_entry.dart';
 import 'package:gwp/domain/entities/dict_type.dart';
 import 'package:gwp/domain/entities/exchange_rate.dart';
-import 'package:gwp/domain/entities/exchange_rate_enums.dart';
 import 'package:gwp/domain/entities/watched_pair.dart';
 import 'package:gwp/domain/repositories/dict_repository.dart';
-import 'package:gwp/domain/repositories/exchange_rate_repository.dart';
 import 'package:gwp/domain/repositories/watched_pair_repository.dart';
 import 'package:gwp/domain/usecases/manage_watched_pair.dart';
-import 'package:gwp/domain/usecases/save_manual_rate.dart';
 import 'package:gwp/features/exchange_rate/presentation/exchange_rate_list_page.dart';
 import 'package:gwp/features/exchange_rate/presentation/exchange_rate_providers.dart';
 
 void main() {
-  testWidgets('汇率录入弹窗使用货币字典选择基准与报价币种', (tester) async {
-    final recorder = _RecordingSaveManualRateUseCase();
-    await _pumpPage(tester, saveManualRateUseCase: recorder);
+  testWidgets('汇率主页不再展示录入按钮', (tester) async {
+    await _pumpPage(tester);
 
-    await tester.tap(find.text('录入'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('rate-editor-base-currency-field')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('欧元（EUR）').last);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('rate-editor-quote-currency-field')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('日元（JPY）').last);
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.widgetWithText(TextField, '汇率'), '170.25');
-    await tester.tap(find.widgetWithText(FilledButton, '保存'));
-    await tester.pumpAndSettle();
-
-    expect(recorder.invocations, hasLength(1));
-    expect(recorder.invocations.single.baseCurrency, 'EUR');
-    expect(recorder.invocations.single.quoteCurrency, 'JPY');
+    expect(find.text('录入'), findsNothing);
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 
   testWidgets('添加币对弹窗使用货币字典选择基准与报价币种', (tester) async {
@@ -76,7 +54,6 @@ void main() {
 
 Future<void> _pumpPage(
   WidgetTester tester, {
-  SaveManualRateUseCase? saveManualRateUseCase,
   ManageWatchedPairUseCase? manageWatchedPairUseCase,
 }) async {
   tester.view.physicalSize = const Size(1080, 2400);
@@ -157,8 +134,6 @@ Future<void> _pumpPage(
         dictEntriesProvider(DictType.currency).overrideWith(
           (ref) => Stream.value(currencies),
         ),
-        if (saveManualRateUseCase != null)
-          saveManualRateUseCaseProvider.overrideWithValue(saveManualRateUseCase),
         if (manageWatchedPairUseCase != null)
           manageWatchedPairUseCaseProvider.overrideWithValue(manageWatchedPairUseCase),
       ],
@@ -167,67 +142,6 @@ Future<void> _pumpPage(
   );
   await tester.pump();
   await tester.pumpAndSettle();
-}
-
-class _RecordingSaveManualRateUseCase extends SaveManualRateUseCase {
-  _RecordingSaveManualRateUseCase()
-      : super(
-          rates: _NoopExchangeRateRepository(),
-          watchedPairs: _RecordingManageWatchedPairUseCase(),
-          dicts: _FakeDictRepository(),
-          idGenerator: () => 'rate-1',
-          now: () => DateTime.utc(2026, 1, 1),
-        );
-
-  final invocations = <_ManualRateInvocation>[];
-
-  @override
-  Future<Result<ExchangeRate, AppError>> call({
-    required String baseCurrency,
-    required String quoteCurrency,
-    required Decimal rate,
-    required SnapshotType snapshotType,
-    String source = 'manual',
-  }) async {
-    invocations.add(
-      _ManualRateInvocation(
-        baseCurrency: baseCurrency,
-        quoteCurrency: quoteCurrency,
-        rate: rate,
-        snapshotType: snapshotType,
-        source: source,
-      ),
-    );
-    return Ok(
-      ExchangeRate(
-        id: 'rate-1',
-        pairKey: '$baseCurrency/$quoteCurrency',
-        baseCurrency: baseCurrency,
-        quoteCurrency: quoteCurrency,
-        rate: rate,
-        asOfTime: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-        source: source,
-        snapshotType: snapshotType,
-      ),
-    );
-  }
-}
-
-class _ManualRateInvocation {
-  const _ManualRateInvocation({
-    required this.baseCurrency,
-    required this.quoteCurrency,
-    required this.rate,
-    required this.snapshotType,
-    required this.source,
-  });
-
-  final String baseCurrency;
-  final String quoteCurrency;
-  final Decimal rate;
-  final SnapshotType snapshotType;
-  final String source;
 }
 
 class _RecordingManageWatchedPairUseCase extends ManageWatchedPairUseCase {
@@ -260,47 +174,6 @@ class _PairInvocation {
 
   final String baseCurrency;
   final String quoteCurrency;
-}
-
-class _NoopExchangeRateRepository implements ExchangeRateRepository {
-  @override
-  Future<Result<ExchangeRate, AppError>> latestFor({
-    required String baseCurrency,
-    required String quoteCurrency,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<ExchangeRate?> queryForDate({
-    required String baseCurrency,
-    required String quoteCurrency,
-    required DateTime date,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<List<ExchangeRate>> querySeriesForPair({
-    required String pairKey,
-    required DateTime since,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<ExchangeRate, AppError>> upsert(ExchangeRate rate) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Stream<List<ExchangeRate>> watchAll({int limit = 200}) => const Stream.empty();
-
-  @override
-  Stream<List<ExchangeRate>> watchSeriesForPair({
-    required String pairKey,
-    required DateTime since,
-  }) => const Stream.empty();
 }
 
 class _NoopWatchedPairRepository implements WatchedPairRepository {
