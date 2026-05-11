@@ -74,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -121,6 +121,7 @@ class AppDatabase extends _$AppDatabase {
         'ON search_history_entries (unique_key)',
       );
       await _seedBuiltinDictEntries(this);
+      await seedBuiltinChannels(this);
     },
     onUpgrade: (m, from, to) async {
       await m.database.transaction(() async {
@@ -422,6 +423,95 @@ class AppDatabase extends _$AppDatabase {
             "AND map_lon = 0.0 AND map_lat = 0.0",
           );
         }
+        if (from < 22) {
+          await customStatement(
+            'ALTER TABLE dict_entries ADD COLUMN anchor_lon REAL',
+          );
+          await customStatement(
+            'ALTER TABLE dict_entries ADD COLUMN anchor_lat REAL',
+          );
+          await _backfillRegionAnchors(this);
+        }
+        if (from < 23) {
+          final now23 =
+              DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+          await customStatement(
+            "UPDATE channels SET transfer_protocol = 'FPS', updated_at = $now23 "
+            "WHERE transfer_protocol = 'UK_FPS'",
+          );
+          await customStatement(
+            "DELETE FROM dict_entries "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'UK_FPS'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = 'SWIFT', name_en = 'SWIFT' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'SWIFT'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = 'ACH', name_en = 'ACH' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'ACH'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = 'Faster Payment System', name_en = 'Faster Payment System' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'FPS'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = 'CNAPS', name_en = 'CNAPS' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'CNAPS'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = 'SEPA', name_en = 'SEPA' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'SEPA'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = 'CHATS', name_en = 'CHATS' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'CHATS'",
+          );
+          await _seedBuiltinDictEntries(this);
+          await seedBuiltinChannels(this);
+        }
+        if (from < 24) {
+          await customStatement(
+            'ALTER TABLE channels ADD COLUMN is_builtin INTEGER NOT NULL DEFAULT 0',
+          );
+          await customStatement(
+            "UPDATE channels SET is_builtin = 1 "
+            "WHERE id IN ("
+            "'builtin_ch_swift',"
+            "'builtin_ch_hk_fps',"
+            "'builtin_ch_gb_fps',"
+            "'builtin_ch_hk_chats',"
+            "'builtin_ch_cn_cny',"
+            "'builtin_ch_us_ach'"
+            ")",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = '环球银行金融电信协会', name_en = 'Society for Worldwide Interbank Financial Telecommunication' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'SWIFT'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = '美国自动清算所', name_en = 'Automated Clearing House' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'ACH'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = '快速支付系统', name_en = 'Faster Payment System' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'FPS'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = '中国现代化支付系统', name_en = 'China National Advanced Payment System' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'CNAPS'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = '单一欧元支付区', name_en = 'Single Euro Payments Area' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'SEPA'",
+          );
+          await customStatement(
+            "UPDATE dict_entries SET name = '港元即时支付结算系统', name_en = 'Clearing House Automated Transfer System' "
+            "WHERE type = 'TRANSFER_PROTOCOL' AND code = 'CHATS'",
+          );
+          await _seedBuiltinDictEntries(this);
+          await seedBuiltinChannels(this);
+        }
       }); // end transaction
     },
     beforeOpen: (details) async {
@@ -455,13 +545,12 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
 
   // 转账协议：对齐 TransferProtocol enum。
   await seed('TRANSFER_PROTOCOL', const [
-    ['SWIFT', '环球银行电讯', 'SWIFT'],
-    ['ACH', '美国自动清算', 'ACH'],
-    ['FPS', '香港快速支付', 'HK FPS'],
-    ['CNAPS', '人民币跨行支付', 'CNAPS'],
-    ['UK_FPS', '英国快速支付', 'UK Faster Payments'],
-    ['SEPA', '欧元区单一支付', 'SEPA'],
-    ['CHATS', '香港美元结算', 'CHATS'],
+    ['SWIFT', '环球银行金融电信协会', 'Society for Worldwide Interbank Financial Telecommunication'],
+    ['ACH', '美国自动清算所', 'Automated Clearing House'],
+    ['FPS', '快速支付系统', 'Faster Payment System'],
+    ['CNAPS', '中国现代化支付系统', 'China National Advanced Payment System'],
+    ['SEPA', '单一欧元支付区', 'Single Euro Payments Area'],
+    ['CHATS', '港元即时支付结算系统', 'Clearing House Automated Transfer System'],
   ]);
 
   // 主权地区：覆盖常见账户归属地；ISO 3166-1 alpha-2 + 虚拟区域代码。
@@ -474,8 +563,9 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
     ['CRYPTO', '加密', 'Crypto'],
   ]);
 
-  // 回填 UI 元数据（onCreate 走这里；onUpgrade from<15 走 _backfillRegionMeta）
+  // 回填地理元数据与地图锚点（onCreate 走这里；onUpgrade 分阶段回填）。
   await _backfillRegionMeta(db);
+  await _backfillRegionAnchors(db);
 
   // 货币：ISO 4217 三位代码。
   await seed('CURRENCY', const [
@@ -487,18 +577,90 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
   ]);
 }
 
-/// 回填内置主权地区的 UI 元数据（flag_emoji / continent / color_hex / map_lon / map_lat）。
+Future<void> seedBuiltinChannels(AppDatabase db) async {
+  final now = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+  final entries = <({
+    String id,
+    String name,
+    String protocol,
+    String? limitCurrency,
+    String? regionRule,
+  })>[
+    (
+      id: 'builtin_ch_swift',
+      name: '环球银行金融电信协会通道',
+      protocol: 'SWIFT',
+      limitCurrency: null,
+      regionRule: null,
+    ),
+    (
+      id: 'builtin_ch_hk_fps',
+      name: '香港快速支付系统通道',
+      protocol: 'FPS',
+      limitCurrency: 'HKD',
+      regionRule: '{"allowedRegions":["HK"]}',
+    ),
+    (
+      id: 'builtin_ch_gb_fps',
+      name: '英国快速支付系统通道',
+      protocol: 'FPS',
+      limitCurrency: 'GBP',
+      regionRule: '{"allowedRegions":["GB"]}',
+    ),
+    (
+      id: 'builtin_ch_hk_chats',
+      name: '香港即时支付结算系统通道',
+      protocol: 'CHATS',
+      limitCurrency: 'USD',
+      regionRule: '{"allowedRegions":["HK"]}',
+    ),
+    (
+      id: 'builtin_ch_cn_cny',
+      name: '中国现代化支付系统通道',
+      protocol: 'CNAPS',
+      limitCurrency: 'CNY',
+      regionRule: '{"allowedRegions":["CN"]}',
+    ),
+    (
+      id: 'builtin_ch_us_ach',
+      name: '美国自动清算所通道',
+      protocol: 'ACH',
+      limitCurrency: 'USD',
+      regionRule: '{"allowedRegions":["US"]}',
+    ),
+  ];
+
+  for (final entry in entries) {
+    await db.customStatement(
+      'INSERT OR IGNORE INTO channels '
+      '(id, name, transfer_protocol, is_builtin, sovereignty_region_rule, limit_currency, status, created_at, updated_at) '
+      'VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)',
+      [
+        entry.id,
+        entry.name,
+        entry.protocol,
+        entry.regionRule,
+        entry.limitCurrency,
+        'ENABLED',
+        now,
+        now,
+      ],
+    );
+  }
+}
+
+/// 回填内置主权地区的地理元数据（flag_emoji / continent / color_hex / map_lon / map_lat）。
 ///
 /// 使用 `UPDATE ... WHERE code = ? AND type = 'SOVEREIGNTY_REGION'`，
 /// 只更新 NULL 列，避免覆盖用户已手动编辑的值。
 Future<void> _backfillRegionMeta(AppDatabase db) async {
   // [code, flag, continent, colorHex, lon, lat]
   const regions = [
-    ['HK', '🇭🇰', '亚太', '0xFFF59E0B', 114.0, 22.0],
-    ['CN', '🇨🇳', '亚太', '0xFFEF4444', 116.0, 40.0],
-    ['US', '🇺🇸', '美洲', '0xFF64748B', -100.0, 40.0],
-    ['SG', '🇸🇬', '亚太', '0xFF22C55E', 104.0, 1.0],
-    ['GB', '🇬🇧', '欧洲', '0xFFA78BFA', 0.0, 51.0],
+    ['HK', '🇭🇰', '亚太', '0xFFF59E0B', 114.1694, 22.3193],
+    ['CN', '🇨🇳', '亚太', '0xFFEF4444', 104.1954, 35.8617],
+    ['US', '🇺🇸', '美洲', '0xFF64748B', -98.5795, 39.8283],
+    ['SG', '🇸🇬', '亚太', '0xFF22C55E', 103.8198, 1.3521],
+    ['GB', '🇬🇧', '欧洲', '0xFFA78BFA', -3.4360, 55.3781],
     ['CRYPTO', '🔐', '数字', '0xFF38BDF8', 18.0, -82.0],
   ];
   for (final r in regions) {
@@ -511,6 +673,39 @@ Future<void> _backfillRegionMeta(AppDatabase db) async {
       "  map_lat = COALESCE(map_lat, ?) "
       "WHERE type = 'SOVEREIGNTY_REGION' AND code = ?",
       [r[1], r[2], r[3], r[4], r[5], r[0]],
+    );
+  }
+}
+
+/// 回填地区的地图展示锚点（优先用于金融中心点）。
+///
+/// 仅在 `anchor_lon/anchor_lat` 为空时写入，避免覆盖用户手调结果。
+Future<void> _backfillRegionAnchors(AppDatabase db) async {
+  // [code, anchorLon, anchorLat]
+  const anchors = [
+    ['HK', 114.1694, 22.3193],
+    ['CN', 121.4737, 31.2304],
+    ['US', -74.0060, 40.7128],
+    ['SG', 103.8198, 1.3521],
+    ['GB', -0.1276, 51.5072],
+    ['CA', -79.3832, 43.6532],
+    ['DE', 8.6821, 50.1109],
+    ['FR', 2.3522, 48.8566],
+    ['IT', 9.1900, 45.4642],
+    ['JP', 139.6917, 35.6895],
+    ['KR', 126.9780, 37.5665],
+    ['TW', 121.5654, 25.0330],
+    ['MY', 101.6869, 3.1390],
+    ['AU', 151.2093, -33.8688],
+    ['CRYPTO', 18.0, -82.0],
+  ];
+  for (final r in anchors) {
+    await db.customStatement(
+      'UPDATE dict_entries SET '
+      "  anchor_lon = COALESCE(anchor_lon, ?), "
+      "  anchor_lat = COALESCE(anchor_lat, ?) "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = ?",
+      [r[1], r[2], r[0]],
     );
   }
 }

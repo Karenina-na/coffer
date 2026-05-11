@@ -55,6 +55,8 @@ class DriftDictRepository implements DictRepository {
     String? colorHex,
     double? mapLon,
     double? mapLat,
+    double? anchorLon,
+    double? anchorLat,
     String? parentRegion,
   }) async {
     final normalized = code.trim().toUpperCase();
@@ -88,6 +90,8 @@ class DriftDictRepository implements DictRepository {
           colorHex: Value(colorHex?.trim().isEmpty == true ? null : colorHex?.trim()),
           mapLon: Value(mapLon),
           mapLat: Value(mapLat),
+          anchorLon: Value(anchorLon),
+          anchorLat: Value(anchorLat),
           parentRegion: Value(parentRegion?.trim().isEmpty == true ? null : parentRegion?.trim()),
         ),
       );
@@ -106,6 +110,8 @@ class DriftDictRepository implements DictRepository {
         colorHex: colorHex?.trim().isEmpty == true ? null : colorHex?.trim(),
         mapLon: mapLon,
         mapLat: mapLat,
+        anchorLon: anchorLon,
+        anchorLat: anchorLat,
         parentRegion: parentRegion?.trim().isEmpty == true ? null : parentRegion?.trim(),
       ));
     } catch (e) {
@@ -124,6 +130,8 @@ class DriftDictRepository implements DictRepository {
     Object? colorHex = const DictFieldAbsent(),
     Object? mapLon = const DictFieldAbsent(),
     Object? mapLat = const DictFieldAbsent(),
+    Object? anchorLon = const DictFieldAbsent(),
+    Object? anchorLat = const DictFieldAbsent(),
     Object? parentRegion = const DictFieldAbsent(),
   }) async {
     try {
@@ -153,6 +161,8 @@ class DriftDictRepository implements DictRepository {
         colorHex: toStringValue(colorHex),
         mapLon: toDoubleValue(mapLon),
         mapLat: toDoubleValue(mapLat),
+        anchorLon: toDoubleValue(anchorLon),
+        anchorLat: toDoubleValue(anchorLat),
         parentRegion: toStringValue(parentRegion),
       );
       final n = await _dao.updateById(id, patch);

@@ -378,120 +378,75 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     }
   }
 
-  Future<void> addChannel({
-    required String id,
-    required String name,
-    required String protocol,
-    required ChannelStatus status,
-    required String limitCurrency,
+  Future<void> linkBuiltinChannel({
+    required String key,
+    required String channelId,
     required List<String> accountKeys,
-    String? feeRate,
-    String? fixedFee,
   }) async {
-    await ctx.collect(
-      deps.saveChannel(
-        Channel(
-          id: id,
-          name: name,
-          transferProtocol: protocol,
-          feeRate: feeRate == null ? null : Decimal.parse(feeRate),
-          fixedFee: fixedFee == null ? null : Decimal.parse(fixedFee),
-          limitCurrency: limitCurrency,
-          singleLimit: Decimal.parse('50000'),
-          dailyLimit: Decimal.parse('200000'),
-          status: status,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      ),
-      (_) {
-        ctx.channelIds[protocol] = id;
-        channels++;
-      },
-      'channel $protocol',
-    );
+    ctx.channelIds[key] = channelId;
     for (final accountKey in accountKeys) {
       final accountId = ctx.accountIds[accountKey];
       if (accountId == null) continue;
       final link = await deps.linkAccountChannel.link(
         accountId: accountId,
-        channelId: id,
+        channelId: channelId,
       );
       link.when(
         ok: (_) => channelLinks++,
-        err: (e) => ctx.errors.add('channel-link $protocol/$accountKey: ${e.message}'),
+        err: (e) => ctx.errors.add('channel-link $key/$accountKey: ${e.message}'),
       );
     }
   }
 
-  await addChannel(
-    id: deps.idGen(),
-    name: '全球转账测试通道',
-    protocol: 'SWIFT',
-    status: ChannelStatus.enabled,
-    limitCurrency: 'USD',
+  await linkBuiltinChannel(
+    key: 'SWIFT',
+    channelId: 'builtin_ch_swift',
     accountKeys: const ['cn_bank', 'us_broker', 'us_custody'],
-    feeRate: '0.0012',
-    fixedFee: '12',
   );
-  await addChannel(
-    id: deps.idGen(),
-    name: '人民币跨行支付',
-    protocol: 'CNAPS',
-    status: ChannelStatus.enabled,
-    limitCurrency: 'CNY',
+  await linkBuiltinChannel(
+    key: 'CNAPS',
+    channelId: 'builtin_ch_cn_cny',
     accountKeys: const ['cn_bank', 'cn_payment'],
   );
-  await addChannel(
-    id: deps.idGen(),
-    name: '美国 ACH',
-    protocol: 'ACH',
-    status: ChannelStatus.enabled,
-    limitCurrency: 'USD',
+  await linkBuiltinChannel(
+    key: 'ACH',
+    channelId: 'builtin_ch_us_ach',
     accountKeys: const ['us_broker', 'us_custody'],
   );
-  await addChannel(
-    id: deps.idGen(),
-    name: '欧元区单一支付',
-    protocol: 'SEPA',
-    status: ChannelStatus.maintenance,
-    limitCurrency: 'EUR',
-    accountKeys: const ['us_broker'],
-  );
-  await addChannel(
-    id: deps.idGen(),
-    name: '香港快速支付 FPS',
-    protocol: 'FPS',
-    status: ChannelStatus.disabled,
-    limitCurrency: 'HKD',
+  await linkBuiltinChannel(
+    key: 'FPS',
+    channelId: 'builtin_ch_hk_fps',
     accountKeys: const ['cn_payment'],
   );
-  await addChannel(
-    id: deps.idGen(),
-    name: '香港美元结算 CHATS',
-    protocol: 'CHATS',
-    status: ChannelStatus.enabled,
-    limitCurrency: 'USD',
+  await linkBuiltinChannel(
+    key: 'CHATS',
+    channelId: 'builtin_ch_hk_chats',
     accountKeys: const ['hk_bank_dormant', 'us_broker'],
-    feeRate: '0.0005',
   );
-  await addChannel(
-    id: deps.idGen(),
-    name: '英国快速支付',
-    protocol: 'UK_FPS',
-    status: ChannelStatus.enabled,
-    limitCurrency: 'USD',
-    accountKeys: const ['us_broker', 'us_custody', 'sg_broker_inactive'],
+  await ctx.collect(
+    deps.saveChannel(
+      Channel(
+        id: deps.idGen(),
+        name: 'SEPA',
+        transferProtocol: 'SEPA',
+        limitCurrency: 'EUR',
+        dailyLimit: Decimal.parse('200000'),
+        singleLimit: Decimal.parse('50000'),
+        status: ChannelStatus.enabled,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ),
+    (Channel channel) {
+      ctx.channelIds['SEPA'] = channel.id;
+      channels++;
+    },
+    'channel SEPA',
   );
-  await addChannel(
-    id: deps.idGen(),
-    name: '欧元区备用 SEPA',
-    protocol: 'SEPA',
-    status: ChannelStatus.enabled,
-    limitCurrency: 'EUR',
+  await linkBuiltinChannel(
+    key: 'SEPA',
+    channelId: ctx.channelIds['SEPA'] ?? 'missing',
     accountKeys: const ['eu_bank_closed', 'us_broker'],
-    feeRate: '0.0025',
-    fixedFee: '25',
   );
 
   Future<void> addPair({
@@ -807,7 +762,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       refs: {
         'sourceAccount': ctx.accountIds['cn_bank'] ?? 'missing',
         'targetAccount': ctx.accountIds['cn_payment'] ?? 'missing',
-        'channel': ctx.channelIds['CNAPS'] ?? 'missing',
+        'channel': ctx.channelIds['CNAPS'] ?? 'builtin_ch_cn_cny',
       },
       ackRequirement: AckRequirement.notApplicable,
       createdAt: now,

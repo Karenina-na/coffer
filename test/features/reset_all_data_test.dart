@@ -221,6 +221,10 @@ void main() {
     expect(builtinBefore, greaterThan(0));
     expect(await _countCustomDictEntries(db), 1);
     for (final t in _clearedTables) {
+      if (t == 'channels') {
+        expect(await _count(db, t), 7, reason: '前置插入 channels 应为 6 条内置 + 1 条测试数据');
+        continue;
+      }
       expect(await _count(db, t), 1, reason: '前置插入 $t 应为 1 行');
     }
 
@@ -232,6 +236,10 @@ void main() {
     expect(r.isOk, isTrue);
 
     for (final t in _clearedTables) {
+      if (t == 'channels') {
+        expect(await _count(db, t), 6, reason: 'reset 后应重建 6 条内置通道');
+        continue;
+      }
       expect(await _count(db, t), 0, reason: 'reset 后 $t 应清空');
     }
     expect(await _countCustomDictEntries(db), 0);
@@ -251,6 +259,10 @@ void main() {
         code: 'SWIFT',
       ),
       isTrue,
+    );
+    expect(
+      await _count(db, 'channels'),
+      6,
     );
     expect(
       await _hasBuiltinDict(
@@ -289,6 +301,10 @@ void main() {
     final r = await uc();
     expect(r.isOk, isTrue);
     for (final t in _clearedTables) {
+      if (t == 'channels') {
+        expect(await _count(db, t), 6);
+        continue;
+      }
       expect(await _count(db, t), 0);
     }
     expect(await _countCustomDictEntries(db), 0);

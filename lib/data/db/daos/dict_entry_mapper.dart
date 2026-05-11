@@ -20,5 +20,7 @@ DictEntry dictEntryFromRow(DictEntryRow row) => DictEntry(
       colorHex: row.colorHex,
       mapLon: row.mapLon,
       mapLat: row.mapLat,
+      anchorLon: row.anchorLon,
+      anchorLat: row.anchorLat,
       parentRegion: row.parentRegion,
     );

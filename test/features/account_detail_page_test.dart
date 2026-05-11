@@ -95,8 +95,9 @@ Future<void> _pumpPage(
   );
   final channel = Channel(
     id: 'ch-1',
-    name: 'SWIFT Main',
+    name: '环球银行金融电信协会通道',
     transferProtocol: 'SWIFT',
+    isBuiltin: true,
     status: ChannelStatus.enabled,
     createdAt: now,
     updatedAt: now,
@@ -118,6 +119,18 @@ Future<void> _pumpPage(
           updatedAt: now,
         ),
       ];
+  final protocolEntries = [
+    DictEntry(
+      id: 101,
+      type: DictType.transferProtocol,
+      code: 'SWIFT',
+      name: '环球银行金融电信协会',
+      nameEn: 'Society for Worldwide Interbank Financial Telecommunication',
+      isBuiltin: true,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  ];
 
   await tester.pumpWidget(
     ProviderScope(
@@ -144,6 +157,9 @@ Future<void> _pumpPage(
         dictEntriesProvider(DictType.currency).overrideWith(
           (ref) => Stream.value(currencyEntries),
         ),
+        dictEntriesProvider(DictType.transferProtocol).overrideWith(
+          (ref) => Stream.value(protocolEntries),
+        ),
         if (saveConfigUseCase != null)
           saveAccountChannelConfigUseCaseProvider.overrideWithValue(saveConfigUseCase),
       ],
@@ -165,11 +181,13 @@ Future<void> _scrollToText(WidgetTester tester, String text) async {
 }
 
 void main() {
-  testWidgets('账户详情页通道卡片点击信息区可进入通道详情', (tester) async {
+  testWidgets('账户详情页通道卡片显示内置标记并可进入通道详情', (tester) async {
     await _pumpPage(tester);
 
-    await _scrollToText(tester, 'SWIFT Main');
-    await tester.tap(find.text('SWIFT Main'));
+    await _scrollToText(tester, '环球银行金融电信协会通道');
+    expect(find.text('内置'), findsOneWidget);
+    expect(find.textContaining('环球银行金融电信协会'), findsWidgets);
+    await tester.tap(find.text('环球银行金融电信协会通道'));
     await tester.pumpAndSettle();
 
     expect(find.text('CHANNEL:ch-1'), findsOneWidget);
@@ -458,7 +476,7 @@ class _NoopChannelRepository implements ChannelRepository {
 
 class _FakeDictRepository implements DictRepository {
   @override
-  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, String? parentRegion}) {
+  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, double? anchorLon, double? anchorLat, String? parentRegion}) {
     throw UnimplementedError();
   }
 
@@ -488,7 +506,7 @@ class _FakeDictRepository implements DictRepository {
   Future<List<DictEntry>> listByType(DictType type) async => const [];
 
   @override
-  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? parentRegion = const _Absent()}) {
+  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? anchorLon = const _Absent(), Object? anchorLat = const _Absent(), Object? parentRegion = const _Absent()}) {
     throw UnimplementedError();
   }
 

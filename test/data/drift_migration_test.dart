@@ -72,9 +72,52 @@ void main() {
     }
   });
 
+  test('onCreate 预置新的内置转账协议集合', () async {
+    final rows = await db.customSelect(
+      "SELECT code, name, name_en, is_builtin FROM dict_entries WHERE type = 'TRANSFER_PROTOCOL' ORDER BY code",
+    ).get();
+    expect(
+      rows
+          .map(
+            (r) => '${r.read<String>('code')}:${r.read<String>('name')}:${r.read<String>('name_en')}:${r.read<int>('is_builtin')}',
+          )
+          .toList(),
+      [
+        'ACH:美国自动清算所:Automated Clearing House:1',
+        'CHATS:港元即时支付结算系统:Clearing House Automated Transfer System:1',
+        'CNAPS:中国现代化支付系统:China National Advanced Payment System:1',
+        'FPS:快速支付系统:Faster Payment System:1',
+        'SEPA:单一欧元支付区:Single Euro Payments Area:1',
+        'SWIFT:环球银行金融电信协会:Society for Worldwide Interbank Financial Telecommunication:1',
+      ],
+    );
+  });
+
+  test('onCreate 预置 6 条全局内置通道', () async {
+    final rows = await db.customSelect(
+      "SELECT id, name, transfer_protocol, is_builtin FROM channels ORDER BY id",
+    ).get();
+    expect(rows, hasLength(6));
+    expect(
+      rows
+          .map(
+            (r) => '${r.read<String>('id')}:${r.read<String>('name')}:${r.read<String>('transfer_protocol')}:${r.read<int>('is_builtin')}',
+          )
+          .toList(),
+      [
+        'builtin_ch_cn_cny:中国现代化支付系统通道:CNAPS:1',
+        'builtin_ch_gb_fps:英国快速支付系统通道:FPS:1',
+        'builtin_ch_hk_chats:香港即时支付结算系统通道:CHATS:1',
+        'builtin_ch_hk_fps:香港快速支付系统通道:FPS:1',
+        'builtin_ch_swift:环球银行金融电信协会通道:SWIFT:1',
+        'builtin_ch_us_ach:美国自动清算所通道:ACH:1',
+      ],
+    );
+  });
+
   test('onCreate 为内置 CRYPTO 写入南极坐标', () async {
     final rows = await db.customSelect(
-      "SELECT continent, map_lon, map_lat FROM dict_entries "
+      "SELECT continent, map_lon, map_lat, anchor_lon, anchor_lat FROM dict_entries "
       "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
     ).get();
     expect(rows, hasLength(1));
@@ -82,6 +125,8 @@ void main() {
     expect(row.read<String>('continent'), '数字');
     expect(row.read<double>('map_lon'), 18.0);
     expect(row.read<double>('map_lat'), -82.0);
+    expect(row.read<double>('anchor_lon'), 18.0);
+    expect(row.read<double>('anchor_lat'), -82.0);
   });
 
   test('连接打开后启用 foreign_keys，非法 account_channels 写入会失败', () async {
@@ -338,5 +383,41 @@ void main() {
     final row = rows.single;
     expect(row.read<double>('map_lon'), 44.0);
     expect(row.read<double>('map_lat'), -70.0);
+  });
+
+  test('v21→v22 仅回填缺失的锚点，不覆盖已有值', () async {
+    await db.customSelect('SELECT 1').get();
+    await db.customStatement(
+      "UPDATE dict_entries SET anchor_lon = NULL, anchor_lat = NULL "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'GB'",
+    );
+    await db.customStatement(
+      "UPDATE dict_entries SET anchor_lon = 8.5, anchor_lat = 50.1 "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'US'",
+    );
+
+    await db.customStatement(
+      "UPDATE dict_entries SET anchor_lon = COALESCE(anchor_lon, -0.1276), "
+      "anchor_lat = COALESCE(anchor_lat, 51.5072) "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'GB'",
+    );
+    await db.customStatement(
+      "UPDATE dict_entries SET anchor_lon = COALESCE(anchor_lon, -74.0060), "
+      "anchor_lat = COALESCE(anchor_lat, 40.7128) "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'US'",
+    );
+
+    final rows = await db.customSelect(
+      "SELECT code, anchor_lon, anchor_lat FROM dict_entries "
+      "WHERE type = 'SOVEREIGNTY_REGION' AND code IN ('GB','US') "
+      "ORDER BY code",
+    ).get();
+    expect(rows, hasLength(2));
+    expect(rows[0].read<String>('code'), 'GB');
+    expect(rows[0].read<double>('anchor_lon'), -0.1276);
+    expect(rows[0].read<double>('anchor_lat'), 51.5072);
+    expect(rows[1].read<String>('code'), 'US');
+    expect(rows[1].read<double>('anchor_lon'), 8.5);
+    expect(rows[1].read<double>('anchor_lat'), 50.1);
   });
 }

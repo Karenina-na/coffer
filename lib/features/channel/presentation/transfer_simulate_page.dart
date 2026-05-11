@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
+import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/protocol_display.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
@@ -54,10 +56,8 @@ const _protocolColors = <String, Color>{
   'ACH': Color(0xFF22C55E),
   'SEPA': Color(0xFF38BDF8),
   'CNAPS': Color(0xFFEF4444),
-  'RTGS': Color(0xFFA78BFA),
   'FPS': Color(0xFFF59E0B),
-  'ONCHAIN': Color(0xFFEC4899),
-  'INTERNAL': Color(0xFF94A3B8),
+  'CHATS': Color(0xFF14B8A6),
 };
 
 const _protocolIcons = <String, IconData>{
@@ -65,10 +65,8 @@ const _protocolIcons = <String, IconData>{
   'ACH': Icons.account_balance_outlined,
   'SEPA': Icons.euro_outlined,
   'CNAPS': Icons.currency_yuan_outlined,
-  'RTGS': Icons.speed_outlined,
   'FPS': Icons.bolt_outlined,
-  'ONCHAIN': Icons.link_outlined,
-  'INTERNAL': Icons.swap_horiz_outlined,
+  'CHATS': Icons.account_balance_wallet_outlined,
 };
 
 /// Body-only widget for embedding inside a parent Scaffold (e.g. HoldingsPage).
@@ -182,6 +180,12 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     final assetsAsync = ref.watch(assetListProvider);
     final linksAsync = ref.watch(accountChannelListProvider);
     final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+    final protocolEntries =
+        ref.watch(dictEntriesProvider(DictType.transferProtocol)).value ??
+        const [];
+    final ProtocolIndex protocolIndex = {
+      for (final entry in protocolEntries) entry.code: entry,
+    };
     return accountsAsync.when(
       loading: () => const Center(
         child: CircularProgressIndicator(color: GwpColors.actionPrimary),
@@ -476,12 +480,13 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
 
             // ── Route results ──
             if (!_compareMode && _route != null)
-              _RouteCard(route: _route!, regionIndex: regionIndex),
+              _RouteCard(route: _route!, regionIndex: regionIndex, protocolIndex: protocolIndex),
             if (_compareMode)
               _CompareResult(
                 feeRoute: _feeRoute,
                 hopsRoute: _hopsRoute,
                 regionIndex: regionIndex,
+                protocolIndex: protocolIndex,
               ),
 
             const SizedBox(height: 80),
@@ -1167,11 +1172,13 @@ class _CompareResult extends StatelessWidget {
     required this.feeRoute,
     required this.hopsRoute,
     required this.regionIndex,
+    required this.protocolIndex,
   });
 
   final TransferRoute? feeRoute;
   final TransferRoute? hopsRoute;
   final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -1223,6 +1230,7 @@ class _CompareResult extends StatelessWidget {
             route: feeRoute!,
             compareBadge: '两种目标一致',
             regionIndex: regionIndex,
+            protocolIndex: protocolIndex,
           )
         else ...[
           if (feeRoute != null)
@@ -1230,6 +1238,7 @@ class _CompareResult extends StatelessWidget {
               route: feeRoute!,
               compareBadge: '费用最低',
               regionIndex: regionIndex,
+              protocolIndex: protocolIndex,
             ),
           if (hopsRoute != null) ...[
             const SizedBox(height: GwpSpacing.md),
@@ -1237,6 +1246,7 @@ class _CompareResult extends StatelessWidget {
               route: hopsRoute!,
               compareBadge: '跳数最少',
               regionIndex: regionIndex,
+              protocolIndex: protocolIndex,
             ),
           ],
         ],
@@ -1378,11 +1388,13 @@ class _RouteCard extends StatelessWidget {
   const _RouteCard({
     required this.route,
     required this.regionIndex,
+    required this.protocolIndex,
     this.compareBadge,
   });
 
   final TransferRoute route;
   final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
   final String? compareBadge;
 
   @override
@@ -1464,7 +1476,11 @@ class _RouteCard extends StatelessWidget {
               children: [
                 // Visual timeline
                 if (route.legs.isNotEmpty) ...[
-                  _VisualTimeline(route: route, regionIndex: regionIndex),
+                  _VisualTimeline(
+                    route: route,
+                    regionIndex: regionIndex,
+                    protocolIndex: protocolIndex,
+                  ),
                   const SizedBox(height: GwpSpacing.md),
                 ],
 
@@ -1549,9 +1565,14 @@ class _RouteCard extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _VisualTimeline extends StatelessWidget {
-  const _VisualTimeline({required this.route, required this.regionIndex});
+  const _VisualTimeline({
+    required this.route,
+    required this.regionIndex,
+    required this.protocolIndex,
+  });
   final TransferRoute route;
   final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -1660,6 +1681,8 @@ class _VisualTimeline extends StatelessWidget {
         GwpColors.actionPrimary;
     final protocolIcon =
         _protocolIcons[leg.channel.transferProtocol] ?? Icons.swap_horiz;
+    final protocolName =
+        protocolDisplayName(protocolIndex, leg.channel.transferProtocol);
     return Padding(
       padding: const EdgeInsets.only(left: 0),
       child: Row(
@@ -1703,15 +1726,25 @@ class _VisualTimeline extends StatelessWidget {
                   Icon(protocolIcon, size: 14, color: protocolColor),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      '${leg.channel.name} · ${leg.channel.transferProtocol}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: protocolColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${leg.channel.name} · $protocolName',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: protocolColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (leg.channel.isBuiltin) ...[
+                          const SizedBox(width: 6),
+                          const BuiltinBadge(),
+                        ],
+                      ],
                     ),
                   ),
                   Text(

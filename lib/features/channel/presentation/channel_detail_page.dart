@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/protocol_display.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
+import '../../../domain/entities/dict_entry.dart';
+import '../../../domain/entities/dict_type.dart';
 import '../../account/presentation/account_providers.dart';
 import 'channel_form.dart';
 import 'channel_providers.dart';
@@ -64,6 +69,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   @override
   Widget build(BuildContext context) {
     final c = widget.channel;
+    final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
+    final ProtocolIndex protocolIndex = {
+      for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
+    };
     if (_editing) {
       return ChannelForm(
         initial: c,
@@ -73,7 +82,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _headerCard(context, c),
+        _headerCard(context, c, protocolIndex),
         const SizedBox(height: 16),
         _ruleCard(context, c),
         const SizedBox(height: 16),
@@ -103,20 +112,31 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     );
   }
 
-  Widget _headerCard(BuildContext context, Channel c) {
+  Widget _headerCard(
+    BuildContext context,
+    Channel c,
+    ProtocolIndex protocolIndex,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              c.name,
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    c.name,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                if (c.isBuiltin) const BuiltinBadge(),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
-              '${c.transferProtocol} · ${c.status.labelZh}',
+              '${protocolDisplayLabel(protocolIndex, c.transferProtocol)} · ${c.status.labelZh}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 4),

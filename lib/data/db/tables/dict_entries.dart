@@ -36,10 +36,14 @@ class DictEntries extends Table {
   TextColumn get continent => text().nullable()();
   /// 强调色十六进制字符串，如 `'0xFFEF4444'`（与 `Color(0xFFEF4444)` 对应）。
   TextColumn get colorHex => text().named('color_hex').nullable()();
-  /// 地图经度（-180 ~ 180）。
+  /// 地理经度（-180 ~ 180），表示国家/地区的真实地理参考位置。
   RealColumn get mapLon => real().named('map_lon').nullable()();
-  /// 地图纬度（-90 ~ 90）。
+  /// 地理纬度（-90 ~ 90），表示国家/地区的真实地理参考位置。
   RealColumn get mapLat => real().named('map_lat').nullable()();
+  /// 地图锚点经度（-180 ~ 180），默认用于金融中心点展示。
+  RealColumn get anchorLon => real().named('anchor_lon').nullable()();
+  /// 地图锚点纬度（-90 ~ 90），默认用于金融中心点展示。
+  RealColumn get anchorLat => real().named('anchor_lat').nullable()();
 
   /// 所属上级区域 code（如 `DE` 的 `parent_region = 'EU'`）。
   /// 为 `null` 表示顶级区域。UI 展示为「区域 | 国家」层级格式。

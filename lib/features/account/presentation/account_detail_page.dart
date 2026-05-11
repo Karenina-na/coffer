@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
 import '../../../core/valuation/valuation_currency_provider.dart';
+import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_donut_chart.dart';
 import '../../../core/ui/design_tokens.dart';
@@ -15,6 +16,7 @@ import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/protocol_display.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
@@ -23,11 +25,13 @@ import '../../../domain/entities/asset_price_history_point.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
+import '../../../domain/entities/dict_entry.dart';
 import '../../../domain/entities/dict_type.dart';
 import '../../../core/errors.dart';
 import '../../../core/result.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/sync_window_menu_button.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../../domain/usecases/refresh_asset_price.dart';
 import '../../../domain/valuation/asset_valuator.dart';
@@ -72,10 +76,8 @@ const _protocolColors = <String, Color>{
   'ACH': Color(0xFF22C55E),
   'SEPA': Color(0xFF38BDF8),
   'CNAPS': Color(0xFFEF4444),
-  'RTGS': Color(0xFFA78BFA),
   'FPS': Color(0xFFF59E0B),
-  'ONCHAIN': Color(0xFFEC4899),
-  'INTERNAL': Color(0xFF94A3B8),
+  'CHATS': Color(0xFF14B8A6),
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -1808,6 +1810,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
     final linksAsync =
         ref.watch(accountChannelsByAccountProvider(accountId));
     final channelsAsync = ref.watch(channelListProvider);
+    final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
 
     return _SectionCard(
       icon: Icons.swap_horiz_outlined,
@@ -1832,6 +1835,9 @@ class _ChannelNetworkSection extends ConsumerWidget {
             style: const TextStyle(color: GwpColors.negative, fontSize: 12),
           ),
           data: (channels) {
+            final ProtocolIndex protocolIndex = {
+              for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
+            };
             final byId = {for (final c in channels) c.id: c};
             final attached = [
               for (final l in links)
@@ -1852,6 +1858,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
                       channel: attached[i].$1,
                       link: attached[i].$2,
                       accountId: accountId,
+                      protocolIndex: protocolIndex,
                     ),
                     if (i < attached.length - 1)
                       const SizedBox(height: GwpSpacing.sm),
@@ -1864,7 +1871,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
                       context.push('/channels/new');
                       return;
                     }
-                    _pickAndLink(context, ref, available);
+                    _pickAndLink(context, ref, available, protocolIndex);
                   },
                 ),
               ],
@@ -1879,6 +1886,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     List<Channel> available,
+    ProtocolIndex protocolIndex,
   ) async {
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -1894,8 +1902,16 @@ class _ChannelNetworkSection extends ConsumerWidget {
                   color:
                       _protocolColors[c.transferProtocol] ?? GwpColors.textMuted,
                 ),
-                title: Text(c.name),
-                subtitle: Text(c.transferProtocol),
+                title: Row(
+                  children: [
+                    Expanded(child: Text(c.name)),
+                    if (c.isBuiltin) ...[
+                      const SizedBox(width: 8),
+                      const BuiltinBadge(),
+                    ],
+                  ],
+                ),
+                subtitle: Text(protocolDisplayLabel(protocolIndex, c.transferProtocol)),
                 onTap: () => Navigator.of(ctx).pop(c.id),
               ),
           ],
@@ -1933,17 +1949,20 @@ class _ChannelCard extends ConsumerWidget {
     required this.channel,
     required this.link,
     required this.accountId,
+    required this.protocolIndex,
   });
 
   final Channel channel;
   final AccountChannel link;
   final String accountId;
+  final ProtocolIndex protocolIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final protColor =
         _protocolColors[channel.transferProtocol] ?? GwpColors.textMuted;
     final isEnabled = channel.status == ChannelStatus.enabled;
+    final protocolName = protocolDisplayName(protocolIndex, channel.transferProtocol);
 
     final defaultFeeDesc = _feeDesc(
       feeRate: channel.feeRate,
@@ -1988,9 +2007,7 @@ class _ChannelCard extends ConsumerWidget {
                     ),
                     child: Center(
                       child: Text(
-                        channel.transferProtocol.length > 4
-                            ? channel.transferProtocol.substring(0, 4)
-                            : channel.transferProtocol,
+                        channel.transferProtocol,
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
@@ -2007,14 +2024,24 @@ class _ChannelCard extends ConsumerWidget {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                channel.name,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: GwpColors.textPrimary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      channel.name,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: GwpColors.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (channel.isBuiltin) ...[
+                                    const SizedBox(width: GwpSpacing.xs),
+                                    const BuiltinBadge(),
+                                  ],
+                                ],
                               ),
                             ),
                             const SizedBox(width: GwpSpacing.sm),
@@ -2028,10 +2055,11 @@ class _ChannelCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          hasOverride
+                          '$protocolName · '
+                          '${hasOverride
                               ? '默认 $defaultFeeDesc · 账户 $effectiveFeeDesc'
                               : '费率 $defaultFeeDesc'
-                                  '${channel.dailyLimit != null ? ' · 日限额 ${compactValue(channel.dailyLimit!.toDouble())}' : ''}',
+                                  '${channel.dailyLimit != null ? ' · 日限额 ${compactValue(channel.dailyLimit!.toDouble())}' : ''}'}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: GwpColors.textMuted,

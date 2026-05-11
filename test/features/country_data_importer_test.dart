@@ -222,6 +222,50 @@ void main() {
     expect(us.sortOrder, 7);
     expect(us.isBuiltin, isFalse);
   });
+
+  test('CountryDataImporter does not overwrite existing anchor coords', () async {
+    final repo = _FakeDictRepository.regions([
+      _regionEntry(
+        id: 1,
+        code: 'GB',
+        name: '英国',
+        nameEn: 'United Kingdom',
+        mapLon: -3.4360,
+        mapLat: 55.3781,
+        anchorLon: -0.1276,
+        anchorLat: 51.5072,
+      ),
+    ]);
+    final importer = CountryDataImporter(
+      repo,
+      client: MockClient((request) async {
+        if (request.url.path == '/v3.1/name/United%20Kingdom') {
+          return _jsonResponse([
+            _country(
+              code: 'GB',
+              nameEn: 'United Kingdom',
+              nameZh: '英国',
+              continent: 'Europe',
+              lat: 55.3781,
+              lon: -3.4360,
+              currencies: ['GBP'],
+              flag: '🇬🇧',
+            ),
+          ]);
+        }
+        fail('Unexpected request: ${request.url}');
+      }),
+    );
+
+    final result = await importer.import();
+    expect(result.isOk, isTrue, reason: '${result.errorOrNull}');
+
+    final gb = repo.region('GB')!;
+    expect(gb.mapLon, -3.4360);
+    expect(gb.mapLat, 55.3781);
+    expect(gb.anchorLon, -0.1276);
+    expect(gb.anchorLat, 51.5072);
+  });
 }
 
 DictEntry _regionEntry({
@@ -231,6 +275,10 @@ DictEntry _regionEntry({
   String? nameEn,
   int sortOrder = 1000,
   bool isBuiltin = true,
+  double? mapLon,
+  double? mapLat,
+  double? anchorLon,
+  double? anchorLat,
 }) {
   return DictEntry(
     id: id,
@@ -242,6 +290,10 @@ DictEntry _regionEntry({
     isBuiltin: isBuiltin,
     createdAt: DateTime.utc(2025, 1, 1),
     updatedAt: DateTime.utc(2025, 1, 1),
+    mapLon: mapLon,
+    mapLat: mapLat,
+    anchorLon: anchorLon,
+    anchorLat: anchorLat,
   );
 }
 
@@ -314,6 +366,8 @@ class _FakeDictRepository implements DictRepository {
     String? colorHex,
     double? mapLon,
     double? mapLat,
+    double? anchorLon,
+    double? anchorLat,
     String? parentRegion,
   }) async {
     final map = type == DictType.sovereigntyRegion ? _regions : _currencies;
@@ -334,6 +388,8 @@ class _FakeDictRepository implements DictRepository {
       colorHex: colorHex,
       mapLon: mapLon,
       mapLat: mapLat,
+      anchorLon: anchorLon,
+      anchorLat: anchorLat,
       parentRegion: parentRegion,
     );
     map[code] = entry;
@@ -368,6 +424,8 @@ class _FakeDictRepository implements DictRepository {
     Object? colorHex = const DictFieldAbsent(),
     Object? mapLon = const DictFieldAbsent(),
     Object? mapLat = const DictFieldAbsent(),
+    Object? anchorLon = const DictFieldAbsent(),
+    Object? anchorLat = const DictFieldAbsent(),
     Object? parentRegion = const DictFieldAbsent(),
   }) async {
     final match = _regions.values.firstWhere((e) => e.id == id);
@@ -384,6 +442,12 @@ class _FakeDictRepository implements DictRepository {
           colorHex is DictFieldAbsent ? match.colorHex : colorHex as String?,
       mapLon: mapLon is DictFieldAbsent ? match.mapLon : mapLon as double?,
       mapLat: mapLat is DictFieldAbsent ? match.mapLat : mapLat as double?,
+      anchorLon: anchorLon is DictFieldAbsent
+          ? match.anchorLon
+          : anchorLon as double?,
+      anchorLat: anchorLat is DictFieldAbsent
+          ? match.anchorLat
+          : anchorLat as double?,
       parentRegion: parentRegion is DictFieldAbsent
           ? match.parentRegion
           : parentRegion as String?,

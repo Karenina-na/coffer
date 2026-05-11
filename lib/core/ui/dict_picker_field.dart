@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/providers/dict_providers.dart';
 import '../../domain/entities/dict_entry.dart';
 import '../../domain/entities/dict_type.dart';
+import 'builtin_badge.dart';
 
 /// 通用字典下拉选择器。
 ///
@@ -76,11 +77,21 @@ class DictPickerField extends ConsumerWidget {
       for (final e in entries)
         DropdownMenuItem(
           value: e.code,
-          child: Text(
-            '${e.name}（${e.code}）',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textStyle,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${e.name}（${e.code}）',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+              ),
+              if (e.isBuiltin) ...[
+                const SizedBox(width: 8),
+                const BuiltinBadge(),
+              ],
+            ],
           ),
         ),
     ];

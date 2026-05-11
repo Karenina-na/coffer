@@ -324,6 +324,7 @@ class DbSnapshotService implements DbSnapshotRepository {
       await _db.delete(_db.assets).go();
       await _db.delete(_db.channels).go();
       await _db.delete(_db.accounts).go();
+      await seedBuiltinChannels(_db);
     });
   }
 

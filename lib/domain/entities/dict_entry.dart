@@ -29,10 +29,14 @@ abstract class DictEntry with _$DictEntry {
     String? continent,
     /// 强调色十六进制字符串，如 `'0xFFEF4444'`。
     String? colorHex,
-    /// 地图经度（-180 ~ 180）。
+    /// 地理经度（-180 ~ 180），表示国家/地区的真实地理参考位置。
     double? mapLon,
-    /// 地图纬度（-90 ~ 90）。
+    /// 地理纬度（-90 ~ 90），表示国家/地区的真实地理参考位置。
     double? mapLat,
+    /// 地图锚点经度（-180 ~ 180），默认用于金融中心点展示。
+    double? anchorLon,
+    /// 地图锚点纬度（-90 ~ 90），默认用于金融中心点展示。
+    double? anchorLat,
 
     /// 所属上级区域 code（如 `DE` 的 `parent_region = 'EU'`）。
     /// `null` 表示顶级区域。UI 展示为「区域 | 国家」层级格式。

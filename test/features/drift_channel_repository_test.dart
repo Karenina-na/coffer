@@ -20,11 +20,16 @@ void main() {
 
   tearDown(() => db.close());
 
-  Channel makeChannel({String id = 'ch-1', ChannelStatus status = ChannelStatus.enabled}) {
+  Channel makeChannel({
+    String id = 'ch-1',
+    ChannelStatus status = ChannelStatus.enabled,
+    bool isBuiltin = false,
+  }) {
     return Channel(
       id: id,
       name: 'SWIFT',
       transferProtocol: 'SWIFT',
+      isBuiltin: isBuiltin,
       feeRate: Decimal.parse('0.001'),
       status: status,
       createdAt: now,
@@ -33,13 +38,14 @@ void main() {
   }
 
   test('upsert and findById round-trip', () async {
-    final ch = makeChannel();
+    final ch = makeChannel(isBuiltin: true);
     await repo.upsert(ch);
 
     final r = await repo.findById('ch-1');
     expect(r.isOk, isTrue);
     expect(r.valueOrNull!.name, 'SWIFT');
     expect(r.valueOrNull!.status, ChannelStatus.enabled);
+    expect(r.valueOrNull!.isBuiltin, isTrue);
   });
 
   test('findById returns NotFoundError for missing id', () async {
@@ -75,15 +81,16 @@ void main() {
     expect(r.errorOrNull, isA<NotFoundError>());
   });
 
-  test('watchAll emits all channels ordered by createdAt desc', () async {
+  test('watchAll emits custom channels in createdAt desc order', () async {
     final t1 = DateTime.utc(2025, 6, 14);
     final t2 = DateTime.utc(2025, 6, 15);
     await repo.upsert(makeChannel(id: 'ch-1').copyWith(createdAt: t1, updatedAt: t1));
     await repo.upsert(makeChannel(id: 'ch-2').copyWith(createdAt: t2, updatedAt: t2));
 
     final list = await repo.watchAll().first;
-    expect(list.length, 2);
-    // newest first
-    expect(list.first.id, 'ch-2');
+    final custom = list.where((c) => c.id.startsWith('ch-')).toList();
+    expect(custom.length, 2);
+    expect(custom[0].id, 'ch-2');
+    expect(custom[1].id, 'ch-1');
   });
 }

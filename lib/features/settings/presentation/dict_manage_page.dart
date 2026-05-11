@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../data/providers/country_data_importer.dart';
@@ -67,11 +68,24 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
       parts.add(const SizedBox(width: 2));
       parts.add(Text(e.continent!, style: const TextStyle(fontSize: 12)));
     }
+    if (e.anchorLon != null && e.anchorLat != null) {
+      if (parts.isNotEmpty) parts.add(const SizedBox(width: 8));
+      parts.add(
+        Text(
+          '锚 ${e.anchorLat!.toStringAsFixed(1)}, ${e.anchorLon!.toStringAsFixed(1)}',
+          style: const TextStyle(
+            fontSize: 11,
+            fontFamily: GwpTypo.monoFont,
+            color: GwpColors.textMuted,
+          ),
+        ),
+      );
+    }
     if (e.mapLon != null && e.mapLat != null) {
       if (parts.isNotEmpty) parts.add(const SizedBox(width: 8));
       parts.add(
         Text(
-          '${e.mapLat!.toStringAsFixed(1)}, ${e.mapLon!.toStringAsFixed(1)}',
+          '地 ${e.mapLat!.toStringAsFixed(1)}, ${e.mapLon!.toStringAsFixed(1)}',
           style: const TextStyle(
             fontSize: 11,
             fontFamily: GwpTypo.monoFont,
@@ -175,20 +189,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
               ),
               if (e.isBuiltin) ...[
                 const SizedBox(width: GwpSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: GwpColors.surface3,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    '内置',
-                    style: TextStyle(fontSize: 10, color: GwpColors.textMuted),
-                  ),
-                ),
+                const BuiltinBadge(),
               ],
             ],
           ),
@@ -240,6 +241,8 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
             colorHex: result.colorHex,
             mapLon: result.mapLon,
             mapLat: result.mapLat,
+            anchorLon: result.anchorLon,
+            anchorLat: result.anchorLat,
             parentRegion: result.parentRegion,
           )
         : await repo.updateEntry(
@@ -252,6 +255,8 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
             colorHex: result.colorHex,
             mapLon: result.mapLon,
             mapLat: result.mapLat,
+            anchorLon: result.anchorLon,
+            anchorLat: result.anchorLat,
             parentRegion: result.parentRegion,
           );
     r.when(
@@ -316,6 +321,8 @@ class _DictFormResult {
     this.colorHex,
     this.mapLon,
     this.mapLat,
+    this.anchorLon,
+    this.anchorLat,
     this.parentRegion,
   });
   final String code;
@@ -327,6 +334,8 @@ class _DictFormResult {
   final String? colorHex;
   final double? mapLon;
   final double? mapLat;
+  final double? anchorLon;
+  final double? anchorLat;
   final String? parentRegion;
 }
 
@@ -350,6 +359,8 @@ class _DictFormDialogState extends State<_DictFormDialog> {
   late final TextEditingController _color;
   late final TextEditingController _lon;
   late final TextEditingController _lat;
+  late final TextEditingController _anchorLon;
+  late final TextEditingController _anchorLat;
   late final TextEditingController _parentRegion;
   late bool _showAdvancedRegionMeta;
 
@@ -370,6 +381,12 @@ class _DictFormDialogState extends State<_DictFormDialog> {
     _lat = TextEditingController(
       text: e?.mapLat != null ? e!.mapLat!.toStringAsFixed(4) : '',
     );
+    _anchorLon = TextEditingController(
+      text: e?.anchorLon != null ? e!.anchorLon!.toStringAsFixed(4) : '',
+    );
+    _anchorLat = TextEditingController(
+      text: e?.anchorLat != null ? e!.anchorLat!.toStringAsFixed(4) : '',
+    );
     _parentRegion = TextEditingController(text: e?.parentRegion ?? '');
     _showAdvancedRegionMeta = e != null;
   }
@@ -385,6 +402,8 @@ class _DictFormDialogState extends State<_DictFormDialog> {
     _color.dispose();
     _lon.dispose();
     _lat.dispose();
+    _anchorLon.dispose();
+    _anchorLat.dispose();
     _parentRegion.dispose();
     super.dispose();
   }
@@ -462,7 +481,7 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                       border: Border.all(color: GwpColors.border, width: 0.5),
                     ),
                     child: const Text(
-                      '可先只填代码和名称，保存后用右上角同步自动补全旗帜、坐标、大洲和上级区域等信息。',
+                      '可先只填代码和名称，保存后用右上角同步自动补全旗帜、地理坐标、大洲和上级区域等信息；地图锚点可单独微调金融中心位置。',
                       style: TextStyle(
                         fontSize: 12,
                         color: GwpColors.textMuted,
@@ -518,13 +537,25 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '地理坐标',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: GwpColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _lon,
                           decoration: const InputDecoration(
-                            labelText: '经度',
+                            labelText: '地理经度',
                             helperText: '-180 ~ 180',
                           ),
                           keyboardType: const TextInputType.numberWithOptions(
@@ -540,8 +571,56 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                         child: TextFormField(
                           controller: _lat,
                           decoration: const InputDecoration(
-                            labelText: '纬度',
+                            labelText: '地理纬度',
                             helperText: '-90 ~ 90',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '地图锚点',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: GwpColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _anchorLon,
+                          decoration: const InputDecoration(
+                            labelText: '锚点经度',
+                            helperText: '默认用于金融中心点',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _anchorLat,
+                          decoration: const InputDecoration(
+                            labelText: '锚点纬度',
+                            helperText: '为空时回退地理坐标',
                           ),
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
@@ -593,6 +672,8 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                     : _color.text.trim(),
                 mapLon: double.tryParse(_lon.text.trim()),
                 mapLat: double.tryParse(_lat.text.trim()),
+                anchorLon: double.tryParse(_anchorLon.text.trim()),
+                anchorLat: double.tryParse(_anchorLat.text.trim()),
                 parentRegion: _parentRegion.text.trim().isEmpty
                     ? null
                     : _parentRegion.text.trim(),

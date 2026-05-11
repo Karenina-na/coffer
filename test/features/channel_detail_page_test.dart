@@ -6,8 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gwp/domain/entities/account.dart';
 import 'package:gwp/domain/entities/account_channel.dart';
 import 'package:gwp/domain/entities/account_enums.dart';
+import 'package:gwp/data/providers/dict_providers.dart';
 import 'package:gwp/domain/entities/channel.dart';
 import 'package:gwp/domain/entities/channel_enums.dart';
+import 'package:gwp/domain/entities/dict_entry.dart';
+import 'package:gwp/domain/entities/dict_type.dart';
 import 'package:gwp/features/account/presentation/account_providers.dart';
 import 'package:gwp/features/channel/presentation/channel_detail_page.dart';
 import 'package:gwp/features/channel/presentation/channel_providers.dart';
@@ -21,8 +24,9 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
   final now = DateTime.utc(2026, 1, 1);
   final channel = Channel(
     id: 'ch-1',
-    name: 'SWIFT',
+    name: '环球银行金融电信协会通道',
     transferProtocol: 'SWIFT',
+    isBuiltin: true,
     feeRate: Decimal.zero,
     fixedFee: Decimal.zero,
     limitCurrency: 'USD',
@@ -73,6 +77,20 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
         channelListProvider.overrideWith((ref) => Stream.value([channel])),
         accountChannelListProvider.overrideWith((ref) => Stream.value(links)),
         accountListProvider.overrideWith((ref) => Stream.value(accounts)),
+        dictEntriesProvider(DictType.transferProtocol).overrideWith(
+          (ref) => Stream.value([
+            DictEntry(
+              id: 1,
+              type: DictType.transferProtocol,
+              code: 'SWIFT',
+              name: '环球银行金融电信协会',
+              nameEn: 'Society for Worldwide Interbank Financial Telecommunication',
+              isBuiltin: true,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ]),
+        ),
       ],
       child: const MaterialApp(
         home: ChannelDetailPage(channelId: 'ch-1'),
@@ -84,6 +102,14 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('通道详情页显示内置标记与协议中文名', (tester) async {
+    await _pumpChannelDetail(tester);
+
+    expect(find.text('环球银行金融电信协会通道'), findsOneWidget);
+    expect(find.text('环球银行金融电信协会（SWIFT） · 启用'), findsOneWidget);
+    expect(find.text('内置'), findsOneWidget);
+  });
+
   testWidgets('成员账户区块展示默认与账户级费率覆盖状态', (tester) async {
     await _pumpChannelDetail(tester);
 

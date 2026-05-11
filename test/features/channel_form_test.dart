@@ -47,16 +47,20 @@ void main() {
       DictEntry(
         id: 4,
         type: DictType.transferProtocol,
-        code: 'INTERNAL',
-        name: 'INTERNAL',
+        code: 'SWIFT',
+        name: '环球银行金融电信协会',
+        nameEn: 'Society for Worldwide Interbank Financial Telecommunication',
+        isBuiltin: true,
         createdAt: now,
         updatedAt: now,
       ),
       DictEntry(
         id: 5,
         type: DictType.transferProtocol,
-        code: 'SWIFT',
-        name: 'SWIFT',
+        code: 'FPS',
+        name: '快速支付系统',
+        nameEn: 'Faster Payment System',
+        isBuiltin: true,
         createdAt: now,
         updatedAt: now,
       ),
@@ -84,6 +88,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('环球银行金融电信协会（SWIFT）'), findsOneWidget);
+    expect(find.text('内置'), findsWidgets);
 
     await tester.enterText(find.widgetWithText(TextFormField, '通道名称'), 'SWIFT');
 
@@ -153,7 +160,7 @@ class _FakeDictRepository implements DictRepository {
   final List<DictEntry> entries;
 
   @override
-  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, String? parentRegion}) {
+  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, double? anchorLon, double? anchorLat, String? parentRegion}) {
     throw UnimplementedError();
   }
 
@@ -176,7 +183,7 @@ class _FakeDictRepository implements DictRepository {
       entries.where((e) => e.type == type).toList(growable: false);
 
   @override
-  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? parentRegion = const _Absent()}) {
+  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? anchorLon = const _Absent(), Object? anchorLat = const _Absent(), Object? parentRegion = const _Absent()}) {
     throw UnimplementedError();
   }
 

@@ -224,7 +224,7 @@ class _FakeDictRepository implements DictRepository {
   static const _codes = {'USD', 'CNY', 'EUR', 'JPY', 'GBP', 'HKD'};
 
   @override
-  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, String? parentRegion}) {
+  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, double? anchorLon, double? anchorLat, String? parentRegion}) {
     throw UnimplementedError();
   }
 
@@ -251,7 +251,7 @@ class _FakeDictRepository implements DictRepository {
   Future<List<DictEntry>> listByType(DictType type) async => const [];
 
   @override
-  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? parentRegion = const _Absent()}) {
+  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? anchorLon = const _Absent(), Object? anchorLat = const _Absent(), Object? parentRegion = const _Absent()}) {
     throw UnimplementedError();
   }
 

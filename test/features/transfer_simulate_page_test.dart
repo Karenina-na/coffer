@@ -71,16 +71,18 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
   final channels = [
     Channel(
       id: 'ch-1',
-      name: 'SWIFT Main',
+      name: '环球银行金融电信协会通道',
       transferProtocol: 'SWIFT',
+      isBuiltin: true,
       status: ChannelStatus.enabled,
       createdAt: now,
       updatedAt: now,
     ),
     Channel(
       id: 'ch-2',
-      name: 'ACH Backup',
+      name: '美国自动清算所通道',
       transferProtocol: 'ACH',
+      isBuiltin: true,
       status: ChannelStatus.enabled,
       createdAt: now,
       updatedAt: now,
@@ -102,6 +104,30 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
         dictEntriesProvider(DictType.currency).overrideWith(
           (ref) => Stream.value(<DictEntry>[]),
         ),
+        dictEntriesProvider(DictType.transferProtocol).overrideWith(
+          (ref) => Stream.value([
+            DictEntry(
+              id: 1,
+              type: DictType.transferProtocol,
+              code: 'SWIFT',
+              name: '环球银行金融电信协会',
+              nameEn: 'Society for Worldwide Interbank Financial Telecommunication',
+              isBuiltin: true,
+              createdAt: now,
+              updatedAt: now,
+            ),
+            DictEntry(
+              id: 2,
+              type: DictType.transferProtocol,
+              code: 'ACH',
+              name: '美国自动清算所',
+              nameEn: 'Automated Clearing House',
+              isBuiltin: true,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ]),
+        ),
       ],
       child: MaterialApp.router(routerConfig: _router()),
     ),
@@ -122,6 +148,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('转账通道'), findsOneWidget);
+    expect(find.text('环球银行金融电信协会通道'), findsOneWidget);
+    expect(find.text('内置'), findsWidgets);
   });
 
   testWidgets('源账户选择改为底部弹窗并默认过滤未接入通道账户', (tester) async {

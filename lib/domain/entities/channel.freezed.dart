@@ -18,7 +18,7 @@ mixin _$Channel {
 ///
 /// 值来自 `dict_entries` 表的 `TRANSFER_PROTOCOL` 类型，应用层只按代码字符串
 /// 处理，展示时通过 [DictRepository] 查出对应名称。
- String get transferProtocol; Decimal? get feeRate; Decimal? get fixedFee; Map<String, dynamic>? get sovereigntyRegionRule; String? get limitCurrency; Decimal? get dailyLimit; Decimal? get singleLimit; ChannelStatus get status; DateTime? get effectiveFrom; DateTime? get effectiveTo; DateTime get createdAt; DateTime get updatedAt;
+ String get transferProtocol; bool get isBuiltin; Decimal? get feeRate; Decimal? get fixedFee; Map<String, dynamic>? get sovereigntyRegionRule; String? get limitCurrency; Decimal? get dailyLimit; Decimal? get singleLimit; ChannelStatus get status; DateTime? get effectiveFrom; DateTime? get effectiveTo; DateTime get createdAt; DateTime get updatedAt;
 /// Create a copy of Channel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +29,16 @@ $ChannelCopyWith<Channel> get copyWith => _$ChannelCopyWithImpl<Channel>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Channel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.transferProtocol, transferProtocol) || other.transferProtocol == transferProtocol)&&(identical(other.feeRate, feeRate) || other.feeRate == feeRate)&&(identical(other.fixedFee, fixedFee) || other.fixedFee == fixedFee)&&const DeepCollectionEquality().equals(other.sovereigntyRegionRule, sovereigntyRegionRule)&&(identical(other.limitCurrency, limitCurrency) || other.limitCurrency == limitCurrency)&&(identical(other.dailyLimit, dailyLimit) || other.dailyLimit == dailyLimit)&&(identical(other.singleLimit, singleLimit) || other.singleLimit == singleLimit)&&(identical(other.status, status) || other.status == status)&&(identical(other.effectiveFrom, effectiveFrom) || other.effectiveFrom == effectiveFrom)&&(identical(other.effectiveTo, effectiveTo) || other.effectiveTo == effectiveTo)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Channel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.transferProtocol, transferProtocol) || other.transferProtocol == transferProtocol)&&(identical(other.isBuiltin, isBuiltin) || other.isBuiltin == isBuiltin)&&(identical(other.feeRate, feeRate) || other.feeRate == feeRate)&&(identical(other.fixedFee, fixedFee) || other.fixedFee == fixedFee)&&const DeepCollectionEquality().equals(other.sovereigntyRegionRule, sovereigntyRegionRule)&&(identical(other.limitCurrency, limitCurrency) || other.limitCurrency == limitCurrency)&&(identical(other.dailyLimit, dailyLimit) || other.dailyLimit == dailyLimit)&&(identical(other.singleLimit, singleLimit) || other.singleLimit == singleLimit)&&(identical(other.status, status) || other.status == status)&&(identical(other.effectiveFrom, effectiveFrom) || other.effectiveFrom == effectiveFrom)&&(identical(other.effectiveTo, effectiveTo) || other.effectiveTo == effectiveTo)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,transferProtocol,feeRate,fixedFee,const DeepCollectionEquality().hash(sovereigntyRegionRule),limitCurrency,dailyLimit,singleLimit,status,effectiveFrom,effectiveTo,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,transferProtocol,isBuiltin,feeRate,fixedFee,const DeepCollectionEquality().hash(sovereigntyRegionRule),limitCurrency,dailyLimit,singleLimit,status,effectiveFrom,effectiveTo,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Channel(id: $id, name: $name, transferProtocol: $transferProtocol, feeRate: $feeRate, fixedFee: $fixedFee, sovereigntyRegionRule: $sovereigntyRegionRule, limitCurrency: $limitCurrency, dailyLimit: $dailyLimit, singleLimit: $singleLimit, status: $status, effectiveFrom: $effectiveFrom, effectiveTo: $effectiveTo, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Channel(id: $id, name: $name, transferProtocol: $transferProtocol, isBuiltin: $isBuiltin, feeRate: $feeRate, fixedFee: $fixedFee, sovereigntyRegionRule: $sovereigntyRegionRule, limitCurrency: $limitCurrency, dailyLimit: $dailyLimit, singleLimit: $singleLimit, status: $status, effectiveFrom: $effectiveFrom, effectiveTo: $effectiveTo, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $ChannelCopyWith<$Res>  {
   factory $ChannelCopyWith(Channel value, $Res Function(Channel) _then) = _$ChannelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String transferProtocol, Decimal? feeRate, Decimal? fixedFee, Map<String, dynamic>? sovereigntyRegionRule, String? limitCurrency, Decimal? dailyLimit, Decimal? singleLimit, ChannelStatus status, DateTime? effectiveFrom, DateTime? effectiveTo, DateTime createdAt, DateTime updatedAt
+ String id, String name, String transferProtocol, bool isBuiltin, Decimal? feeRate, Decimal? fixedFee, Map<String, dynamic>? sovereigntyRegionRule, String? limitCurrency, Decimal? dailyLimit, Decimal? singleLimit, ChannelStatus status, DateTime? effectiveFrom, DateTime? effectiveTo, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -66,12 +66,13 @@ class _$ChannelCopyWithImpl<$Res>
 
 /// Create a copy of Channel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? transferProtocol = null,Object? feeRate = freezed,Object? fixedFee = freezed,Object? sovereigntyRegionRule = freezed,Object? limitCurrency = freezed,Object? dailyLimit = freezed,Object? singleLimit = freezed,Object? status = null,Object? effectiveFrom = freezed,Object? effectiveTo = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? transferProtocol = null,Object? isBuiltin = null,Object? feeRate = freezed,Object? fixedFee = freezed,Object? sovereigntyRegionRule = freezed,Object? limitCurrency = freezed,Object? dailyLimit = freezed,Object? singleLimit = freezed,Object? status = null,Object? effectiveFrom = freezed,Object? effectiveTo = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,transferProtocol: null == transferProtocol ? _self.transferProtocol : transferProtocol // ignore: cast_nullable_to_non_nullable
-as String,feeRate: freezed == feeRate ? _self.feeRate : feeRate // ignore: cast_nullable_to_non_nullable
+as String,isBuiltin: null == isBuiltin ? _self.isBuiltin : isBuiltin // ignore: cast_nullable_to_non_nullable
+as bool,feeRate: freezed == feeRate ? _self.feeRate : feeRate // ignore: cast_nullable_to_non_nullable
 as Decimal?,fixedFee: freezed == fixedFee ? _self.fixedFee : fixedFee // ignore: cast_nullable_to_non_nullable
 as Decimal?,sovereigntyRegionRule: freezed == sovereigntyRegionRule ? _self.sovereigntyRegionRule : sovereigntyRegionRule // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,limitCurrency: freezed == limitCurrency ? _self.limitCurrency : limitCurrency // ignore: cast_nullable_to_non_nullable
@@ -167,10 +168,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String transferProtocol,  Decimal? feeRate,  Decimal? fixedFee,  Map<String, dynamic>? sovereigntyRegionRule,  String? limitCurrency,  Decimal? dailyLimit,  Decimal? singleLimit,  ChannelStatus status,  DateTime? effectiveFrom,  DateTime? effectiveTo,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String transferProtocol,  bool isBuiltin,  Decimal? feeRate,  Decimal? fixedFee,  Map<String, dynamic>? sovereigntyRegionRule,  String? limitCurrency,  Decimal? dailyLimit,  Decimal? singleLimit,  ChannelStatus status,  DateTime? effectiveFrom,  DateTime? effectiveTo,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Channel() when $default != null:
-return $default(_that.id,_that.name,_that.transferProtocol,_that.feeRate,_that.fixedFee,_that.sovereigntyRegionRule,_that.limitCurrency,_that.dailyLimit,_that.singleLimit,_that.status,_that.effectiveFrom,_that.effectiveTo,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.transferProtocol,_that.isBuiltin,_that.feeRate,_that.fixedFee,_that.sovereigntyRegionRule,_that.limitCurrency,_that.dailyLimit,_that.singleLimit,_that.status,_that.effectiveFrom,_that.effectiveTo,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -188,10 +189,10 @@ return $default(_that.id,_that.name,_that.transferProtocol,_that.feeRate,_that.f
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String transferProtocol,  Decimal? feeRate,  Decimal? fixedFee,  Map<String, dynamic>? sovereigntyRegionRule,  String? limitCurrency,  Decimal? dailyLimit,  Decimal? singleLimit,  ChannelStatus status,  DateTime? effectiveFrom,  DateTime? effectiveTo,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String transferProtocol,  bool isBuiltin,  Decimal? feeRate,  Decimal? fixedFee,  Map<String, dynamic>? sovereigntyRegionRule,  String? limitCurrency,  Decimal? dailyLimit,  Decimal? singleLimit,  ChannelStatus status,  DateTime? effectiveFrom,  DateTime? effectiveTo,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Channel():
-return $default(_that.id,_that.name,_that.transferProtocol,_that.feeRate,_that.fixedFee,_that.sovereigntyRegionRule,_that.limitCurrency,_that.dailyLimit,_that.singleLimit,_that.status,_that.effectiveFrom,_that.effectiveTo,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.transferProtocol,_that.isBuiltin,_that.feeRate,_that.fixedFee,_that.sovereigntyRegionRule,_that.limitCurrency,_that.dailyLimit,_that.singleLimit,_that.status,_that.effectiveFrom,_that.effectiveTo,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -208,10 +209,10 @@ return $default(_that.id,_that.name,_that.transferProtocol,_that.feeRate,_that.f
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String transferProtocol,  Decimal? feeRate,  Decimal? fixedFee,  Map<String, dynamic>? sovereigntyRegionRule,  String? limitCurrency,  Decimal? dailyLimit,  Decimal? singleLimit,  ChannelStatus status,  DateTime? effectiveFrom,  DateTime? effectiveTo,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String transferProtocol,  bool isBuiltin,  Decimal? feeRate,  Decimal? fixedFee,  Map<String, dynamic>? sovereigntyRegionRule,  String? limitCurrency,  Decimal? dailyLimit,  Decimal? singleLimit,  ChannelStatus status,  DateTime? effectiveFrom,  DateTime? effectiveTo,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Channel() when $default != null:
-return $default(_that.id,_that.name,_that.transferProtocol,_that.feeRate,_that.fixedFee,_that.sovereigntyRegionRule,_that.limitCurrency,_that.dailyLimit,_that.singleLimit,_that.status,_that.effectiveFrom,_that.effectiveTo,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.transferProtocol,_that.isBuiltin,_that.feeRate,_that.fixedFee,_that.sovereigntyRegionRule,_that.limitCurrency,_that.dailyLimit,_that.singleLimit,_that.status,_that.effectiveFrom,_that.effectiveTo,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -223,7 +224,7 @@ return $default(_that.id,_that.name,_that.transferProtocol,_that.feeRate,_that.f
 
 
 class _Channel implements Channel {
-  const _Channel({required this.id, required this.name, required this.transferProtocol, this.feeRate, this.fixedFee, final  Map<String, dynamic>? sovereigntyRegionRule, this.limitCurrency, this.dailyLimit, this.singleLimit, required this.status, this.effectiveFrom, this.effectiveTo, required this.createdAt, required this.updatedAt}): _sovereigntyRegionRule = sovereigntyRegionRule;
+  const _Channel({required this.id, required this.name, required this.transferProtocol, this.isBuiltin = false, this.feeRate, this.fixedFee, final  Map<String, dynamic>? sovereigntyRegionRule, this.limitCurrency, this.dailyLimit, this.singleLimit, required this.status, this.effectiveFrom, this.effectiveTo, required this.createdAt, required this.updatedAt}): _sovereigntyRegionRule = sovereigntyRegionRule;
   
 
 @override final  String id;
@@ -233,6 +234,7 @@ class _Channel implements Channel {
 /// 值来自 `dict_entries` 表的 `TRANSFER_PROTOCOL` 类型，应用层只按代码字符串
 /// 处理，展示时通过 [DictRepository] 查出对应名称。
 @override final  String transferProtocol;
+@override@JsonKey() final  bool isBuiltin;
 @override final  Decimal? feeRate;
 @override final  Decimal? fixedFee;
  final  Map<String, dynamic>? _sovereigntyRegionRule;
@@ -263,16 +265,16 @@ _$ChannelCopyWith<_Channel> get copyWith => __$ChannelCopyWithImpl<_Channel>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Channel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.transferProtocol, transferProtocol) || other.transferProtocol == transferProtocol)&&(identical(other.feeRate, feeRate) || other.feeRate == feeRate)&&(identical(other.fixedFee, fixedFee) || other.fixedFee == fixedFee)&&const DeepCollectionEquality().equals(other._sovereigntyRegionRule, _sovereigntyRegionRule)&&(identical(other.limitCurrency, limitCurrency) || other.limitCurrency == limitCurrency)&&(identical(other.dailyLimit, dailyLimit) || other.dailyLimit == dailyLimit)&&(identical(other.singleLimit, singleLimit) || other.singleLimit == singleLimit)&&(identical(other.status, status) || other.status == status)&&(identical(other.effectiveFrom, effectiveFrom) || other.effectiveFrom == effectiveFrom)&&(identical(other.effectiveTo, effectiveTo) || other.effectiveTo == effectiveTo)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Channel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.transferProtocol, transferProtocol) || other.transferProtocol == transferProtocol)&&(identical(other.isBuiltin, isBuiltin) || other.isBuiltin == isBuiltin)&&(identical(other.feeRate, feeRate) || other.feeRate == feeRate)&&(identical(other.fixedFee, fixedFee) || other.fixedFee == fixedFee)&&const DeepCollectionEquality().equals(other._sovereigntyRegionRule, _sovereigntyRegionRule)&&(identical(other.limitCurrency, limitCurrency) || other.limitCurrency == limitCurrency)&&(identical(other.dailyLimit, dailyLimit) || other.dailyLimit == dailyLimit)&&(identical(other.singleLimit, singleLimit) || other.singleLimit == singleLimit)&&(identical(other.status, status) || other.status == status)&&(identical(other.effectiveFrom, effectiveFrom) || other.effectiveFrom == effectiveFrom)&&(identical(other.effectiveTo, effectiveTo) || other.effectiveTo == effectiveTo)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,transferProtocol,feeRate,fixedFee,const DeepCollectionEquality().hash(_sovereigntyRegionRule),limitCurrency,dailyLimit,singleLimit,status,effectiveFrom,effectiveTo,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,transferProtocol,isBuiltin,feeRate,fixedFee,const DeepCollectionEquality().hash(_sovereigntyRegionRule),limitCurrency,dailyLimit,singleLimit,status,effectiveFrom,effectiveTo,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Channel(id: $id, name: $name, transferProtocol: $transferProtocol, feeRate: $feeRate, fixedFee: $fixedFee, sovereigntyRegionRule: $sovereigntyRegionRule, limitCurrency: $limitCurrency, dailyLimit: $dailyLimit, singleLimit: $singleLimit, status: $status, effectiveFrom: $effectiveFrom, effectiveTo: $effectiveTo, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Channel(id: $id, name: $name, transferProtocol: $transferProtocol, isBuiltin: $isBuiltin, feeRate: $feeRate, fixedFee: $fixedFee, sovereigntyRegionRule: $sovereigntyRegionRule, limitCurrency: $limitCurrency, dailyLimit: $dailyLimit, singleLimit: $singleLimit, status: $status, effectiveFrom: $effectiveFrom, effectiveTo: $effectiveTo, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -283,7 +285,7 @@ abstract mixin class _$ChannelCopyWith<$Res> implements $ChannelCopyWith<$Res> {
   factory _$ChannelCopyWith(_Channel value, $Res Function(_Channel) _then) = __$ChannelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String transferProtocol, Decimal? feeRate, Decimal? fixedFee, Map<String, dynamic>? sovereigntyRegionRule, String? limitCurrency, Decimal? dailyLimit, Decimal? singleLimit, ChannelStatus status, DateTime? effectiveFrom, DateTime? effectiveTo, DateTime createdAt, DateTime updatedAt
+ String id, String name, String transferProtocol, bool isBuiltin, Decimal? feeRate, Decimal? fixedFee, Map<String, dynamic>? sovereigntyRegionRule, String? limitCurrency, Decimal? dailyLimit, Decimal? singleLimit, ChannelStatus status, DateTime? effectiveFrom, DateTime? effectiveTo, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -300,12 +302,13 @@ class __$ChannelCopyWithImpl<$Res>
 
 /// Create a copy of Channel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? transferProtocol = null,Object? feeRate = freezed,Object? fixedFee = freezed,Object? sovereigntyRegionRule = freezed,Object? limitCurrency = freezed,Object? dailyLimit = freezed,Object? singleLimit = freezed,Object? status = null,Object? effectiveFrom = freezed,Object? effectiveTo = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? transferProtocol = null,Object? isBuiltin = null,Object? feeRate = freezed,Object? fixedFee = freezed,Object? sovereigntyRegionRule = freezed,Object? limitCurrency = freezed,Object? dailyLimit = freezed,Object? singleLimit = freezed,Object? status = null,Object? effectiveFrom = freezed,Object? effectiveTo = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_Channel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,transferProtocol: null == transferProtocol ? _self.transferProtocol : transferProtocol // ignore: cast_nullable_to_non_nullable
-as String,feeRate: freezed == feeRate ? _self.feeRate : feeRate // ignore: cast_nullable_to_non_nullable
+as String,isBuiltin: null == isBuiltin ? _self.isBuiltin : isBuiltin // ignore: cast_nullable_to_non_nullable
+as bool,feeRate: freezed == feeRate ? _self.feeRate : feeRate // ignore: cast_nullable_to_non_nullable
 as Decimal?,fixedFee: freezed == fixedFee ? _self.fixedFee : fixedFee // ignore: cast_nullable_to_non_nullable
 as Decimal?,sovereigntyRegionRule: freezed == sovereigntyRegionRule ? _self._sovereigntyRegionRule : sovereigntyRegionRule // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,limitCurrency: freezed == limitCurrency ? _self.limitCurrency : limitCurrency // ignore: cast_nullable_to_non_nullable

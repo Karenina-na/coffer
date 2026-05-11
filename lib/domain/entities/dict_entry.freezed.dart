@@ -18,9 +18,11 @@ mixin _$DictEntry {
 /// Emoji 国旗，如 `'🇨🇳'`。
  String? get flagEmoji;/// 大洲分组标签，如 `'亚太'`。
  String? get continent;/// 强调色十六进制字符串，如 `'0xFFEF4444'`。
- String? get colorHex;/// 地图经度（-180 ~ 180）。
- double? get mapLon;/// 地图纬度（-90 ~ 90）。
- double? get mapLat;/// 所属上级区域 code（如 `DE` 的 `parent_region = 'EU'`）。
+ String? get colorHex;/// 地理经度（-180 ~ 180），表示国家/地区的真实地理参考位置。
+ double? get mapLon;/// 地理纬度（-90 ~ 90），表示国家/地区的真实地理参考位置。
+ double? get mapLat;/// 地图锚点经度（-180 ~ 180），默认用于金融中心点展示。
+ double? get anchorLon;/// 地图锚点纬度（-90 ~ 90），默认用于金融中心点展示。
+ double? get anchorLat;/// 所属上级区域 code（如 `DE` 的 `parent_region = 'EU'`）。
 /// `null` 表示顶级区域。UI 展示为「区域 | 国家」层级格式。
  String? get parentRegion;
 /// Create a copy of DictEntry
@@ -33,16 +35,16 @@ $DictEntryCopyWith<DictEntry> get copyWith => _$DictEntryCopyWithImpl<DictEntry>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DictEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.nameEn, nameEn) || other.nameEn == nameEn)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.isBuiltin, isBuiltin) || other.isBuiltin == isBuiltin)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.flagEmoji, flagEmoji) || other.flagEmoji == flagEmoji)&&(identical(other.continent, continent) || other.continent == continent)&&(identical(other.colorHex, colorHex) || other.colorHex == colorHex)&&(identical(other.mapLon, mapLon) || other.mapLon == mapLon)&&(identical(other.mapLat, mapLat) || other.mapLat == mapLat)&&(identical(other.parentRegion, parentRegion) || other.parentRegion == parentRegion));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DictEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.nameEn, nameEn) || other.nameEn == nameEn)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.isBuiltin, isBuiltin) || other.isBuiltin == isBuiltin)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.flagEmoji, flagEmoji) || other.flagEmoji == flagEmoji)&&(identical(other.continent, continent) || other.continent == continent)&&(identical(other.colorHex, colorHex) || other.colorHex == colorHex)&&(identical(other.mapLon, mapLon) || other.mapLon == mapLon)&&(identical(other.mapLat, mapLat) || other.mapLat == mapLat)&&(identical(other.anchorLon, anchorLon) || other.anchorLon == anchorLon)&&(identical(other.anchorLat, anchorLat) || other.anchorLat == anchorLat)&&(identical(other.parentRegion, parentRegion) || other.parentRegion == parentRegion));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,type,code,name,nameEn,sortOrder,isBuiltin,createdAt,updatedAt,flagEmoji,continent,colorHex,mapLon,mapLat,parentRegion);
+int get hashCode => Object.hash(runtimeType,id,type,code,name,nameEn,sortOrder,isBuiltin,createdAt,updatedAt,flagEmoji,continent,colorHex,mapLon,mapLat,anchorLon,anchorLat,parentRegion);
 
 @override
 String toString() {
-  return 'DictEntry(id: $id, type: $type, code: $code, name: $name, nameEn: $nameEn, sortOrder: $sortOrder, isBuiltin: $isBuiltin, createdAt: $createdAt, updatedAt: $updatedAt, flagEmoji: $flagEmoji, continent: $continent, colorHex: $colorHex, mapLon: $mapLon, mapLat: $mapLat, parentRegion: $parentRegion)';
+  return 'DictEntry(id: $id, type: $type, code: $code, name: $name, nameEn: $nameEn, sortOrder: $sortOrder, isBuiltin: $isBuiltin, createdAt: $createdAt, updatedAt: $updatedAt, flagEmoji: $flagEmoji, continent: $continent, colorHex: $colorHex, mapLon: $mapLon, mapLat: $mapLat, anchorLon: $anchorLon, anchorLat: $anchorLat, parentRegion: $parentRegion)';
 }
 
 
@@ -53,7 +55,7 @@ abstract mixin class $DictEntryCopyWith<$Res>  {
   factory $DictEntryCopyWith(DictEntry value, $Res Function(DictEntry) _then) = _$DictEntryCopyWithImpl;
 @useResult
 $Res call({
- int id, DictType type, String code, String name, String? nameEn, int sortOrder, bool isBuiltin, DateTime createdAt, DateTime updatedAt, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, String? parentRegion
+ int id, DictType type, String code, String name, String? nameEn, int sortOrder, bool isBuiltin, DateTime createdAt, DateTime updatedAt, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, double? anchorLon, double? anchorLat, String? parentRegion
 });
 
 
@@ -70,7 +72,7 @@ class _$DictEntryCopyWithImpl<$Res>
 
 /// Create a copy of DictEntry
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? code = null,Object? name = null,Object? nameEn = freezed,Object? sortOrder = null,Object? isBuiltin = null,Object? createdAt = null,Object? updatedAt = null,Object? flagEmoji = freezed,Object? continent = freezed,Object? colorHex = freezed,Object? mapLon = freezed,Object? mapLat = freezed,Object? parentRegion = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? code = null,Object? name = null,Object? nameEn = freezed,Object? sortOrder = null,Object? isBuiltin = null,Object? createdAt = null,Object? updatedAt = null,Object? flagEmoji = freezed,Object? continent = freezed,Object? colorHex = freezed,Object? mapLon = freezed,Object? mapLat = freezed,Object? anchorLon = freezed,Object? anchorLat = freezed,Object? parentRegion = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -86,6 +88,8 @@ as String?,continent: freezed == continent ? _self.continent : continent // igno
 as String?,colorHex: freezed == colorHex ? _self.colorHex : colorHex // ignore: cast_nullable_to_non_nullable
 as String?,mapLon: freezed == mapLon ? _self.mapLon : mapLon // ignore: cast_nullable_to_non_nullable
 as double?,mapLat: freezed == mapLat ? _self.mapLat : mapLat // ignore: cast_nullable_to_non_nullable
+as double?,anchorLon: freezed == anchorLon ? _self.anchorLon : anchorLon // ignore: cast_nullable_to_non_nullable
+as double?,anchorLat: freezed == anchorLat ? _self.anchorLat : anchorLat // ignore: cast_nullable_to_non_nullable
 as double?,parentRegion: freezed == parentRegion ? _self.parentRegion : parentRegion // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -172,10 +176,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  DictType type,  String code,  String name,  String? nameEn,  int sortOrder,  bool isBuiltin,  DateTime createdAt,  DateTime updatedAt,  String? flagEmoji,  String? continent,  String? colorHex,  double? mapLon,  double? mapLat,  String? parentRegion)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  DictType type,  String code,  String name,  String? nameEn,  int sortOrder,  bool isBuiltin,  DateTime createdAt,  DateTime updatedAt,  String? flagEmoji,  String? continent,  String? colorHex,  double? mapLon,  double? mapLat,  double? anchorLon,  double? anchorLat,  String? parentRegion)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DictEntry() when $default != null:
-return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sortOrder,_that.isBuiltin,_that.createdAt,_that.updatedAt,_that.flagEmoji,_that.continent,_that.colorHex,_that.mapLon,_that.mapLat,_that.parentRegion);case _:
+return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sortOrder,_that.isBuiltin,_that.createdAt,_that.updatedAt,_that.flagEmoji,_that.continent,_that.colorHex,_that.mapLon,_that.mapLat,_that.anchorLon,_that.anchorLat,_that.parentRegion);case _:
   return orElse();
 
 }
@@ -193,10 +197,10 @@ return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sor
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  DictType type,  String code,  String name,  String? nameEn,  int sortOrder,  bool isBuiltin,  DateTime createdAt,  DateTime updatedAt,  String? flagEmoji,  String? continent,  String? colorHex,  double? mapLon,  double? mapLat,  String? parentRegion)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  DictType type,  String code,  String name,  String? nameEn,  int sortOrder,  bool isBuiltin,  DateTime createdAt,  DateTime updatedAt,  String? flagEmoji,  String? continent,  String? colorHex,  double? mapLon,  double? mapLat,  double? anchorLon,  double? anchorLat,  String? parentRegion)  $default,) {final _that = this;
 switch (_that) {
 case _DictEntry():
-return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sortOrder,_that.isBuiltin,_that.createdAt,_that.updatedAt,_that.flagEmoji,_that.continent,_that.colorHex,_that.mapLon,_that.mapLat,_that.parentRegion);case _:
+return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sortOrder,_that.isBuiltin,_that.createdAt,_that.updatedAt,_that.flagEmoji,_that.continent,_that.colorHex,_that.mapLon,_that.mapLat,_that.anchorLon,_that.anchorLat,_that.parentRegion);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -213,10 +217,10 @@ return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sor
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  DictType type,  String code,  String name,  String? nameEn,  int sortOrder,  bool isBuiltin,  DateTime createdAt,  DateTime updatedAt,  String? flagEmoji,  String? continent,  String? colorHex,  double? mapLon,  double? mapLat,  String? parentRegion)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  DictType type,  String code,  String name,  String? nameEn,  int sortOrder,  bool isBuiltin,  DateTime createdAt,  DateTime updatedAt,  String? flagEmoji,  String? continent,  String? colorHex,  double? mapLon,  double? mapLat,  double? anchorLon,  double? anchorLat,  String? parentRegion)?  $default,) {final _that = this;
 switch (_that) {
 case _DictEntry() when $default != null:
-return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sortOrder,_that.isBuiltin,_that.createdAt,_that.updatedAt,_that.flagEmoji,_that.continent,_that.colorHex,_that.mapLon,_that.mapLat,_that.parentRegion);case _:
+return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sortOrder,_that.isBuiltin,_that.createdAt,_that.updatedAt,_that.flagEmoji,_that.continent,_that.colorHex,_that.mapLon,_that.mapLat,_that.anchorLon,_that.anchorLat,_that.parentRegion);case _:
   return null;
 
 }
@@ -228,7 +232,7 @@ return $default(_that.id,_that.type,_that.code,_that.name,_that.nameEn,_that.sor
 
 
 class _DictEntry implements DictEntry {
-  const _DictEntry({required this.id, required this.type, required this.code, required this.name, this.nameEn, this.sortOrder = 1000, this.isBuiltin = false, required this.createdAt, required this.updatedAt, this.flagEmoji, this.continent, this.colorHex, this.mapLon, this.mapLat, this.parentRegion});
+  const _DictEntry({required this.id, required this.type, required this.code, required this.name, this.nameEn, this.sortOrder = 1000, this.isBuiltin = false, required this.createdAt, required this.updatedAt, this.flagEmoji, this.continent, this.colorHex, this.mapLon, this.mapLat, this.anchorLon, this.anchorLat, this.parentRegion});
   
 
 @override final  int id;
@@ -247,10 +251,14 @@ class _DictEntry implements DictEntry {
 @override final  String? continent;
 /// 强调色十六进制字符串，如 `'0xFFEF4444'`。
 @override final  String? colorHex;
-/// 地图经度（-180 ~ 180）。
+/// 地理经度（-180 ~ 180），表示国家/地区的真实地理参考位置。
 @override final  double? mapLon;
-/// 地图纬度（-90 ~ 90）。
+/// 地理纬度（-90 ~ 90），表示国家/地区的真实地理参考位置。
 @override final  double? mapLat;
+/// 地图锚点经度（-180 ~ 180），默认用于金融中心点展示。
+@override final  double? anchorLon;
+/// 地图锚点纬度（-90 ~ 90），默认用于金融中心点展示。
+@override final  double? anchorLat;
 /// 所属上级区域 code（如 `DE` 的 `parent_region = 'EU'`）。
 /// `null` 表示顶级区域。UI 展示为「区域 | 国家」层级格式。
 @override final  String? parentRegion;
@@ -265,16 +273,16 @@ _$DictEntryCopyWith<_DictEntry> get copyWith => __$DictEntryCopyWithImpl<_DictEn
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DictEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.nameEn, nameEn) || other.nameEn == nameEn)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.isBuiltin, isBuiltin) || other.isBuiltin == isBuiltin)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.flagEmoji, flagEmoji) || other.flagEmoji == flagEmoji)&&(identical(other.continent, continent) || other.continent == continent)&&(identical(other.colorHex, colorHex) || other.colorHex == colorHex)&&(identical(other.mapLon, mapLon) || other.mapLon == mapLon)&&(identical(other.mapLat, mapLat) || other.mapLat == mapLat)&&(identical(other.parentRegion, parentRegion) || other.parentRegion == parentRegion));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DictEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.nameEn, nameEn) || other.nameEn == nameEn)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.isBuiltin, isBuiltin) || other.isBuiltin == isBuiltin)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.flagEmoji, flagEmoji) || other.flagEmoji == flagEmoji)&&(identical(other.continent, continent) || other.continent == continent)&&(identical(other.colorHex, colorHex) || other.colorHex == colorHex)&&(identical(other.mapLon, mapLon) || other.mapLon == mapLon)&&(identical(other.mapLat, mapLat) || other.mapLat == mapLat)&&(identical(other.anchorLon, anchorLon) || other.anchorLon == anchorLon)&&(identical(other.anchorLat, anchorLat) || other.anchorLat == anchorLat)&&(identical(other.parentRegion, parentRegion) || other.parentRegion == parentRegion));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,type,code,name,nameEn,sortOrder,isBuiltin,createdAt,updatedAt,flagEmoji,continent,colorHex,mapLon,mapLat,parentRegion);
+int get hashCode => Object.hash(runtimeType,id,type,code,name,nameEn,sortOrder,isBuiltin,createdAt,updatedAt,flagEmoji,continent,colorHex,mapLon,mapLat,anchorLon,anchorLat,parentRegion);
 
 @override
 String toString() {
-  return 'DictEntry(id: $id, type: $type, code: $code, name: $name, nameEn: $nameEn, sortOrder: $sortOrder, isBuiltin: $isBuiltin, createdAt: $createdAt, updatedAt: $updatedAt, flagEmoji: $flagEmoji, continent: $continent, colorHex: $colorHex, mapLon: $mapLon, mapLat: $mapLat, parentRegion: $parentRegion)';
+  return 'DictEntry(id: $id, type: $type, code: $code, name: $name, nameEn: $nameEn, sortOrder: $sortOrder, isBuiltin: $isBuiltin, createdAt: $createdAt, updatedAt: $updatedAt, flagEmoji: $flagEmoji, continent: $continent, colorHex: $colorHex, mapLon: $mapLon, mapLat: $mapLat, anchorLon: $anchorLon, anchorLat: $anchorLat, parentRegion: $parentRegion)';
 }
 
 
@@ -285,7 +293,7 @@ abstract mixin class _$DictEntryCopyWith<$Res> implements $DictEntryCopyWith<$Re
   factory _$DictEntryCopyWith(_DictEntry value, $Res Function(_DictEntry) _then) = __$DictEntryCopyWithImpl;
 @override @useResult
 $Res call({
- int id, DictType type, String code, String name, String? nameEn, int sortOrder, bool isBuiltin, DateTime createdAt, DateTime updatedAt, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, String? parentRegion
+ int id, DictType type, String code, String name, String? nameEn, int sortOrder, bool isBuiltin, DateTime createdAt, DateTime updatedAt, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, double? anchorLon, double? anchorLat, String? parentRegion
 });
 
 
@@ -302,7 +310,7 @@ class __$DictEntryCopyWithImpl<$Res>
 
 /// Create a copy of DictEntry
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? code = null,Object? name = null,Object? nameEn = freezed,Object? sortOrder = null,Object? isBuiltin = null,Object? createdAt = null,Object? updatedAt = null,Object? flagEmoji = freezed,Object? continent = freezed,Object? colorHex = freezed,Object? mapLon = freezed,Object? mapLat = freezed,Object? parentRegion = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? code = null,Object? name = null,Object? nameEn = freezed,Object? sortOrder = null,Object? isBuiltin = null,Object? createdAt = null,Object? updatedAt = null,Object? flagEmoji = freezed,Object? continent = freezed,Object? colorHex = freezed,Object? mapLon = freezed,Object? mapLat = freezed,Object? anchorLon = freezed,Object? anchorLat = freezed,Object? parentRegion = freezed,}) {
   return _then(_DictEntry(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -318,6 +326,8 @@ as String?,continent: freezed == continent ? _self.continent : continent // igno
 as String?,colorHex: freezed == colorHex ? _self.colorHex : colorHex // ignore: cast_nullable_to_non_nullable
 as String?,mapLon: freezed == mapLon ? _self.mapLon : mapLon // ignore: cast_nullable_to_non_nullable
 as double?,mapLat: freezed == mapLat ? _self.mapLat : mapLat // ignore: cast_nullable_to_non_nullable
+as double?,anchorLon: freezed == anchorLon ? _self.anchorLon : anchorLon // ignore: cast_nullable_to_non_nullable
+as double?,anchorLat: freezed == anchorLat ? _self.anchorLat : anchorLat // ignore: cast_nullable_to_non_nullable
 as double?,parentRegion: freezed == parentRegion ? _self.parentRegion : parentRegion // ignore: cast_nullable_to_non_nullable
 as String?,
   ));

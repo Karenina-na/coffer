@@ -30,6 +30,7 @@ abstract class Channel with _$Channel {
     /// 值来自 `dict_entries` 表的 `TRANSFER_PROTOCOL` 类型，应用层只按代码字符串
     /// 处理，展示时通过 [DictRepository] 查出对应名称。
     required String transferProtocol,
+    @Default(false) bool isBuiltin,
     Decimal? feeRate,
     Decimal? fixedFee,
     Map<String, dynamic>? sovereigntyRegionRule,

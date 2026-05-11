@@ -30,7 +30,7 @@ Channel _ch({
   return Channel(
     id: id,
     name: name ?? id,
-    transferProtocol: 'INTERNAL',
+    transferProtocol: 'SWIFT',
     feeRate: feeRate,
     fixedFee: fixedFee,
     singleLimit: single,

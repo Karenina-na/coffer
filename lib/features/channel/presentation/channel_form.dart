@@ -61,7 +61,7 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
     final rule = c?.sovereigntyRegionRule ?? const <String, dynamic>{};
     _allowedRegions = _normalizeRegions(rule['allowedRegions']);
     _blockedRegions = _normalizeRegions(rule['blockedRegions']);
-    _protocol = c?.transferProtocol ?? 'INTERNAL';
+    _protocol = c?.transferProtocol ?? 'SWIFT';
     _requireSameRegion = rule['requireSameRegion'] == true;
   }
 
@@ -115,6 +115,7 @@ class _ChannelFormState extends ConsumerState<ChannelForm> {
       id: prev?.id ?? const Uuid().v4(),
       name: _nameCtrl.text.trim(),
       transferProtocol: _protocol,
+      isBuiltin: prev?.isBuiltin ?? false,
       feeRate: _parse(_feeRateCtrl),
       fixedFee: _parse(_fixedFeeCtrl),
       sovereigntyRegionRule: rule.isEmpty ? null : rule,

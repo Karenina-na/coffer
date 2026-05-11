@@ -3,13 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/app_top_bar.dart';
+import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/protocol_display.dart';
+import '../../../core/ui/region_meta.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/channel.dart';
 import '../../../domain/entities/channel_enums.dart';
+import '../../../domain/entities/dict_entry.dart';
+import '../../../domain/entities/dict_type.dart';
 import 'channel_providers.dart';
+
+String _channelRegionSuffix(Channel channel, RegionIndex regionIndex) {
+  final allowed = (channel.sovereigntyRegionRule?['allowedRegions'] as List?)
+      ?.whereType<String>()
+      .toList(growable: false);
+  if (allowed == null || allowed.length != 1) return '';
+  return ' · ${regionLabel(regionIndex, allowed.single)}';
+}
 
 class ChannelListPage extends ConsumerStatefulWidget {
   const ChannelListPage({super.key});
@@ -22,6 +36,8 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
   @override
   Widget build(BuildContext context) {
     final channels = ref.watch(channelListProvider);
+    final regionIndexAsync = ref.watch(regionMetaIndexProvider);
+    final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
     return Scaffold(
       appBar: const AppTopBar(title: Text('转账通道')),
       body: channels.when(
@@ -33,6 +49,10 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
           onRetry: () => ref.invalidate(channelListProvider),
         ),
         data: (list) {
+          final regionIndex = regionIndexAsync.value ?? const <String, RegionMeta>{};
+          final ProtocolIndex protocolIndex = {
+            for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
+          };
           if (list.isEmpty) {
             return const GwpEmptyState(
               icon: Icons.swap_horiz_outlined,
@@ -57,7 +77,11 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
               ),
               const SizedBox(height: GwpSpacing.md),
               for (var i = 0; i < list.length; i++) ...[
-                _ChannelCard(channel: list[i]),
+                _ChannelCard(
+                  channel: list[i],
+                  regionIndex: regionIndex,
+                  protocolIndex: protocolIndex,
+                ),
                 if (i < list.length - 1) const SizedBox(height: GwpSpacing.sm),
               ],
             ],
@@ -161,10 +185,8 @@ const _protocolColors = <String, Color>{
   'ACH': Color(0xFF22C55E),
   'SEPA': Color(0xFF8B5CF6),
   'CNAPS': Color(0xFFEF4444),
-  'RTGS': Color(0xFFF59E0B),
   'FPS': Color(0xFFEC4899),
-  'ONCHAIN': Color(0xFFF97316),
-  'INTERNAL': Color(0xFF6B7280),
+  'CHATS': Color(0xFFF59E0B),
 };
 
 const _protocolIcons = <String, IconData>{
@@ -172,16 +194,20 @@ const _protocolIcons = <String, IconData>{
   'ACH': Icons.account_balance_outlined,
   'SEPA': Icons.euro_outlined,
   'CNAPS': Icons.currency_yuan_outlined,
-  'RTGS': Icons.speed_outlined,
   'FPS': Icons.flash_on_outlined,
-  'ONCHAIN': Icons.link_outlined,
-  'INTERNAL': Icons.swap_horiz_outlined,
+  'CHATS': Icons.account_balance_wallet_outlined,
 };
 
 class _ChannelCard extends ConsumerWidget {
-  const _ChannelCard({required this.channel});
+  const _ChannelCard({
+    required this.channel,
+    required this.regionIndex,
+    required this.protocolIndex,
+  });
 
   final Channel channel;
+  final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -189,6 +215,8 @@ class _ChannelCard extends ConsumerWidget {
     final icon = _protocolIcons[channel.transferProtocol] ?? Icons.swap_horiz_outlined;
     final enabled = channel.status == ChannelStatus.enabled;
     final isMaintenance = channel.status == ChannelStatus.maintenance;
+    final protocolLabel = protocolDisplayLabel(protocolIndex, channel.transferProtocol);
+    final regionSuffix = _channelRegionSuffix(channel, regionIndex);
 
     final limits = <String>[
       if (channel.singleLimit != null) '单笔 ≤ ${channel.singleLimit}',
@@ -200,7 +228,7 @@ class _ChannelCard extends ConsumerWidget {
       if (channel.fixedFee != null) '固定 ${channel.fixedFee}',
     ];
     final meta = [
-      channel.transferProtocol,
+      '$protocolLabel$regionSuffix',
       if (fee.isNotEmpty) fee.join(' / '),
       if (limits.isNotEmpty) limits.join(' '),
     ].join(' · ');
@@ -250,15 +278,25 @@ class _ChannelCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        channel.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: GwpColors.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${channel.name}$regionSuffix',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: GwpColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (channel.isBuiltin) ...[
+                            const SizedBox(width: GwpSpacing.xs),
+                            const BuiltinBadge(),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 3),
                       Text(

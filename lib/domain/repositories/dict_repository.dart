@@ -25,12 +25,14 @@ abstract interface class DictRepository {
     String? colorHex,
     double? mapLon,
     double? mapLat,
+    double? anchorLon,
+    double? anchorLat,
     String? parentRegion,
   });
 
   /// 更新条目名称、英文名、排序。内置项允许改名/排序，不允许改 code。
   /// 地区 UI 元数据字段（flagEmoji / continent / colorHex / mapLon / mapLat
-  /// / parentRegion）内置项和自定义项均可编辑。
+  /// / anchorLon / anchorLat / parentRegion）内置项和自定义项均可编辑。
   Future<Result<DictEntry, AppError>> updateEntry({
     required int id,
     String? name,
@@ -42,6 +44,8 @@ abstract interface class DictRepository {
     Object? colorHex = const DictFieldAbsent(),
     Object? mapLon = const DictFieldAbsent(),
     Object? mapLat = const DictFieldAbsent(),
+    Object? anchorLon = const DictFieldAbsent(),
+    Object? anchorLat = const DictFieldAbsent(),
     Object? parentRegion = const DictFieldAbsent(),
   });
 

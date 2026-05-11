@@ -712,6 +712,21 @@ class $ChannelsTable extends Channels
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isBuiltinMeta = const VerificationMeta(
+    'isBuiltin',
+  );
+  @override
+  late final GeneratedColumn<bool> isBuiltin = GeneratedColumn<bool>(
+    'is_builtin',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_builtin" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _feeRateMeta = const VerificationMeta(
     'feeRate',
   );
@@ -837,6 +852,7 @@ class $ChannelsTable extends Channels
     id,
     name,
     transferProtocol,
+    isBuiltin,
     feeRate,
     fixedFee,
     sovereigntyRegionRule,
@@ -884,6 +900,12 @@ class $ChannelsTable extends Channels
       );
     } else if (isInserting) {
       context.missing(_transferProtocolMeta);
+    }
+    if (data.containsKey('is_builtin')) {
+      context.handle(
+        _isBuiltinMeta,
+        isBuiltin.isAcceptableOrUnknown(data['is_builtin']!, _isBuiltinMeta),
+      );
     }
     if (data.containsKey('fee_rate')) {
       context.handle(
@@ -993,6 +1015,10 @@ class $ChannelsTable extends Channels
         DriftSqlType.string,
         data['${effectivePrefix}transfer_protocol'],
       )!,
+      isBuiltin: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_builtin'],
+      )!,
       feeRate: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}fee_rate'],
@@ -1050,6 +1076,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
   final String id;
   final String name;
   final String transferProtocol;
+  final bool isBuiltin;
   final String? feeRate;
   final String? fixedFee;
   final String? sovereigntyRegionRule;
@@ -1065,6 +1092,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     required this.id,
     required this.name,
     required this.transferProtocol,
+    required this.isBuiltin,
     this.feeRate,
     this.fixedFee,
     this.sovereigntyRegionRule,
@@ -1083,6 +1111,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['transfer_protocol'] = Variable<String>(transferProtocol);
+    map['is_builtin'] = Variable<bool>(isBuiltin);
     if (!nullToAbsent || feeRate != null) {
       map['fee_rate'] = Variable<String>(feeRate);
     }
@@ -1118,6 +1147,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       id: Value(id),
       name: Value(name),
       transferProtocol: Value(transferProtocol),
+      isBuiltin: Value(isBuiltin),
       feeRate: feeRate == null && nullToAbsent
           ? const Value.absent()
           : Value(feeRate),
@@ -1157,6 +1187,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       transferProtocol: serializer.fromJson<String>(json['transferProtocol']),
+      isBuiltin: serializer.fromJson<bool>(json['isBuiltin']),
       feeRate: serializer.fromJson<String?>(json['feeRate']),
       fixedFee: serializer.fromJson<String?>(json['fixedFee']),
       sovereigntyRegionRule: serializer.fromJson<String?>(
@@ -1179,6 +1210,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'transferProtocol': serializer.toJson<String>(transferProtocol),
+      'isBuiltin': serializer.toJson<bool>(isBuiltin),
       'feeRate': serializer.toJson<String?>(feeRate),
       'fixedFee': serializer.toJson<String?>(fixedFee),
       'sovereigntyRegionRule': serializer.toJson<String?>(
@@ -1199,6 +1231,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     String? id,
     String? name,
     String? transferProtocol,
+    bool? isBuiltin,
     Value<String?> feeRate = const Value.absent(),
     Value<String?> fixedFee = const Value.absent(),
     Value<String?> sovereigntyRegionRule = const Value.absent(),
@@ -1214,6 +1247,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     id: id ?? this.id,
     name: name ?? this.name,
     transferProtocol: transferProtocol ?? this.transferProtocol,
+    isBuiltin: isBuiltin ?? this.isBuiltin,
     feeRate: feeRate.present ? feeRate.value : this.feeRate,
     fixedFee: fixedFee.present ? fixedFee.value : this.fixedFee,
     sovereigntyRegionRule: sovereigntyRegionRule.present
@@ -1239,6 +1273,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       transferProtocol: data.transferProtocol.present
           ? data.transferProtocol.value
           : this.transferProtocol,
+      isBuiltin: data.isBuiltin.present ? data.isBuiltin.value : this.isBuiltin,
       feeRate: data.feeRate.present ? data.feeRate.value : this.feeRate,
       fixedFee: data.fixedFee.present ? data.fixedFee.value : this.fixedFee,
       sovereigntyRegionRule: data.sovereigntyRegionRule.present
@@ -1271,6 +1306,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('transferProtocol: $transferProtocol, ')
+          ..write('isBuiltin: $isBuiltin, ')
           ..write('feeRate: $feeRate, ')
           ..write('fixedFee: $fixedFee, ')
           ..write('sovereigntyRegionRule: $sovereigntyRegionRule, ')
@@ -1291,6 +1327,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     id,
     name,
     transferProtocol,
+    isBuiltin,
     feeRate,
     fixedFee,
     sovereigntyRegionRule,
@@ -1310,6 +1347,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           other.id == this.id &&
           other.name == this.name &&
           other.transferProtocol == this.transferProtocol &&
+          other.isBuiltin == this.isBuiltin &&
           other.feeRate == this.feeRate &&
           other.fixedFee == this.fixedFee &&
           other.sovereigntyRegionRule == this.sovereigntyRegionRule &&
@@ -1327,6 +1365,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> transferProtocol;
+  final Value<bool> isBuiltin;
   final Value<String?> feeRate;
   final Value<String?> fixedFee;
   final Value<String?> sovereigntyRegionRule;
@@ -1343,6 +1382,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.transferProtocol = const Value.absent(),
+    this.isBuiltin = const Value.absent(),
     this.feeRate = const Value.absent(),
     this.fixedFee = const Value.absent(),
     this.sovereigntyRegionRule = const Value.absent(),
@@ -1360,6 +1400,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     required String id,
     required String name,
     required String transferProtocol,
+    this.isBuiltin = const Value.absent(),
     this.feeRate = const Value.absent(),
     this.fixedFee = const Value.absent(),
     this.sovereigntyRegionRule = const Value.absent(),
@@ -1382,6 +1423,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? transferProtocol,
+    Expression<bool>? isBuiltin,
     Expression<String>? feeRate,
     Expression<String>? fixedFee,
     Expression<String>? sovereigntyRegionRule,
@@ -1399,6 +1441,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (transferProtocol != null) 'transfer_protocol': transferProtocol,
+      if (isBuiltin != null) 'is_builtin': isBuiltin,
       if (feeRate != null) 'fee_rate': feeRate,
       if (fixedFee != null) 'fixed_fee': fixedFee,
       if (sovereigntyRegionRule != null)
@@ -1419,6 +1462,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? transferProtocol,
+    Value<bool>? isBuiltin,
     Value<String?>? feeRate,
     Value<String?>? fixedFee,
     Value<String?>? sovereigntyRegionRule,
@@ -1436,6 +1480,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
       id: id ?? this.id,
       name: name ?? this.name,
       transferProtocol: transferProtocol ?? this.transferProtocol,
+      isBuiltin: isBuiltin ?? this.isBuiltin,
       feeRate: feeRate ?? this.feeRate,
       fixedFee: fixedFee ?? this.fixedFee,
       sovereigntyRegionRule:
@@ -1463,6 +1508,9 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     }
     if (transferProtocol.present) {
       map['transfer_protocol'] = Variable<String>(transferProtocol.value);
+    }
+    if (isBuiltin.present) {
+      map['is_builtin'] = Variable<bool>(isBuiltin.value);
     }
     if (feeRate.present) {
       map['fee_rate'] = Variable<String>(feeRate.value);
@@ -1511,6 +1559,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('transferProtocol: $transferProtocol, ')
+          ..write('isBuiltin: $isBuiltin, ')
           ..write('feeRate: $feeRate, ')
           ..write('fixedFee: $fixedFee, ')
           ..write('sovereigntyRegionRule: $sovereigntyRegionRule, ')
@@ -5637,6 +5686,28 @@ class $DictEntriesTable extends DictEntries
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _anchorLonMeta = const VerificationMeta(
+    'anchorLon',
+  );
+  @override
+  late final GeneratedColumn<double> anchorLon = GeneratedColumn<double>(
+    'anchor_lon',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _anchorLatMeta = const VerificationMeta(
+    'anchorLat',
+  );
+  @override
+  late final GeneratedColumn<double> anchorLat = GeneratedColumn<double>(
+    'anchor_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _parentRegionMeta = const VerificationMeta(
     'parentRegion',
   );
@@ -5664,6 +5735,8 @@ class $DictEntriesTable extends DictEntries
     colorHex,
     mapLon,
     mapLat,
+    anchorLon,
+    anchorLat,
     parentRegion,
   ];
   @override
@@ -5769,6 +5842,18 @@ class $DictEntriesTable extends DictEntries
         mapLat.isAcceptableOrUnknown(data['map_lat']!, _mapLatMeta),
       );
     }
+    if (data.containsKey('anchor_lon')) {
+      context.handle(
+        _anchorLonMeta,
+        anchorLon.isAcceptableOrUnknown(data['anchor_lon']!, _anchorLonMeta),
+      );
+    }
+    if (data.containsKey('anchor_lat')) {
+      context.handle(
+        _anchorLatMeta,
+        anchorLat.isAcceptableOrUnknown(data['anchor_lat']!, _anchorLatMeta),
+      );
+    }
     if (data.containsKey('parent_region')) {
       context.handle(
         _parentRegionMeta,
@@ -5843,6 +5928,14 @@ class $DictEntriesTable extends DictEntries
         DriftSqlType.double,
         data['${effectivePrefix}map_lat'],
       ),
+      anchorLon: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}anchor_lon'],
+      ),
+      anchorLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}anchor_lat'],
+      ),
       parentRegion: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}parent_region'],
@@ -5876,11 +5969,17 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
   /// 强调色十六进制字符串，如 `'0xFFEF4444'`（与 `Color(0xFFEF4444)` 对应）。
   final String? colorHex;
 
-  /// 地图经度（-180 ~ 180）。
+  /// 地理经度（-180 ~ 180），表示国家/地区的真实地理参考位置。
   final double? mapLon;
 
-  /// 地图纬度（-90 ~ 90）。
+  /// 地理纬度（-90 ~ 90），表示国家/地区的真实地理参考位置。
   final double? mapLat;
+
+  /// 地图锚点经度（-180 ~ 180），默认用于金融中心点展示。
+  final double? anchorLon;
+
+  /// 地图锚点纬度（-90 ~ 90），默认用于金融中心点展示。
+  final double? anchorLat;
 
   /// 所属上级区域 code（如 `DE` 的 `parent_region = 'EU'`）。
   /// 为 `null` 表示顶级区域。UI 展示为「区域 | 国家」层级格式。
@@ -5900,6 +5999,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
     this.colorHex,
     this.mapLon,
     this.mapLat,
+    this.anchorLon,
+    this.anchorLat,
     this.parentRegion,
   });
   @override
@@ -5930,6 +6031,12 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
     }
     if (!nullToAbsent || mapLat != null) {
       map['map_lat'] = Variable<double>(mapLat);
+    }
+    if (!nullToAbsent || anchorLon != null) {
+      map['anchor_lon'] = Variable<double>(anchorLon);
+    }
+    if (!nullToAbsent || anchorLat != null) {
+      map['anchor_lat'] = Variable<double>(anchorLat);
     }
     if (!nullToAbsent || parentRegion != null) {
       map['parent_region'] = Variable<String>(parentRegion);
@@ -5965,6 +6072,12 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
       mapLat: mapLat == null && nullToAbsent
           ? const Value.absent()
           : Value(mapLat),
+      anchorLon: anchorLon == null && nullToAbsent
+          ? const Value.absent()
+          : Value(anchorLon),
+      anchorLat: anchorLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(anchorLat),
       parentRegion: parentRegion == null && nullToAbsent
           ? const Value.absent()
           : Value(parentRegion),
@@ -5991,6 +6104,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
       colorHex: serializer.fromJson<String?>(json['colorHex']),
       mapLon: serializer.fromJson<double?>(json['mapLon']),
       mapLat: serializer.fromJson<double?>(json['mapLat']),
+      anchorLon: serializer.fromJson<double?>(json['anchorLon']),
+      anchorLat: serializer.fromJson<double?>(json['anchorLat']),
       parentRegion: serializer.fromJson<String?>(json['parentRegion']),
     );
   }
@@ -6012,6 +6127,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
       'colorHex': serializer.toJson<String?>(colorHex),
       'mapLon': serializer.toJson<double?>(mapLon),
       'mapLat': serializer.toJson<double?>(mapLat),
+      'anchorLon': serializer.toJson<double?>(anchorLon),
+      'anchorLat': serializer.toJson<double?>(anchorLat),
       'parentRegion': serializer.toJson<String?>(parentRegion),
     };
   }
@@ -6031,6 +6148,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
     Value<String?> colorHex = const Value.absent(),
     Value<double?> mapLon = const Value.absent(),
     Value<double?> mapLat = const Value.absent(),
+    Value<double?> anchorLon = const Value.absent(),
+    Value<double?> anchorLat = const Value.absent(),
     Value<String?> parentRegion = const Value.absent(),
   }) => DictEntryRow(
     id: id ?? this.id,
@@ -6047,6 +6166,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
     colorHex: colorHex.present ? colorHex.value : this.colorHex,
     mapLon: mapLon.present ? mapLon.value : this.mapLon,
     mapLat: mapLat.present ? mapLat.value : this.mapLat,
+    anchorLon: anchorLon.present ? anchorLon.value : this.anchorLon,
+    anchorLat: anchorLat.present ? anchorLat.value : this.anchorLat,
     parentRegion: parentRegion.present ? parentRegion.value : this.parentRegion,
   );
   DictEntryRow copyWithCompanion(DictEntriesCompanion data) {
@@ -6065,6 +6186,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       mapLon: data.mapLon.present ? data.mapLon.value : this.mapLon,
       mapLat: data.mapLat.present ? data.mapLat.value : this.mapLat,
+      anchorLon: data.anchorLon.present ? data.anchorLon.value : this.anchorLon,
+      anchorLat: data.anchorLat.present ? data.anchorLat.value : this.anchorLat,
       parentRegion: data.parentRegion.present
           ? data.parentRegion.value
           : this.parentRegion,
@@ -6088,6 +6211,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
           ..write('colorHex: $colorHex, ')
           ..write('mapLon: $mapLon, ')
           ..write('mapLat: $mapLat, ')
+          ..write('anchorLon: $anchorLon, ')
+          ..write('anchorLat: $anchorLat, ')
           ..write('parentRegion: $parentRegion')
           ..write(')'))
         .toString();
@@ -6109,6 +6234,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
     colorHex,
     mapLon,
     mapLat,
+    anchorLon,
+    anchorLat,
     parentRegion,
   );
   @override
@@ -6129,6 +6256,8 @@ class DictEntryRow extends DataClass implements Insertable<DictEntryRow> {
           other.colorHex == this.colorHex &&
           other.mapLon == this.mapLon &&
           other.mapLat == this.mapLat &&
+          other.anchorLon == this.anchorLon &&
+          other.anchorLat == this.anchorLat &&
           other.parentRegion == this.parentRegion);
 }
 
@@ -6147,6 +6276,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
   final Value<String?> colorHex;
   final Value<double?> mapLon;
   final Value<double?> mapLat;
+  final Value<double?> anchorLon;
+  final Value<double?> anchorLat;
   final Value<String?> parentRegion;
   const DictEntriesCompanion({
     this.id = const Value.absent(),
@@ -6163,6 +6294,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
     this.colorHex = const Value.absent(),
     this.mapLon = const Value.absent(),
     this.mapLat = const Value.absent(),
+    this.anchorLon = const Value.absent(),
+    this.anchorLat = const Value.absent(),
     this.parentRegion = const Value.absent(),
   });
   DictEntriesCompanion.insert({
@@ -6180,6 +6313,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
     this.colorHex = const Value.absent(),
     this.mapLon = const Value.absent(),
     this.mapLat = const Value.absent(),
+    this.anchorLon = const Value.absent(),
+    this.anchorLat = const Value.absent(),
     this.parentRegion = const Value.absent(),
   }) : type = Value(type),
        code = Value(code),
@@ -6201,6 +6336,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
     Expression<String>? colorHex,
     Expression<double>? mapLon,
     Expression<double>? mapLat,
+    Expression<double>? anchorLon,
+    Expression<double>? anchorLat,
     Expression<String>? parentRegion,
   }) {
     return RawValuesInsertable({
@@ -6218,6 +6355,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
       if (colorHex != null) 'color_hex': colorHex,
       if (mapLon != null) 'map_lon': mapLon,
       if (mapLat != null) 'map_lat': mapLat,
+      if (anchorLon != null) 'anchor_lon': anchorLon,
+      if (anchorLat != null) 'anchor_lat': anchorLat,
       if (parentRegion != null) 'parent_region': parentRegion,
     });
   }
@@ -6237,6 +6376,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
     Value<String?>? colorHex,
     Value<double?>? mapLon,
     Value<double?>? mapLat,
+    Value<double?>? anchorLon,
+    Value<double?>? anchorLat,
     Value<String?>? parentRegion,
   }) {
     return DictEntriesCompanion(
@@ -6254,6 +6395,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
       colorHex: colorHex ?? this.colorHex,
       mapLon: mapLon ?? this.mapLon,
       mapLat: mapLat ?? this.mapLat,
+      anchorLon: anchorLon ?? this.anchorLon,
+      anchorLat: anchorLat ?? this.anchorLat,
       parentRegion: parentRegion ?? this.parentRegion,
     );
   }
@@ -6303,6 +6446,12 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
     if (mapLat.present) {
       map['map_lat'] = Variable<double>(mapLat.value);
     }
+    if (anchorLon.present) {
+      map['anchor_lon'] = Variable<double>(anchorLon.value);
+    }
+    if (anchorLat.present) {
+      map['anchor_lat'] = Variable<double>(anchorLat.value);
+    }
     if (parentRegion.present) {
       map['parent_region'] = Variable<String>(parentRegion.value);
     }
@@ -6326,6 +6475,8 @@ class DictEntriesCompanion extends UpdateCompanion<DictEntryRow> {
           ..write('colorHex: $colorHex, ')
           ..write('mapLon: $mapLon, ')
           ..write('mapLat: $mapLat, ')
+          ..write('anchorLon: $anchorLon, ')
+          ..write('anchorLat: $anchorLat, ')
           ..write('parentRegion: $parentRegion')
           ..write(')'))
         .toString();
@@ -9926,6 +10077,7 @@ typedef $$ChannelsTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String transferProtocol,
+      Value<bool> isBuiltin,
       Value<String?> feeRate,
       Value<String?> fixedFee,
       Value<String?> sovereigntyRegionRule,
@@ -9944,6 +10096,7 @@ typedef $$ChannelsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> transferProtocol,
+      Value<bool> isBuiltin,
       Value<String?> feeRate,
       Value<String?> fixedFee,
       Value<String?> sovereigntyRegionRule,
@@ -10007,6 +10160,11 @@ class $$ChannelsTableFilterComposer
 
   ColumnFilters<String> get transferProtocol => $composableBuilder(
     column: $table.transferProtocol,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isBuiltin => $composableBuilder(
+    column: $table.isBuiltin,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10115,6 +10273,11 @@ class $$ChannelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isBuiltin => $composableBuilder(
+    column: $table.isBuiltin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get feeRate => $composableBuilder(
     column: $table.feeRate,
     builder: (column) => ColumnOrderings(column),
@@ -10190,6 +10353,9 @@ class $$ChannelsTableAnnotationComposer
     column: $table.transferProtocol,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isBuiltin =>
+      $composableBuilder(column: $table.isBuiltin, builder: (column) => column);
 
   GeneratedColumn<String> get feeRate =>
       $composableBuilder(column: $table.feeRate, builder: (column) => column);
@@ -10293,6 +10459,7 @@ class $$ChannelsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> transferProtocol = const Value.absent(),
+                Value<bool> isBuiltin = const Value.absent(),
                 Value<String?> feeRate = const Value.absent(),
                 Value<String?> fixedFee = const Value.absent(),
                 Value<String?> sovereigntyRegionRule = const Value.absent(),
@@ -10309,6 +10476,7 @@ class $$ChannelsTableTableManager
                 id: id,
                 name: name,
                 transferProtocol: transferProtocol,
+                isBuiltin: isBuiltin,
                 feeRate: feeRate,
                 fixedFee: fixedFee,
                 sovereigntyRegionRule: sovereigntyRegionRule,
@@ -10327,6 +10495,7 @@ class $$ChannelsTableTableManager
                 required String id,
                 required String name,
                 required String transferProtocol,
+                Value<bool> isBuiltin = const Value.absent(),
                 Value<String?> feeRate = const Value.absent(),
                 Value<String?> fixedFee = const Value.absent(),
                 Value<String?> sovereigntyRegionRule = const Value.absent(),
@@ -10343,6 +10512,7 @@ class $$ChannelsTableTableManager
                 id: id,
                 name: name,
                 transferProtocol: transferProtocol,
+                isBuiltin: isBuiltin,
                 feeRate: feeRate,
                 fixedFee: fixedFee,
                 sovereigntyRegionRule: sovereigntyRegionRule,
@@ -13160,6 +13330,8 @@ typedef $$DictEntriesTableCreateCompanionBuilder =
       Value<String?> colorHex,
       Value<double?> mapLon,
       Value<double?> mapLat,
+      Value<double?> anchorLon,
+      Value<double?> anchorLat,
       Value<String?> parentRegion,
     });
 typedef $$DictEntriesTableUpdateCompanionBuilder =
@@ -13178,6 +13350,8 @@ typedef $$DictEntriesTableUpdateCompanionBuilder =
       Value<String?> colorHex,
       Value<double?> mapLon,
       Value<double?> mapLat,
+      Value<double?> anchorLon,
+      Value<double?> anchorLat,
       Value<String?> parentRegion,
     });
 
@@ -13257,6 +13431,16 @@ class $$DictEntriesTableFilterComposer
 
   ColumnFilters<double> get mapLat => $composableBuilder(
     column: $table.mapLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get anchorLon => $composableBuilder(
+    column: $table.anchorLon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get anchorLat => $composableBuilder(
+    column: $table.anchorLat,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13345,6 +13529,16 @@ class $$DictEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get anchorLon => $composableBuilder(
+    column: $table.anchorLon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get anchorLat => $composableBuilder(
+    column: $table.anchorLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get parentRegion => $composableBuilder(
     column: $table.parentRegion,
     builder: (column) => ColumnOrderings(column),
@@ -13402,6 +13596,12 @@ class $$DictEntriesTableAnnotationComposer
   GeneratedColumn<double> get mapLat =>
       $composableBuilder(column: $table.mapLat, builder: (column) => column);
 
+  GeneratedColumn<double> get anchorLon =>
+      $composableBuilder(column: $table.anchorLon, builder: (column) => column);
+
+  GeneratedColumn<double> get anchorLat =>
+      $composableBuilder(column: $table.anchorLat, builder: (column) => column);
+
   GeneratedColumn<String> get parentRegion => $composableBuilder(
     column: $table.parentRegion,
     builder: (column) => column,
@@ -13453,6 +13653,8 @@ class $$DictEntriesTableTableManager
                 Value<String?> colorHex = const Value.absent(),
                 Value<double?> mapLon = const Value.absent(),
                 Value<double?> mapLat = const Value.absent(),
+                Value<double?> anchorLon = const Value.absent(),
+                Value<double?> anchorLat = const Value.absent(),
                 Value<String?> parentRegion = const Value.absent(),
               }) => DictEntriesCompanion(
                 id: id,
@@ -13469,6 +13671,8 @@ class $$DictEntriesTableTableManager
                 colorHex: colorHex,
                 mapLon: mapLon,
                 mapLat: mapLat,
+                anchorLon: anchorLon,
+                anchorLat: anchorLat,
                 parentRegion: parentRegion,
               ),
           createCompanionCallback:
@@ -13487,6 +13691,8 @@ class $$DictEntriesTableTableManager
                 Value<String?> colorHex = const Value.absent(),
                 Value<double?> mapLon = const Value.absent(),
                 Value<double?> mapLat = const Value.absent(),
+                Value<double?> anchorLon = const Value.absent(),
+                Value<double?> anchorLat = const Value.absent(),
                 Value<String?> parentRegion = const Value.absent(),
               }) => DictEntriesCompanion.insert(
                 id: id,
@@ -13503,6 +13709,8 @@ class $$DictEntriesTableTableManager
                 colorHex: colorHex,
                 mapLon: mapLon,
                 mapLat: mapLat,
+                anchorLon: anchorLon,
+                anchorLat: anchorLat,
                 parentRegion: parentRegion,
               ),
           withReferenceMapper: (p0) => p0

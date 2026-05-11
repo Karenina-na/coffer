@@ -8,6 +8,8 @@ class Channels extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   TextColumn get transferProtocol => text().named('transfer_protocol')();
+  BoolColumn get isBuiltin =>
+      boolean().named('is_builtin').withDefault(const Constant(false))();
   TextColumn get feeRate => text().named('fee_rate').nullable()();
   TextColumn get fixedFee => text().named('fixed_fee').nullable()();
   TextColumn get sovereigntyRegionRule =>

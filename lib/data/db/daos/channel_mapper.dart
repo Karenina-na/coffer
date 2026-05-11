@@ -14,6 +14,7 @@ class ChannelMapper {
         id: r.id,
         name: r.name,
         transferProtocol: r.transferProtocol,
+        isBuiltin: r.isBuiltin,
         feeRate: Money.parseOrNull(r.feeRate),
         fixedFee: Money.parseOrNull(r.fixedFee),
         sovereigntyRegionRule: r.sovereigntyRegionRule == null
@@ -33,6 +34,7 @@ class ChannelMapper {
         id: c.id,
         name: c.name,
         transferProtocol: c.transferProtocol,
+        isBuiltin: Value(c.isBuiltin),
         feeRate: _val(Money.stringifyOrNull(c.feeRate)),
         fixedFee: _val(Money.stringifyOrNull(c.fixedFee)),
         sovereigntyRegionRule: _val(
