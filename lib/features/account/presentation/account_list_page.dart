@@ -111,82 +111,101 @@ class _AccountListViewState extends State<_AccountListView> {
 
   @override
   Widget build(BuildContext context) {
-    // Compute per-account net worth + asset count
     final netWorth = <String, Decimal>{};
     final assetCount = <String, int>{};
-    for (final a in assets) {
-      final mv = a.valuedAmount;
+    final assetsByAccountId = <String, List<ValuedAsset>>{};
+    for (final valuedAsset in assets) {
+      final accountId = valuedAsset.asset.accountId;
+      assetsByAccountId.putIfAbsent(accountId, () => []).add(valuedAsset);
+      final mv = valuedAsset.valuedAmount;
       if (mv != null && mv > Decimal.zero) {
-        netWorth[a.asset.accountId] =
-            (netWorth[a.asset.accountId] ?? Decimal.zero) + mv;
+        netWorth[accountId] = (netWorth[accountId] ?? Decimal.zero) + mv;
       }
-      assetCount[a.asset.accountId] = (assetCount[a.asset.accountId] ?? 0) + 1;
+      assetCount[accountId] = (assetCount[accountId] ?? 0) + 1;
     }
 
-    // Per-account type aggregation for donut
     final typeValue = <AccountType, double>{};
-    for (final a in accounts) {
-      final v = (netWorth[a.id] ?? Decimal.zero).toDouble();
-      if (v > 0) {
-        typeValue[a.accountType] = (typeValue[a.accountType] ?? 0) + v;
+    for (final account in accounts) {
+      final value = (netWorth[account.id] ?? Decimal.zero).toDouble();
+      if (value > 0) {
+        typeValue[account.accountType] =
+            (typeValue[account.accountType] ?? 0) + value;
       }
     }
 
-    // Per-region aggregation for donut
     final regionValue = <String, double>{};
-    for (final a in accounts) {
-      final v = (netWorth[a.id] ?? Decimal.zero).toDouble();
-      if (v > 0) {
-        regionValue[a.sovereigntyRegion] =
-            (regionValue[a.sovereigntyRegion] ?? 0) + v;
+    for (final account in accounts) {
+      final value = (netWorth[account.id] ?? Decimal.zero).toDouble();
+      if (value > 0) {
+        regionValue[account.sovereigntyRegion] =
+            (regionValue[account.sovereigntyRegion] ?? 0) + value;
       }
     }
 
-    // Total net worth
     var totalNetWorth = Decimal.zero;
-    for (final v in netWorth.values) {
-      totalNetWorth += v;
+    for (final value in netWorth.values) {
+      totalNetWorth += value;
     }
 
-    // Group by region
-    final grouped = <String, List<Account>>{};
-    for (final a in accounts) {
-      grouped.putIfAbsent(a.sovereigntyRegion, () => []).add(a);
+    final grouped = <String, Map<AccountType, List<Account>>>{};
+    final regionNetWorth = <String, Decimal>{};
+    final typeNetWorthByRegion = <String, Map<AccountType, Decimal>>{};
+    for (final account in accounts) {
+      final regionGroups = grouped.putIfAbsent(
+        account.sovereigntyRegion,
+        () => <AccountType, List<Account>>{},
+      );
+      regionGroups.putIfAbsent(account.accountType, () => []).add(account);
+      final value = netWorth[account.id] ?? Decimal.zero;
+      regionNetWorth[account.sovereigntyRegion] =
+          (regionNetWorth[account.sovereigntyRegion] ?? Decimal.zero) + value;
+      final typeTotals = typeNetWorthByRegion.putIfAbsent(
+        account.sovereigntyRegion,
+        () => <AccountType, Decimal>{},
+      );
+      typeTotals[account.accountType] =
+          (typeTotals[account.accountType] ?? Decimal.zero) + value;
     }
+
+    for (final regionGroups in grouped.values) {
+      for (final accountsInType in regionGroups.values) {
+        accountsInType.sort((a, b) {
+          final valueCmp = (netWorth[b.id] ?? Decimal.zero).compareTo(
+            netWorth[a.id] ?? Decimal.zero,
+          );
+          if (valueCmp != 0) return valueCmp;
+          return a.institutionName.compareTo(b.institutionName);
+        });
+      }
+    }
+
     final sortedRegions = grouped.keys.toList()
       ..sort((a, b) {
-        final aTotal = grouped[a]!.fold<Decimal>(
-          Decimal.zero,
-          (s, acc) => s + (netWorth[acc.id] ?? Decimal.zero),
+        final valueCmp = (regionNetWorth[b] ?? Decimal.zero).compareTo(
+          regionNetWorth[a] ?? Decimal.zero,
         );
-        final bTotal = grouped[b]!.fold<Decimal>(
-          Decimal.zero,
-          (s, acc) => s + (netWorth[acc.id] ?? Decimal.zero),
-        );
-        return bTotal.compareTo(aTotal);
+        if (valueCmp != 0) return valueCmp;
+        return regionLabel(regionIndex, a).compareTo(regionLabel(regionIndex, b));
       });
 
-    // Auto-expand top N groups on first build
     if (!_initialized) {
       _initialized = true;
       for (var i = 0; i < sortedRegions.length && i < _kAutoExpandCount; i++) {
         _expandedGroups.add(sortedRegions[i]);
       }
-      // If total groups <= _kAutoExpandCount, expand all
       if (sortedRegions.length <= _kAutoExpandCount) {
         _expandedGroups.addAll(sortedRegions);
       }
     }
 
     final activeCount = accounts
-        .where((a) => a.status == AccountStatus.active)
+        .where((account) => account.status == AccountStatus.active)
         .length;
     final totalD = totalNetWorth.toDouble();
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 112),
       children: [
-        // Hero summary with donut charts
         _HeroCard(
           totalNetWorth: totalNetWorth,
           totalAccounts: accounts.length,
@@ -199,15 +218,14 @@ class _AccountListViewState extends State<_AccountListView> {
           regionValue: regionValue,
           regionIndex: regionIndex,
         ),
-        // Grouped sections
         for (final region in sortedRegions) ...[
           _RegionHeader(
             region: region,
-            accountCount: grouped[region]!.length,
-            netWorth: grouped[region]!.fold<Decimal>(
-              Decimal.zero,
-              (s, a) => s + (netWorth[a.id] ?? Decimal.zero),
+            accountCount: grouped[region]!.values.fold<int>(
+              0,
+              (sum, accountsInType) => sum + accountsInType.length,
             ),
+            netWorth: regionNetWorth[region] ?? Decimal.zero,
             totalNetWorth: totalD,
             expanded: _expandedGroups.contains(region),
             regionIndex: regionIndex,
@@ -220,30 +238,72 @@ class _AccountListViewState extends State<_AccountListView> {
             }),
           ),
           if (_expandedGroups.contains(region)) ...[
-            for (final account in _visibleItems(region, grouped[region]!))
-              _AccountCard(
-                account: account,
-                netWorth: netWorth[account.id],
-                assetCount: assetCount[account.id] ?? 0,
-                totalNetWorth: totalD,
-                accountAssets: assets
-                    .where((a) => a.asset.accountId == account.id)
-                    .toList(),
+            for (final accountType in _sortedAccountTypes(
+              region,
+              grouped[region]!,
+              typeNetWorthByRegion,
+            )) ...[
+              _AccountTypeHeader(
+                accountType: accountType,
+                accountCount: grouped[region]![accountType]!.length,
+                netWorth:
+                    typeNetWorthByRegion[region]?[accountType] ?? Decimal.zero,
               ),
-            if (!_showAllItems.contains(region) &&
-                grouped[region]!.length > _kGroupPreviewLimit)
-              _ShowMoreButton(
-                remaining: grouped[region]!.length - _kGroupPreviewLimit,
-                onPressed: () => setState(() => _showAllItems.add(region)),
-              ),
+              for (final account in _visibleItems(
+                region,
+                accountType,
+                grouped[region]![accountType]!,
+              ))
+                _AccountCard(
+                  account: account,
+                  netWorth: netWorth[account.id],
+                  assetCount: assetCount[account.id] ?? 0,
+                  totalNetWorth: totalD,
+                  accountAssets: assetsByAccountId[account.id] ?? const [],
+                ),
+              if (!_showAllItems.contains(_typeGroupKey(region, accountType)) &&
+                  grouped[region]![accountType]!.length > _kGroupPreviewLimit)
+                _ShowMoreButton(
+                  remaining:
+                      grouped[region]![accountType]!.length - _kGroupPreviewLimit,
+                  onPressed: () => setState(
+                    () => _showAllItems.add(_typeGroupKey(region, accountType)),
+                  ),
+                ),
+            ],
           ],
         ],
       ],
     );
   }
 
-  List<Account> _visibleItems(String region, List<Account> all) {
-    if (_showAllItems.contains(region) || all.length <= _kGroupPreviewLimit) {
+  List<AccountType> _sortedAccountTypes(
+    String region,
+    Map<AccountType, List<Account>> byType,
+    Map<String, Map<AccountType, Decimal>> typeNetWorthByRegion,
+  ) {
+    final types = byType.keys.toList();
+    types.sort((a, b) {
+      final valueCmp =
+          (typeNetWorthByRegion[region]?[b] ?? Decimal.zero).compareTo(
+            typeNetWorthByRegion[region]?[a] ?? Decimal.zero,
+          );
+      if (valueCmp != 0) return valueCmp;
+      return a.labelZh.compareTo(b.labelZh);
+    });
+    return types;
+  }
+
+  String _typeGroupKey(String region, AccountType type) =>
+      '$region|${type.code}';
+
+  List<Account> _visibleItems(
+    String region,
+    AccountType type,
+    List<Account> all,
+  ) {
+    if (_showAllItems.contains(_typeGroupKey(region, type)) ||
+        all.length <= _kGroupPreviewLimit) {
       return all;
     }
     return all.take(_kGroupPreviewLimit).toList();
@@ -356,7 +416,7 @@ class _HeroCard extends StatelessWidget {
                       data: typeValue.entries
                           .map(
                             (e) => _DonutSlice(
-                              label: _typeLabels[e.key] ?? e.key.name,
+                              label: e.key.labelZh,
                               value: e.value,
                               color:
                                   _typeColors[e.key] ?? GwpColors.actionPrimary,
@@ -478,7 +538,9 @@ class _MiniDonut extends StatelessWidget {
   }
 
   Widget _legendRow(_DonutSlice s, double total) {
-    final pct = total > 0 ? displayPercentDouble(s.value / total * 100, fractionDigits: 4) : '0.0000%';
+    final pct = total > 0
+        ? displayPercentDouble(s.value / total * 100, fractionDigits: 1)
+        : '0.0%';
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(
@@ -503,13 +565,20 @@ class _MiniDonut extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            pct,
-            style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontSize: 9,
-              fontWeight: FontWeight.w500,
-              color: GwpColors.textSecondary,
+          const SizedBox(width: 4),
+          Flexible(
+            fit: FlexFit.loose,
+            child: Text(
+              pct,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontFamily: GwpTypo.monoFont,
+                fontSize: 9,
+                fontWeight: FontWeight.w500,
+                color: GwpColors.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -555,16 +624,6 @@ class _MiniStat extends StatelessWidget {
 
 
 
-const _typeLabels = <AccountType, String>{
-  AccountType.bank: '银行',
-  AccountType.broker: '券商',
-  AccountType.insurance: '保险',
-  AccountType.payment: '支付',
-  AccountType.custody: '托管',
-  AccountType.cryptoExchange: '交易所',
-  AccountType.cryptoWallet: '钱包',
-};
-
 class _RegionHeader extends StatelessWidget {
   const _RegionHeader({
     required this.region,
@@ -609,7 +668,7 @@ class _RegionHeader extends StatelessWidget {
                   width: 4,
                   height: 16,
                   decoration: BoxDecoration(
-                          color: regionColor(regionIndex, region),
+                    color: regionColor(regionIndex, region),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -661,7 +720,7 @@ class _RegionHeader extends StatelessWidget {
                           fontFamily: GwpTypo.monoFont,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                    color: regionColor(regionIndex, region),
+                          color: regionColor(regionIndex, region),
                         ),
                       ),
                     ),
@@ -669,7 +728,6 @@ class _RegionHeader extends StatelessWidget {
                 ],
               ],
             ),
-            // Proportion bar
             if (totalNetWorth > 0 && netWorth > Decimal.zero) ...[
               const SizedBox(height: 4),
               ClipRRect(
@@ -693,7 +751,67 @@ class _RegionHeader extends StatelessWidget {
   static String _compactValue(Decimal val) => compactValue(val.toDouble());
 }
 
+class _AccountTypeHeader extends StatelessWidget {
+  const _AccountTypeHeader({
+    required this.accountType,
+    required this.accountCount,
+    required this.netWorth,
+  });
 
+  final AccountType accountType;
+  final int accountCount;
+  final Decimal netWorth;
+
+  @override
+  Widget build(BuildContext context) {
+    final typeColor = _typeColors[accountType] ?? GwpColors.actionPrimary;
+    final typeIcon = _typeIcons[accountType] ?? Icons.account_balance_outlined;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        GwpSpacing.xl,
+        GwpSpacing.sm,
+        GwpSpacing.base,
+        GwpSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: typeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: Icon(typeIcon, size: 12, color: typeColor),
+          ),
+          const SizedBox(width: GwpSpacing.sm),
+          Expanded(
+            child: Text(
+              '${accountType.labelZh} ($accountCount)',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: GwpColors.textSecondary,
+              ),
+            ),
+          ),
+          if (netWorth > Decimal.zero)
+            Text(
+              compactValue(netWorth.toDouble()),
+              style: TextStyle(
+                fontFamily: GwpTypo.monoFont,
+                fontFeatures: GwpTypo.tabularFigures,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: typeColor,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 // ──────────────────────────────────────────────────────────────
 // Account card (with proportion bar + asset type breakdown)
@@ -851,53 +969,19 @@ class _AccountCard extends ConsumerWidget {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 3),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              account.accountType.labelZh,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                color: GwpColors.textMuted,
-                                              ),
-                                            ),
-                                            if (assetCount > 0) ...[
-                                              const Text(
-                                                ' · ',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: GwpColors.textMuted,
-                                                ),
-                                              ),
-                                              Text(
-                                                '$assetCount 项资产',
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: GwpColors.textMuted,
-                                                ),
-                                              ),
-                                            ],
-                                            if (account.accountNo != null) ...[
-                                              const Text(
-                                                ' · ',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: GwpColors.textMuted,
-                                                ),
-                                              ),
-                                              Flexible(
-                                                child: Text(
-                                                  account.accountNo!,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: GwpColors.textMuted,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
-                                          ],
+                                        Text(
+                                          [
+                                            account.accountType.labelZh,
+                                            if (assetCount > 0) '$assetCount 项资产',
+                                            if (account.accountNo != null)
+                                              account.accountNo!,
+                                          ].join(' · '),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: GwpColors.textMuted,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
                                     ),

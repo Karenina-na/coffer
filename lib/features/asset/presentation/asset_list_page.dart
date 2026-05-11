@@ -11,7 +11,10 @@ import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_number_text.dart';
+import '../../../core/ui/region_meta.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account.dart';
+import '../../../domain/entities/account_enums.dart';
 import '../../../domain/entities/asset_enums.dart';
 import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../account/presentation/account_providers.dart';
@@ -47,9 +50,11 @@ class AssetListBody extends ConsumerWidget {
           loading: () => <Account>[],
           error: (_, _) => <Account>[],
         );
+        final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
         return _AssetListView(
           assets: valued.assets,
           accounts: accounts,
+          regionIndex: regionIndex,
           valuationCurrency: valuationCurrency,
           missingAssetIds: valued.missingAssetIds.toSet(),
         );
@@ -108,12 +113,14 @@ class _AssetListView extends StatefulWidget {
   const _AssetListView({
     required this.assets,
     required this.accounts,
+    required this.regionIndex,
     required this.valuationCurrency,
     required this.missingAssetIds,
   });
 
   final List<ValuedAsset> assets;
   final List<Account> accounts;
+  final RegionIndex regionIndex;
   final String valuationCurrency;
   final Set<String> missingAssetIds;
 
@@ -128,73 +135,92 @@ class _AssetListViewState extends State<_AssetListView> {
 
   List<ValuedAsset> get assets => widget.assets;
   List<Account> get accounts => widget.accounts;
+  RegionIndex get regionIndex => widget.regionIndex;
 
   @override
   Widget build(BuildContext context) {
-    // Portfolio summary
     var totalValue = Decimal.zero;
     var totalGain = Decimal.zero;
     var gainableCount = 0;
-    for (final a in assets) {
-      if (a.valuedAmount != null && a.valuedAmount! > Decimal.zero) {
-        totalValue += a.valuedAmount!;
+    for (final asset in assets) {
+      if (asset.valuedAmount != null && asset.valuedAmount! > Decimal.zero) {
+        totalValue += asset.valuedAmount!;
       }
-      if (a.valuedAmount != null &&
-          a.valuedCostBasis != null &&
-          a.valuedCostBasis! > Decimal.zero) {
-        totalGain += a.valuedAmount! - a.valuedCostBasis!;
+      if (asset.valuedAmount != null &&
+          asset.valuedCostBasis != null &&
+          asset.valuedCostBasis! > Decimal.zero) {
+        totalGain += asset.valuedAmount! - asset.valuedCostBasis!;
         gainableCount++;
       }
     }
     final totalD = totalValue.toDouble();
 
-    // Type breakdown
     final typeBreakdown = <AssetType, double>{};
-    for (final a in assets) {
-      final mv = a.valuedAmount?.toDouble() ?? 0;
+    for (final asset in assets) {
+      final mv = asset.valuedAmount?.toDouble() ?? 0;
       if (mv > 0) {
-        typeBreakdown[a.asset.assetType] =
-            (typeBreakdown[a.asset.assetType] ?? 0) + mv;
+        typeBreakdown[asset.asset.assetType] =
+            (typeBreakdown[asset.asset.assetType] ?? 0) + mv;
       }
     }
 
-    // Currency breakdown
     final currencyBreakdown = <String, double>{};
-    for (final a in assets) {
-      final mv = a.valuedAmount?.toDouble() ?? 0;
+    for (final asset in assets) {
+      final mv = asset.valuedAmount?.toDouble() ?? 0;
       if (mv > 0) {
-        currencyBreakdown[a.asset.currency] =
-            (currencyBreakdown[a.asset.currency] ?? 0) + mv;
+        currencyBreakdown[asset.asset.currency] =
+            (currencyBreakdown[asset.asset.currency] ?? 0) + mv;
       }
     }
 
-    // Group by account
-    final accountMap = {for (final a in accounts) a.id: a};
-    final grouped = <String, List<ValuedAsset>>{};
-    for (final a in assets) {
-      grouped.putIfAbsent(a.asset.accountId, () => []).add(a);
+    final accountMap = {for (final account in accounts) account.id: account};
+    final grouped = <String, Map<AccountType, Map<String, List<ValuedAsset>>>>{};
+    final regionTotal = <String, Decimal>{};
+    final typeTotalByRegion = <String, Map<AccountType, Decimal>>{};
+    final accountTotal = <String, Decimal>{};
+
+    for (final valuedAsset in assets) {
+      final accountId = valuedAsset.asset.accountId;
+      final account = accountMap[accountId];
+      final region = account?.sovereigntyRegion ?? 'UNKNOWN';
+      final accountType = account?.accountType ?? AccountType.bank;
+      final amount = valuedAsset.valuedAmount ?? Decimal.zero;
+
+      final typeGroups = grouped.putIfAbsent(
+        region,
+        () => <AccountType, Map<String, List<ValuedAsset>>>{},
+      );
+      final accountGroups = typeGroups.putIfAbsent(
+        accountType,
+        () => <String, List<ValuedAsset>>{},
+      );
+      accountGroups.putIfAbsent(accountId, () => []).add(valuedAsset);
+
+      regionTotal[region] = (regionTotal[region] ?? Decimal.zero) + amount;
+      final typeTotals = typeTotalByRegion.putIfAbsent(
+        region,
+        () => <AccountType, Decimal>{},
+      );
+      typeTotals[accountType] = (typeTotals[accountType] ?? Decimal.zero) + amount;
+      accountTotal[accountId] = (accountTotal[accountId] ?? Decimal.zero) + amount;
     }
-    final sortedAccountIds = grouped.keys.toList()
+
+    final sortedRegions = grouped.keys.toList()
       ..sort((a, b) {
-        final aTotal = grouped[a]!.fold<Decimal>(
-          Decimal.zero,
-          (s, asset) => s + (asset.valuedAmount ?? Decimal.zero),
+        final valueCmp = (regionTotal[b] ?? Decimal.zero).compareTo(
+          regionTotal[a] ?? Decimal.zero,
         );
-        final bTotal = grouped[b]!.fold<Decimal>(
-          Decimal.zero,
-          (s, asset) => s + (asset.valuedAmount ?? Decimal.zero),
-        );
-        return bTotal.compareTo(aTotal);
+        if (valueCmp != 0) return valueCmp;
+        return regionLabel(regionIndex, a).compareTo(regionLabel(regionIndex, b));
       });
 
-    // Auto-expand top N groups on first build
     if (!_initialized) {
       _initialized = true;
-      for (var i = 0; i < sortedAccountIds.length && i < _kAutoExpandCount; i++) {
-        _expandedGroups.add(sortedAccountIds[i]);
+      for (var i = 0; i < sortedRegions.length && i < _kAutoExpandCount; i++) {
+        _expandedGroups.add(sortedRegions[i]);
       }
-      if (sortedAccountIds.length <= _kAutoExpandCount) {
-        _expandedGroups.addAll(sortedAccountIds);
+      if (sortedRegions.length <= _kAutoExpandCount) {
+        _expandedGroups.addAll(sortedRegions);
       }
     }
 
@@ -211,43 +237,133 @@ class _AssetListViewState extends State<_AssetListView> {
           typeBreakdown: typeBreakdown,
           currencyBreakdown: currencyBreakdown,
         ),
-        for (final accountId in sortedAccountIds) ...[
-          _AccountGroupHeader(
-            account: accountMap[accountId],
-            assets: grouped[accountId]!,
-            totalValue: totalD,
-            expanded: _expandedGroups.contains(accountId),
+        for (final region in sortedRegions) ...[
+          _RegionHeader(
+            region: region,
+            accountCount: grouped[region]!.values.fold<int>(
+              0,
+              (sum, accountGroups) => sum + accountGroups.length,
+            ),
+            netWorth: regionTotal[region] ?? Decimal.zero,
+            totalNetWorth: totalD,
+            expanded: _expandedGroups.contains(region),
+            regionIndex: regionIndex,
             onToggle: () => setState(() {
-              if (_expandedGroups.contains(accountId)) {
-                _expandedGroups.remove(accountId);
+              if (_expandedGroups.contains(region)) {
+                _expandedGroups.remove(region);
               } else {
-                _expandedGroups.add(accountId);
+                _expandedGroups.add(region);
               }
             }),
           ),
-          if (_expandedGroups.contains(accountId)) ...[
-            for (final asset in _visibleItems(accountId, grouped[accountId]!))
-              _AssetCard(asset: asset, totalValue: totalD),
-            if (!_showAllItems.contains(accountId) &&
-                grouped[accountId]!.length > _kGroupPreviewLimit)
-              _ShowMoreButton(
-                remaining:
-                    grouped[accountId]!.length - _kGroupPreviewLimit,
-                onPressed: () =>
-                    setState(() => _showAllItems.add(accountId)),
+          if (_expandedGroups.contains(region)) ...[
+            for (final accountType in _sortedAccountTypes(
+              region,
+              grouped[region]!,
+              typeTotalByRegion,
+            )) ...[
+              _AccountTypeHeader(
+                accountType: accountType,
+                accountCount: grouped[region]![accountType]!.length,
+                netWorth: typeTotalByRegion[region]?[accountType] ?? Decimal.zero,
               ),
+              for (final accountId in _visibleAccounts(
+                region,
+                accountType,
+                grouped[region]![accountType]!,
+                accountMap,
+                accountTotal,
+              )) ...[
+                _AccountGroupHeader(
+                  account: accountMap[accountId],
+                  assets: grouped[region]![accountType]![accountId]!,
+                  totalValue: totalD,
+                ),
+                for (final asset in _visibleAssets(
+                  accountId,
+                  grouped[region]![accountType]![accountId]!,
+                ))
+                  _AssetCard(asset: asset, totalValue: totalD),
+                if (!_showAllItems.contains(_assetGroupKey(accountId)) &&
+                    grouped[region]![accountType]![accountId]!.length >
+                        _kGroupPreviewLimit)
+                  _ShowMoreButton(
+                    remaining:
+                        grouped[region]![accountType]![accountId]!.length -
+                        _kGroupPreviewLimit,
+                    onPressed: () =>
+                        setState(() => _showAllItems.add(_assetGroupKey(accountId))),
+                  ),
+              ],
+              if (!_showAllItems.contains(_typeGroupKey(region, accountType)) &&
+                  grouped[region]![accountType]!.length > _kGroupPreviewLimit)
+                _ShowMoreButton(
+                  remaining:
+                      grouped[region]![accountType]!.length - _kGroupPreviewLimit,
+                  onPressed: () => setState(
+                    () => _showAllItems.add(_typeGroupKey(region, accountType)),
+                  ),
+                ),
+            ],
           ],
         ],
       ],
     );
   }
 
-  List<ValuedAsset> _visibleItems(String accountId, List<ValuedAsset> all) {
-    if (_showAllItems.contains(accountId) || all.length <= _kGroupPreviewLimit) {
+  List<AccountType> _sortedAccountTypes(
+    String region,
+    Map<AccountType, Map<String, List<ValuedAsset>>> byType,
+    Map<String, Map<AccountType, Decimal>> typeTotalByRegion,
+  ) {
+    final types = byType.keys.toList();
+    types.sort((a, b) {
+      final valueCmp =
+          (typeTotalByRegion[region]?[b] ?? Decimal.zero).compareTo(
+            typeTotalByRegion[region]?[a] ?? Decimal.zero,
+          );
+      if (valueCmp != 0) return valueCmp;
+      return a.labelZh.compareTo(b.labelZh);
+    });
+    return types;
+  }
+
+  List<String> _visibleAccounts(
+    String region,
+    AccountType type,
+    Map<String, List<ValuedAsset>> accountGroups,
+    Map<String, Account> accountMap,
+    Map<String, Decimal> accountTotal,
+  ) {
+    final accountIds = accountGroups.keys.toList()
+      ..sort((a, b) {
+        final valueCmp = (accountTotal[b] ?? Decimal.zero).compareTo(
+          accountTotal[a] ?? Decimal.zero,
+        );
+        if (valueCmp != 0) return valueCmp;
+        final aName = accountMap[a]?.institutionName ?? a;
+        final bName = accountMap[b]?.institutionName ?? b;
+        return aName.compareTo(bName);
+      });
+    if (_showAllItems.contains(_typeGroupKey(region, type)) ||
+        accountIds.length <= _kGroupPreviewLimit) {
+      return accountIds;
+    }
+    return accountIds.take(_kGroupPreviewLimit).toList();
+  }
+
+  List<ValuedAsset> _visibleAssets(String accountId, List<ValuedAsset> all) {
+    if (_showAllItems.contains(_assetGroupKey(accountId)) ||
+        all.length <= _kGroupPreviewLimit) {
       return all;
     }
     return all.take(_kGroupPreviewLimit).toList();
   }
+
+  String _typeGroupKey(String region, AccountType type) =>
+      '$region|${type.code}';
+
+  String _assetGroupKey(String accountId) => 'asset|$accountId';
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -542,87 +658,80 @@ Color _currencyColor(String ccy) => switch (ccy) {
     };
 
 // ──────────────────────────────────────────────────────────────
-// Account group header (with proportion)
+// Region / type / account headers
 // ──────────────────────────────────────────────────────────────
 
-class _AccountGroupHeader extends StatelessWidget {
-  const _AccountGroupHeader({
-    required this.account,
-    required this.assets,
-    required this.totalValue,
+class _RegionHeader extends StatelessWidget {
+  const _RegionHeader({
+    required this.region,
+    required this.accountCount,
+    required this.netWorth,
+    required this.totalNetWorth,
     required this.expanded,
+    required this.regionIndex,
     required this.onToggle,
   });
 
-  final Account? account;
-  final List<ValuedAsset> assets;
-  final double totalValue;
+  final String region;
+  final int accountCount;
+  final Decimal netWorth;
+  final double totalNetWorth;
   final bool expanded;
+  final RegionIndex regionIndex;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    var total = Decimal.zero;
-    for (final a in assets) {
-      total += a.valuedAmount ?? Decimal.zero;
-    }
-    final name = account?.institutionName ?? '未知账户';
-    final region = account?.sovereigntyRegion ?? '';
-    final pct = totalValue > 0
-        ? (total.toDouble() / totalValue * 100).toStringAsFixed(1)
+    final label = regionLabel(regionIndex, region);
+    final pct = totalNetWorth > 0
+        ? '${(netWorth.toDouble() / totalNetWorth * 100).toStringAsFixed(1)}%'
         : null;
-
-    // Per-account asset type mini breakdown
-    final typeMap = <String, double>{};
-    for (final a in assets) {
-      final mv = a.valuedAmount?.toDouble() ?? 0;
-      if (mv > 0) {
-        typeMap[a.asset.assetType.name] =
-            (typeMap[a.asset.assetType.name] ?? 0) + mv;
-      }
-    }
-    final sortedTypes = typeMap.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final groupTotal = sortedTypes.fold<double>(0, (s, e) => s + e.value);
-
     return GestureDetector(
       onTap: onToggle,
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          GwpSpacing.base, GwpSpacing.base, GwpSpacing.base, GwpSpacing.xs,
+          GwpSpacing.base,
+          GwpSpacing.base,
+          GwpSpacing.base,
+          GwpSpacing.xs,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.account_balance_outlined,
-                    size: 14, color: GwpColors.textSecondary),
-                const SizedBox(width: 6),
+                Container(
+                  width: 4,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: regionColor(regionIndex, region),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: GwpSpacing.sm),
                 Text(
-                  '$name${region.isNotEmpty ? ' · $region' : ''}',
+                  '$label ($accountCount)',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: GwpColors.textSecondary,
                   ),
                 ),
-                const SizedBox(width: 6),
-                Text('(${assets.length})',
-                    style: const TextStyle(
-                        fontSize: 11, color: GwpColors.textMuted)),
                 const SizedBox(width: 4),
                 AnimatedRotation(
                   turns: expanded ? 0.25 : 0,
                   duration: const Duration(milliseconds: 200),
-                  child: const Icon(Icons.chevron_right,
-                      size: 16, color: GwpColors.textMuted),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: GwpColors.textMuted,
+                  ),
                 ),
                 const Spacer(),
-                if (total > Decimal.zero) ...[
+                if (netWorth > Decimal.zero) ...[
                   Text(
-                    _compact(total.toDouble()),
+                    _compact(total: netWorth.toDouble()),
                     style: const TextStyle(
                       fontFamily: GwpTypo.monoFont,
                       fontFeatures: GwpTypo.tabularFigures,
@@ -633,36 +742,39 @@ class _AccountGroupHeader extends StatelessWidget {
                   ),
                   if (pct != null) ...[
                     const SizedBox(width: 4),
-                    Text(
-                      '$pct%',
-                      style: const TextStyle(
-                        fontFamily: GwpTypo.monoFont,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: GwpColors.textMuted,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: regionColor(regionIndex, region).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        pct,
+                        style: TextStyle(
+                          fontFamily: GwpTypo.monoFont,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: regionColor(regionIndex, region),
+                        ),
                       ),
                     ),
                   ],
                 ],
               ],
             ),
-            // Mini stacked bar for type breakdown
-            if (sortedTypes.isNotEmpty && groupTotal > 0) ...[
+            if (totalNetWorth > 0 && netWorth > Decimal.zero) ...[
               const SizedBox(height: 4),
               ClipRRect(
                 borderRadius: BorderRadius.circular(2),
-                child: SizedBox(
-                  height: 3,
-                  child: Row(
-                    children: sortedTypes.map((e) {
-                      final frac = e.value / groupTotal;
-                      final color = _assetTypeColorByName[e.key] ??
-                          GwpColors.textMuted;
-                      return Expanded(
-                        flex: (frac * 1000).round().clamp(1, 1000),
-                        child: Container(color: color),
-                      );
-                    }).toList(),
+                child: LinearProgressIndicator(
+                  value: (netWorth.toDouble() / totalNetWorth).clamp(0.0, 1.0),
+                  minHeight: 3,
+                  backgroundColor: GwpColors.surface2,
+                  valueColor: AlwaysStoppedAnimation(
+                    regionColor(regionIndex, region).withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -672,17 +784,213 @@ class _AccountGroupHeader extends StatelessWidget {
       ),
     );
   }
+}
 
-  static String _compact(double val) {
-    if (val >= 1e6) return '${(val / 1e6).toStringAsFixed(1)}M';
-    if (val >= 1e3) return '${(val / 1e3).toStringAsFixed(0)}K';
-    return val.toStringAsFixed(0);
+class _AccountTypeHeader extends StatelessWidget {
+  const _AccountTypeHeader({
+    required this.accountType,
+    required this.accountCount,
+    required this.netWorth,
+  });
+
+  final AccountType accountType;
+  final int accountCount;
+  final Decimal netWorth;
+
+  @override
+  Widget build(BuildContext context) {
+    final typeColor = _typeColors[accountType] ?? GwpColors.actionPrimary;
+    final typeIcon = _typeIcons[accountType] ?? Icons.account_balance_outlined;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        GwpSpacing.xl,
+        GwpSpacing.sm,
+        GwpSpacing.base,
+        GwpSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: typeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: Icon(typeIcon, size: 12, color: typeColor),
+          ),
+          const SizedBox(width: GwpSpacing.sm),
+          Expanded(
+            child: Text(
+              '${accountType.labelZh} ($accountCount)',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: GwpColors.textSecondary,
+              ),
+            ),
+          ),
+          if (netWorth > Decimal.zero)
+            Text(
+              _compact(total: netWorth.toDouble()),
+              style: TextStyle(
+                fontFamily: GwpTypo.monoFont,
+                fontFeatures: GwpTypo.tabularFigures,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: typeColor,
+              ),
+            ),
+        ],
+      ),
+    );
   }
+}
+
+class _AccountGroupHeader extends StatelessWidget {
+  const _AccountGroupHeader({
+    required this.account,
+    required this.assets,
+    required this.totalValue,
+  });
+
+  final Account? account;
+  final List<ValuedAsset> assets;
+  final double totalValue;
+
+  @override
+  Widget build(BuildContext context) {
+    var total = Decimal.zero;
+    for (final asset in assets) {
+      total += asset.valuedAmount ?? Decimal.zero;
+    }
+    final name = account?.institutionName ?? '未知账户';
+    final pct = totalValue > 0
+        ? (total.toDouble() / totalValue * 100).toStringAsFixed(1)
+        : null;
+
+    final typeMap = <String, double>{};
+    for (final asset in assets) {
+      final mv = asset.valuedAmount?.toDouble() ?? 0;
+      if (mv > 0) {
+        typeMap[asset.asset.assetType.name] =
+            (typeMap[asset.asset.assetType.name] ?? 0) + mv;
+      }
+    }
+    final sortedTypes = typeMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final groupTotal = sortedTypes.fold<double>(0, (sum, entry) => sum + entry.value);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        GwpSpacing.xxl,
+        GwpSpacing.sm,
+        GwpSpacing.base,
+        GwpSpacing.xs,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.account_balance_outlined,
+                size: 14,
+                color: GwpColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '$name (${assets.length})',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: GwpColors.textSecondary,
+                  ),
+                ),
+              ),
+              if (total > Decimal.zero) ...[
+                Text(
+                  _compact(total: total.toDouble()),
+                  style: const TextStyle(
+                    fontFamily: GwpTypo.monoFont,
+                    fontFeatures: GwpTypo.tabularFigures,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: GwpColors.textMuted,
+                  ),
+                ),
+                if (pct != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '$pct%',
+                    style: const TextStyle(
+                      fontFamily: GwpTypo.monoFont,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: GwpColors.textMuted,
+                    ),
+                  ),
+                ],
+              ],
+            ],
+          ),
+          if (sortedTypes.isNotEmpty && groupTotal > 0) ...[
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: SizedBox(
+                height: 3,
+                child: Row(
+                  children: sortedTypes.map((entry) {
+                    final frac = entry.value / groupTotal;
+                    final color =
+                        _assetTypeColorByName[entry.key] ?? GwpColors.textMuted;
+                    return Expanded(
+                      flex: (frac * 1000).round().clamp(1, 1000),
+                      child: Container(color: color),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _compact({required double total}) {
+  if (total >= 1e6) return '${(total / 1e6).toStringAsFixed(1)}M';
+  if (total >= 1e3) return '${(total / 1e3).toStringAsFixed(0)}K';
+  return total.toStringAsFixed(0);
 }
 
 // ──────────────────────────────────────────────────────────────
 // Asset card (with proportion bar)
 // ──────────────────────────────────────────────────────────────
+
+const _typeIcons = <AccountType, IconData>{
+  AccountType.bank: Icons.account_balance_outlined,
+  AccountType.broker: Icons.show_chart_outlined,
+  AccountType.insurance: Icons.health_and_safety_outlined,
+  AccountType.payment: Icons.payment_outlined,
+  AccountType.custody: Icons.lock_outlined,
+  AccountType.cryptoExchange: Icons.currency_bitcoin_outlined,
+  AccountType.cryptoWallet: Icons.wallet_outlined,
+};
+
+const _typeColors = <AccountType, Color>{
+  AccountType.bank: Color(0xFF64748B),
+  AccountType.broker: Color(0xFF22C55E),
+  AccountType.insurance: Color(0xFFA78BFA),
+  AccountType.payment: Color(0xFFF59E0B),
+  AccountType.custody: Color(0xFF94A3B8),
+  AccountType.cryptoExchange: Color(0xFFFB923C),
+  AccountType.cryptoWallet: Color(0xFFEC4899),
+};
 
 const _assetTypeColors = <AssetType, Color>{
   AssetType.stock: Color(0xFF64748B),
