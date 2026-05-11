@@ -42,8 +42,9 @@ class RegionMeta {
   /// from the same index when building from a DictEntry.
   final String? parentName;
 
-  /// Equirectangular map position: (x, y) where
+  /// Effective map anchor position: (x, y) where
   /// x = (lon + 180) / 360,  y = (90 − lat) / 180.
+  /// Prefers financial-center anchor coords and falls back to geo coords.
   /// `null` for regions that have no map pin.
   final (double, double)? mapCoords;
 
@@ -56,8 +57,12 @@ class RegionMeta {
     DictEntry entry, {
     Map<String, String> parentNames = const {},
   }) {
-    final lon = entry.mapLon;
-    final lat = entry.mapLat;
+    final anchorLon = entry.anchorLon;
+    final anchorLat = entry.anchorLat;
+    final geoLon = entry.mapLon;
+    final geoLat = entry.mapLat;
+    final lon = anchorLon ?? geoLon;
+    final lat = anchorLat ?? geoLat;
     (double, double)? coords;
     if (lon != null && lat != null) {
       coords = ((lon + 180) / 360, (90 - lat) / 180);

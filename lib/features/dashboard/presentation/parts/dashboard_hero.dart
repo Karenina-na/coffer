@@ -95,219 +95,44 @@ List<MapEdge> heroFilterEdges(
       .toList();
 }
 
-// ── Continent polygons — equirectangular (x, y) ───────────────
-// All coordinates: x=(lon+180)/360, y=(90-lat)/180
-
-const _continentPolygons = <List<(double, double)>>[
-  // ── North America ─────────────────────────────────────────
-  [
-    (0.033, 0.133), // Alaska W   -168° 66°N
-    (0.264, 0.094), // N Canada    -85° 73°N
-    (0.353, 0.239), // Newfoundland -53° 47°N
-    (0.314, 0.256), // Nova Scotia  -67° 44°N
-    (0.292, 0.306), // Cape Hatteras-75° 35°N
-    (0.278, 0.361), // Florida tip  -80° 25°N
-    (0.256, 0.406), // Yucatan      -88° 17°N
-    (0.283, 0.456), // Panama       -79°  8°N
-    (0.208, 0.394), // Mexico W    -105° 19°N
-    (0.175, 0.322), // Baja S      -117° 32°N
-    (0.156, 0.228), // Oregon      -124° 49°N
-    (0.119, 0.172), // Alaska S    -137° 59°N
-    (0.069, 0.178), // Alaska SW   -155° 58°N
-    (0.033, 0.167), // Alaska W    -168° 60°N
-  ],
-  // ── South America ─────────────────────────────────────────
-  [
-    (0.283, 0.444), // Colombia W   -78° 10°N
-    (0.333, 0.444), // Venezuela    -60° 10°N
-    (0.361, 0.478), // Guyana       -50°  4°N
-    (0.400, 0.539), // Brazil NE    -36° -6°S
-    (0.403, 0.561), // Brazil E     -35°-11°S
-    (0.392, 0.622), // Brazil SE    -39°-22°S
-    (0.361, 0.678), // Uruguay      -50°-32°S
-    (0.317, 0.806), // Tierra del Fuego -66°-55°S
-    (0.294, 0.778), // Chile tip    -74°-50°S
-    (0.300, 0.611), // Chile mid    -72°-20°S
-    (0.272, 0.517), // Ecuador W    -82° -3°S
-  ],
-  // ── Europe (mainland) ─────────────────────────────────────
-  [
-    (0.475, 0.300), // Portugal      -9° 36°N
-    (0.500, 0.261), // S France       0° 43°N
-    (0.542, 0.294), // S Italy       15° 37°N
-    (0.578, 0.272), // Greece        28° 41°N
-    (0.617, 0.261), // Caucasus/Turkey E  42° 43°N
-    (0.622, 0.222), // Ukraine E     44° 50°N
-    (0.583, 0.167), // Russia NW     30° 60°N
-    (0.578, 0.106), // N Norway/Russia 28° 71°N
-    (0.542, 0.111), // N Norway      15° 70°N
-    (0.514, 0.178), // Norway SW      5° 58°N
-    (0.522, 0.189), // Jutland        8° 56°N
-    (0.528, 0.200), // N Germany     10° 54°N
-    (0.506, 0.217), // Netherlands    2° 51°N
-    (0.472, 0.300), // Portugal W   -10° 36°N
-  ],
-  // ── Africa ────────────────────────────────────────────────
-  [
-    (0.450, 0.417), // Senegal/Mauritania -18° 15°N
-    (0.461, 0.300), // Morocco NW   -14° 36°N
-    (0.528, 0.294), // Tunisia       10° 37°N
-    (0.569, 0.322), // Libya         25° 32°N
-    (0.603, 0.378), // Red Sea       37° 22°N
-    (0.642, 0.433), // Horn          51° 12°N
-    (0.622, 0.511), // Kenya coast   44° -2°S
-    (0.611, 0.639), // Mozambique    40°-25°S
-    (0.553, 0.694), // Cape          19°-35°S
-    (0.542, 0.661), // S Africa W    15°-29°S
-    (0.533, 0.594), // Angola        12°-17°S
-    (0.525, 0.522), // Congo/Gabon    9°  -4°S
-    (0.506, 0.472), // Gulf of Guinea 2°   5°N
-  ],
-  // ── Asia (mainland, including Malay Peninsula) ────────────
-  [
-    (0.575, 0.294), // Turkey W      27° 37°N
-    (0.600, 0.300), // Turkey E/Syria 36° 36°N
-    (0.639, 0.333), // Persian Gulf  50° 30°N
-    (0.678, 0.372), // Pakistan W    64° 23°N
-    (0.714, 0.456), // India S tip   77°  8°N
-    (0.722, 0.428), // India SE      80° 13°N
-    (0.756, 0.378), // Bay of Bengal 92° 22°N
-    (0.778, 0.411), // Indochina    100° 16°N
-    (0.789, 0.489), // Malay Peninsula 104°  2°N
-    (0.803, 0.483), // Malay E coast 108°  3°N
-    (0.806, 0.389), // Vietnam N    110° 20°N
-    (0.825, 0.367), // SE China     117° 24°N
-    (0.839, 0.328), // E China      122° 31°N
-    (0.858, 0.306), // Korea        129° 35°N
-    (0.864, 0.261), // Manchuria    131° 43°N
-    (0.953, 0.200), // Kamchatka    163° 54°N
-    (0.997, 0.133), // Chukotka     180° 66°N (clipped)
-    (0.889, 0.094), // Siberia NE   140° 73°N
-    (0.722, 0.100), // W Siberia     80° 72°N
-    (0.661, 0.167), // Ural          58° 60°N
-    (0.631, 0.267), // Caucasus      47° 42°N
-  ],
-  // ── Australia ─────────────────────────────────────────────
-  [
-    (0.817, 0.678), // W coast     114°-32°S
-    (0.819, 0.622), // NW          115°-22°S
-    (0.864, 0.567), // N           131°-12°S
-    (0.894, 0.556), // NE          142°-10°S
-    (0.925, 0.678), // E coast     153°-32°S
-    (0.911, 0.717), // SE          148°-39°S
-    (0.878, 0.711), // S           136°-38°S
-    (0.819, 0.689), // SW          115°-34°S
-  ],
-  // ── Greenland ─────────────────────────────────────────────
-  [
-    (0.361, 0.167), // SW  -50° 60°N
-    (0.347, 0.111), // W   -55° 70°N
-    (0.375, 0.039), // N   -45° 83°N
-    (0.444, 0.083), // NE  -20° 75°N
-    (0.444, 0.167), // SE  -20° 60°N
-  ],
-];
-
-// ── Island patches (x1,y1,x2,y2 bounding boxes) ──────────────
-// Forces specific cells to be land regardless of polygon tests.
-
-const _islandPatches = <(double, double, double, double)>[
-  (0.858, 0.267, 0.903, 0.328), // Japan: Honshu + Kyushu
-  (0.892, 0.244, 0.914, 0.267), // Japan: Hokkaido
-  (0.481, 0.172, 0.511, 0.222), // UK: Britain
-  (0.469, 0.194, 0.483, 0.217), // Ireland
-  (0.428, 0.133, 0.464, 0.156), // Iceland
-  (0.831, 0.356, 0.842, 0.378), // Taiwan
-  (0.825, 0.394, 0.853, 0.456), // Philippines (rough)
-  (0.717, 0.444, 0.728, 0.472), // Sri Lanka
-  (0.781, 0.489, 0.795, 0.500), // Singapore area
-  (0.961, 0.711, 0.994, 0.767), // New Zealand (North+South)
-  (0.619, 0.556, 0.636, 0.644), // Madagascar
-];
+// ── Land geometry — generated from assets/world.svg ───────────
 
 // ── Dot-matrix land bitmap (pre-computed, lazy) ───────────────
 
 const _dotCols = 88;
 const _dotRows = 42;
 
-final _landBitmap = _computeLandBitmap();
+final _landSurface = ProjectedLandSurface.forGrid(cols: _dotCols, rows: _dotRows);
 
-List<List<bool>> _computeLandBitmap() {
-  final bitmap =
-      List.generate(_dotRows, (_) => List.filled(_dotCols, false));
-  for (var r = 0; r < _dotRows; r++) {
-    for (var c = 0; c < _dotCols; c++) {
-      final nx = (c + 0.5) / _dotCols;
-      final ny = (r + 0.5) / _dotRows;
+@visibleForTesting
+bool heroLandContainsPoint(double px, double py) => containsRawLand(px, py);
 
-      // Polygon test
-      var isLand = false;
-      for (final poly in _continentPolygons) {
-        if (_pointInPolygon(nx, ny, poly)) {
-          isLand = true;
-          break;
-        }
-      }
-      // Island patch test
-      if (!isLand) {
-        for (final p in _islandPatches) {
-          if (nx >= p.$1 && nx <= p.$3 && ny >= p.$2 && ny <= p.$4) {
-            isLand = true;
-            break;
-          }
-        }
-      }
+@visibleForTesting
+bool heroProjectedLandContainsPoint(double px, double py) =>
+    _landSurface.containsProjected(px, py);
 
-      bitmap[r][c] = isLand;
-    }
-  }
-  return bitmap;
+@visibleForTesting
+int heroLandCellCount() => _landSurface.cellCount();
+
+
+@visibleForTesting
+(double, double) heroWarpCoords((double, double) norm) {
+  return FinanceMapProjection.warpCoords(norm);
 }
 
-bool _pointInPolygon(
-    double px, double py, List<(double, double)> polygon) {
-  bool inside = false;
-  int j = polygon.length - 1;
-  for (int i = 0; i < polygon.length; i++) {
-    final xi = polygon[i].$1, yi = polygon[i].$2;
-    final xj = polygon[j].$1, yj = polygon[j].$2;
-    if ((yi > py) != (yj > py) &&
-        px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-    j = i;
-  }
-  return inside;
+@visibleForTesting
+double heroProjectDepth((double, double) norm) {
+  return FinanceMapProjection.projectDepth(norm);
 }
-
-const _heroArcVerticalLift = 0.14;
-const _heroArcEdgeCompression = 0.12;
-const _heroMapTopInset = 0.025;
-const _heroMapBottomInset = 0.065;
 
 @visibleForTesting
 Offset heroProjectPoint(Size size, (double, double) norm) {
-  final nx = norm.$1.clamp(0.0, 1.0);
-  final ny = norm.$2.clamp(0.0, 1.0);
-  final centeredX = nx * 2 - 1;
-  final edgeCompression = 1 - centeredX.abs() * _heroArcEdgeCompression;
-  final projectedX = (0.5 + centeredX * 0.5 * edgeCompression) * size.width;
-
-  final usableHeight = size.height * (1 - _heroMapTopInset - _heroMapBottomInset);
-  final baseY = size.height * _heroMapTopInset + usableHeight * ny;
-  final arcOffset =
-      (centeredX * centeredX - 0.25) * size.height * _heroArcVerticalLift;
-  final projectedY = (baseY + arcOffset).clamp(0.0, size.height);
-
-  return Offset(projectedX, projectedY);
+  return FinanceMapProjection.projectPoint(size, norm);
 }
 
 @visibleForTesting
 List<Offset> heroProjectGuide(Size size, double yNorm, {int samples = 24}) {
-  return List.generate(samples + 1, (index) {
-    final nx = index / samples;
-    return heroProjectPoint(size, (nx, yNorm));
-  });
+  return FinanceMapProjection.projectGuide(size, yNorm, samples: samples);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -323,27 +148,19 @@ class _GridMapHero extends ConsumerWidget {
     final regionIndex =
         ref.watch(regionMetaIndexProvider).value ?? const {};
 
-    return Container(
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GwpColors.border, width: 0.5),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: mapAsync.when(
-        loading: () => const SizedBox(
-          height: 210,
-          child: Center(
-            child: CircularProgressIndicator(
-              color: GwpColors.actionPrimary,
-              strokeWidth: 1.5,
-            ),
+    return mapAsync.when(
+      loading: () => const SizedBox(
+        height: 210,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: GwpColors.actionPrimary,
+            strokeWidth: 1.5,
           ),
         ),
-        error: (_, _) => const SizedBox(height: 210),
-        data: (mapData) =>
-            _GridMapContent(mapData: mapData, regionIndex: regionIndex),
       ),
+      error: (_, _) => const SizedBox(height: 210),
+      data: (mapData) =>
+          _GridMapContent(mapData: mapData, regionIndex: regionIndex),
     );
   }
 }
@@ -442,7 +259,7 @@ class _GridMapContentState extends State<_GridMapContent>
       for (final node in _visibleNodes) {
         final coords = regionMetaOf(widget.regionIndex, node.regionCode)?.mapCoords;
         if (coords == null) continue;
-        final dotPos = heroProjectPoint(canvasSize, coords);
+        final dotPos = FinanceMapProjection.projectPoint(canvasSize, coords);
         final dist = (tap - dotPos).distance;
         if (dist < bestDist) {
           bestDist = dist;
@@ -480,15 +297,16 @@ class _GridMapContentState extends State<_GridMapContent>
     // animation value. The AnimatedBuilder.builder closure captures these
     // variables so they are computed once per build() call, not per frame.
     final forcedCells = <(int, int)>{};
-    final activeNorm = <(double, double)>[];
+    final activeProjected = <(double, double)>[];
     for (final n in nodes) {
       final c = regionMetaOf(widget.regionIndex, n.regionCode)?.mapCoords;
       if (c == null) continue;
+      final projected = heroProjectPoint(const Size(1, 1), c);
       forcedCells.add((
-        (c.$1 * _dotCols).floor().clamp(0, _dotCols - 1),
-        (c.$2 * _dotRows).floor().clamp(0, _dotRows - 1),
+        (projected.dx * _dotCols).floor().clamp(0, _dotCols - 1),
+        (projected.dy * _dotRows).floor().clamp(0, _dotRows - 1),
       ));
-      activeNorm.add(c);
+      activeProjected.add((projected.dx, projected.dy));
     }
 
     final regionCount = nodes.length;
@@ -527,9 +345,10 @@ class _GridMapContentState extends State<_GridMapContent>
       children: [
         // ── Map canvas ────────────────────────────────────────
         LayoutBuilder(builder: (context, constraints) {
-          const canvasHeight = 218.0;
           final canvasWidth = constraints.maxWidth;
+          final canvasHeight = (canvasWidth * 0.49).clamp(176.0, 204.0);
           final canvasSize = Size(canvasWidth, canvasHeight);
+          final compactCanvas = canvasWidth < 430;
 
           return SizedBox(
             height: canvasHeight,
@@ -550,7 +369,7 @@ class _GridMapContentState extends State<_GridMapContent>
                         selectedRegion: _selectedNode?.regionCode,
                         pulseValue: _pulseCtrl.value,
                         forcedCells: forcedCells,
-                        activeNorm: activeNorm,
+                        activeProjected: activeProjected,
                         regionIndex: widget.regionIndex,
                       ),
                     ),
@@ -573,11 +392,11 @@ class _GridMapContentState extends State<_GridMapContent>
                 ),
 
                 // Continent color legend — above bottom controls
-                if (_layers.contains(_MapLayer.regionDots))
+                if (_layers.contains(_MapLayer.regionDots) && !compactCanvas)
                   Positioned(
                     left: 10,
                     right: 10,
-                    bottom: 34,
+                    bottom: 26,
                     child: IgnorePointer(
                       child: Wrap(
                         alignment: WrapAlignment.center,
@@ -1490,7 +1309,7 @@ class _DotWorldPainter extends CustomPainter {
     required this.edges,
     required this.layers,
     required this.forcedCells,
-    required this.activeNorm,
+    required this.activeProjected,
     required this.regionIndex,
     this.selectedRegion,
     this.pulseValue = 0.0,
@@ -1501,9 +1320,9 @@ class _DotWorldPainter extends CustomPainter {
   final Set<_MapLayer> layers;
   /// Land cells that must be lit regardless of the polygon bitmap (one per node).
   final Set<(int, int)> forcedCells;
-  /// Normalised (x, y) coords for nodes used by the glow test; pre-computed
-  /// in build() so paint() doesn't recompute per frame.
-  final List<(double, double)> activeNorm;
+  /// Projected-space normalised (x, y) coords for nodes used by the glow test;
+  /// pre-computed in build() so paint() doesn't recompute per frame.
+  final List<(double, double)> activeProjected;
   final RegionIndex regionIndex;
   final String? selectedRegion;
   final double pulseValue;
@@ -1529,7 +1348,7 @@ class _DotWorldPainter extends CustomPainter {
 
     final showGlow = layers.contains(_MapLayer.glow);
 
-    final bitmap = _landBitmap;
+    final bitmap = _landSurface.bitmap;
     for (var r = 0; r < _dotRows; r++) {
       for (var c = 0; c < _dotCols; c++) {
         final isLand = bitmap[r][c] || forcedCells.contains((c, r));
@@ -1537,12 +1356,12 @@ class _DotWorldPainter extends CustomPainter {
 
         final nx = (c + 0.5) / _dotCols;
         final ny = (r + 0.5) / _dotRows;
-        final center = heroProjectPoint(size, (nx, ny));
+        final center = Offset(nx * size.width, ny * size.height);
         final edgeFactor = (1 - (nx - 0.5).abs() * 1.15).clamp(0.45, 1.0);
 
         var isHot = false;
         if (showGlow) {
-          for (final ac in activeNorm) {
+          for (final ac in activeProjected) {
             final dx = nx - ac.$1, dy = ny - ac.$2;
             if (dx * dx + dy * dy < 0.0052) {
               isHot = true;
@@ -1614,55 +1433,72 @@ class _DotWorldPainter extends CustomPainter {
 
   // ── Edges ────────────────────────────────────────────────────
   void _drawEdges(Canvas canvas, Size size) {
+    final compact = size.width < 430;
     for (final edge in edges) {
-      final from = regionMetaOf(regionIndex, edge.fromRegion)?.mapCoords;
-      final to = regionMetaOf(regionIndex, edge.toRegion)?.mapCoords;
-      if (from == null || to == null) continue;
+      final geometry = projectEdgeGeometry(
+        size: size,
+        fromCoords: regionMetaOf(regionIndex, edge.fromRegion)?.mapCoords,
+        toCoords: regionMetaOf(regionIndex, edge.toRegion)?.mapCoords,
+        arcLiftFactor: 0.20,
+        arcDepthFactor: 0.08,
+        heightLiftFactor: 0.025,
+        heightDepthFactor: 0.018,
+      );
+      if (geometry == null) continue;
 
-      final p1 = heroProjectPoint(size, from);
-      final p2 = heroProjectPoint(size, to);
-      final sw = (0.7 + edge.channelCount * 0.25).clamp(0.7, 2.2);
-
-      final mid = (p1 + p2) / 2;
-      final dist = (p1 - p2).distance;
-      final control = Offset(mid.dx, mid.dy - dist * 0.26 - size.height * 0.05);
-      final path = Path()
-        ..moveTo(p1.dx, p1.dy)
-        ..quadraticBezierTo(control.dx, control.dy, p2.dx, p2.dy);
+      final depth = geometry.depth;
+      final sw = geometry.recommendedStrokeWidth(
+        count: edge.channelCount,
+        base: 0.65,
+        countFactor: 0.22,
+        depthBase: 0.82,
+        depthFactor: 0.36,
+        min: 0.65,
+        max: 2.35,
+      );
+      final path = geometry.buildPath();
 
       canvas.drawPath(
         path,
         Paint()
-          ..color = GwpColors.actionPrimary.withValues(alpha: 0.16)
+          ..color = GwpColors.actionPrimary.withValues(
+              alpha: (compact ? 0.08 : 0.10) + depth * 0.10)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = sw + 1.1
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.6),
+          ..strokeWidth = sw + (compact ? 1.0 : 1.25)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, compact ? 2.2 : 3.0),
       );
       canvas.drawPath(
         path,
         Paint()
-          ..color = GwpColors.actionPrimary.withValues(alpha: 0.40)
+          ..color = GwpColors.actionPrimary.withValues(alpha: 0.28 + depth * 0.22)
           ..style = PaintingStyle.stroke
           ..strokeWidth = sw,
       );
 
       final termPaint = Paint()
-        ..color = GwpColors.actionPrimary.withValues(alpha: 0.55)
+        ..color = GwpColors.actionPrimary.withValues(alpha: 0.35 + depth * 0.28)
         ..style = PaintingStyle.fill;
-      canvas.drawCircle(p1, sw * 0.9, termPaint);
-      canvas.drawCircle(p2, sw * 0.9, termPaint);
+      final terminalRadius = geometry.recommendedTerminalRadius(
+        strokeWidth: sw,
+        base: 0.75,
+        depthFactor: 0.2,
+      );
+      canvas.drawCircle(geometry.from, terminalRadius, termPaint);
+      canvas.drawCircle(geometry.to, terminalRadius, termPaint);
     }
   }
 
   // ── Region dots ──────────────────────────────────────────────
   void _drawRegionDots(Canvas canvas, Size size) {
     if (nodes.isEmpty) return;
+    final compact = size.width < 430;
     final maxVal = nodes.fold<double>(0, (m, n) => n.value > m ? n.value : m);
 
     for (final node in nodes) {
       final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
       if (coords == null) continue;
-      final center = heroProjectPoint(size, coords);
+      final center = FinanceMapProjection.projectPoint(size, coords);
+      final depth = FinanceMapProjection.projectDepth(coords);
 
       final ratio =
           maxVal > 0 ? (node.value / maxVal).clamp(0.0, 1.0) : 0.5;
@@ -1676,8 +1512,8 @@ class _DotWorldPainter extends CustomPainter {
       // Phase-offset each node slightly so they don't all pulse together
       final phaseOffset = ((coords.$1 + coords.$2) * 3.7) % 1.0;
       final phase = (pulseValue + phaseOffset) % 1.0;
-      final pingR = (isSel ? 8.0 : 5.5) + phase * 9.0;
-      final pingAlpha = (1 - phase) * (isSel ? 0.20 : 0.11);
+      final pingR = ((isSel ? 7.2 : 4.8) + phase * 8.8) * (0.90 + depth * 0.18);
+      final pingAlpha = (1 - phase) * (isSel ? 0.22 : 0.10) * (0.72 + depth * 0.28);
       if (pingAlpha > 0.005) {
         canvas.drawCircle(
           center,
@@ -1691,30 +1527,32 @@ class _DotWorldPainter extends CustomPainter {
       for (var ring = 3; ring >= 1; ring--) {
         canvas.drawCircle(
           center,
-          (isSel ? 6.0 : 4.0) + ring * 3.2,
+          ((isSel ? 5.8 : 3.8) + ring * 3.0) *
+              (0.88 + depth * 0.16) *
+              (compact ? 0.92 : 1.0),
           Paint()
-            ..color = nodeColor
-                .withValues(alpha: isSel ? 0.10 * ring : 0.048 * ring)
+            ..color = nodeColor.withValues(
+                alpha: (isSel ? 0.11 * ring : 0.045 * ring) * (0.72 + depth * 0.28))
             ..style = PaintingStyle.fill,
         );
       }
 
-      final dotR = 1.8 + ratio * 1.7;
+      final dotR = (1.55 + ratio * 1.65) * (0.84 + depth * 0.20) * (compact ? 0.90 : 1.0);
       canvas.drawCircle(
         center,
         dotR,
         Paint()
           ..color = isSel
               ? GwpColors.textPrimary.withValues(alpha: 0.96)
-              : nodeColor.withValues(alpha: 0.90)
+              : nodeColor.withValues(alpha: 0.78 + depth * 0.16)
           ..style = PaintingStyle.fill,
       );
       canvas.drawCircle(
         center,
         dotR,
         Paint()
-          ..color =
-              GwpColors.textPrimary.withValues(alpha: isSel ? 0.60 : 0.22)
+          ..color = GwpColors.textPrimary
+              .withValues(alpha: isSel ? 0.60 + depth * 0.12 : 0.18 + depth * 0.10)
           ..style = PaintingStyle.stroke
           ..strokeWidth = isSel ? 1.0 : 0.65,
       );
@@ -1723,36 +1561,25 @@ class _DotWorldPainter extends CustomPainter {
 
   // ── TOP-3 rank badges ────────────────────────────────────────
   void _drawRankBadges(Canvas canvas, Size size) {
-    if (nodes.isEmpty) return;
-    final sorted = [...nodes]..sort((a, b) => b.value.compareTo(a.value));
-    final top = sorted.take(3).toList();
-
-    for (var i = 0; i < top.length; i++) {
-      final node = top[i];
-      final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
-      if (coords == null) continue;
-
-      final projected = heroProjectPoint(size, coords);
-      final cx = projected.dx;
-      final cy = projected.dy;
-      final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
-      final badgeColor =
-          kContinentColors[continent] ?? GwpColors.actionPrimary;
-
-      final bc = Offset(cx - 6.0, cy - 6.0);
+    final badgeRects = _topBadgeRects(size);
+    for (final entry in badgeRects.entries) {
+      final rank = entry.key;
+      final badge = entry.value;
       canvas.drawCircle(
-          bc, 5.2, Paint()..color = badgeColor.withValues(alpha: 0.88));
+          badge.center,
+          badge.radius,
+          Paint()..color = badge.color.withValues(alpha: 0.78 + badge.depth * 0.12));
       canvas.drawCircle(
-          bc,
-          5.2,
+          badge.center,
+          badge.radius,
           Paint()
-            ..color = Colors.white.withValues(alpha: 0.20)
+            ..color = Colors.white.withValues(alpha: 0.16 + badge.depth * 0.06)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 0.5);
 
       final tp = TextPainter(
         text: TextSpan(
-          text: '${i + 1}',
+          text: '$rank',
           style: const TextStyle(
             fontSize: 6.0,
             color: Colors.white,
@@ -1761,46 +1588,128 @@ class _DotWorldPainter extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, Offset(bc.dx - tp.width / 2, bc.dy - tp.height / 2));
+      tp.paint(
+        canvas,
+        Offset(badge.center.dx - tp.width / 2, badge.center.dy - tp.height / 2),
+      );
     }
+  }
+
+  Map<int, _HeroBadgeLayout> _topBadgeRects(Size size) {
+    if (nodes.isEmpty) return <int, _HeroBadgeLayout>{};
+    final sorted = [...nodes]..sort((a, b) => b.value.compareTo(a.value));
+    final top = sorted.take(3).toList();
+    final result = <int, _HeroBadgeLayout>{};
+
+    for (var i = 0; i < top.length; i++) {
+      final node = top[i];
+      final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
+      if (coords == null) continue;
+
+      final projected = heroProjectPoint(size, coords);
+      final depth = heroProjectDepth(coords);
+      final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
+      final badgeColor =
+          kContinentColors[continent] ?? GwpColors.actionPrimary;
+      final badgeR = 4.4 + depth * 0.75;
+      final center = Offset(projected.dx - badgeR, projected.dy - badgeR);
+      result[i + 1] = _HeroBadgeLayout(
+        center: center,
+        radius: badgeR,
+        color: badgeColor,
+        depth: depth,
+      );
+    }
+
+    return result;
   }
 
   // ── Region code labels ───────────────────────────────────────
   void _drawRegionLabels(Canvas canvas, Size size) {
+    final sorted = [...nodes]..sort((a, b) => b.value.compareTo(a.value));
+    final priorityByCode = <String, int>{
+      for (var i = 0; i < sorted.length; i++) sorted[i].regionCode: sorted.length - i,
+    };
+    final topCodes = sorted.take(3).map((n) => n.regionCode).toSet();
+    final reservedRects = _topBadgeRects(size)
+        .values
+        .map((badge) => Rect.fromCircle(center: badge.center, radius: badge.radius + 1))
+        .toList();
+    final specs = <ProjectedLabelSpec>[];
+    final textPainters = <String, TextPainter>{};
+    final depths = <String, double>{};
+    final centers = <String, Offset>{};
+    final colors = <String, Color>{};
+
     for (final node in nodes) {
       if (node.regionCode == selectedRegion) continue;
       final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
       if (coords == null) continue;
 
       final projected = heroProjectPoint(size, coords);
-      final cx = projected.dx;
-      final cy = projected.dy;
-
+      final depth = heroProjectDepth(coords);
       final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final labelColor =
           (kContinentColors[continent] ?? GwpColors.textMuted)
-              .withValues(alpha: 0.52);
-
+              .withValues(alpha: 0.34 + depth * 0.26);
       final tp = TextPainter(
         text: TextSpan(
           text: node.regionCode,
           style: TextStyle(
-            fontSize: 7.0,
+            fontSize: 6.5,
             color: labelColor,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout(maxWidth: 28);
+      )..layout(maxWidth: 24);
 
-      const dotR = 3.5;
-      var lx = cx + dotR + 1.5;
-      var ly = cy + dotR;
-      if (lx + tp.width > size.width - 2) lx = cx - tp.width - dotR - 1.5;
-      if (ly + tp.height > size.height - 2) ly = cy - tp.height - dotR;
+      textPainters[node.regionCode] = tp;
+      depths[node.regionCode] = depth;
+      centers[node.regionCode] = projected;
+      colors[node.regionCode] = labelColor;
+      specs.add(
+        ProjectedLabelSpec(
+          id: node.regionCode,
+          center: projected,
+          size: tp.size,
+          anchorRadius: 3.5,
+          priority: (priorityByCode[node.regionCode] ?? 0) * 100 + node.accountCount,
+          keepVisible: topCodes.contains(node.regionCode),
+          gap: 2,
+          maxRing: 3,
+          ringSpacing: 8,
+        ),
+      );
+    }
 
-      tp.paint(canvas, Offset(lx, ly));
+    final placements = computeProjectedLabelPlacements(
+      size,
+      specs,
+      reservedRects: reservedRects,
+      padding: 2,
+    );
+
+    for (final placement in placements) {
+      if (!placement.visible) continue;
+      final tp = textPainters[placement.id];
+      final center = centers[placement.id];
+      final color = colors[placement.id];
+      if (tp == null || center == null || color == null) continue;
+
+      if (placement.showLeaderLine) {
+        canvas.drawLine(
+          center,
+          placement.attachPoint,
+          Paint()
+            ..color = color.withValues(alpha: 0.32)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.5,
+        );
+      }
+
+      tp.paint(canvas, placement.rect.topLeft);
     }
   }
 
@@ -1825,7 +1734,7 @@ class _DotWorldPainter extends CustomPainter {
 
     const bg = GwpColors.surface1;
     const bgT = Color(0x00141414);
-    final sw = size.width * 0.08;
+    final sw = size.width * 0.04;
     final sh = size.height * 0.18;
 
     final lR = Rect.fromLTWH(0, 0, sw, size.height);
@@ -1867,4 +1776,18 @@ class _DotWorldPainter extends CustomPainter {
       old.layers != layers ||
       old.selectedRegion != selectedRegion ||
       old.pulseValue != pulseValue;
+}
+
+class _HeroBadgeLayout {
+  const _HeroBadgeLayout({
+    required this.center,
+    required this.radius,
+    required this.color,
+    required this.depth,
+  });
+
+  final Offset center;
+  final double radius;
+  final Color color;
+  final double depth;
 }

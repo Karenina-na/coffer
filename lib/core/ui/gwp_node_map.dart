@@ -3,6 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
+import 'finance_map_projection.dart';
+import 'projected_edge_geometry.dart';
+import 'projected_label_layout.dart';
+import 'projected_land_surface.dart';
 import 'region_meta.dart';
 
 export 'region_meta.dart' show RegionIndex;
@@ -73,9 +77,7 @@ class GwpNodeMap extends StatelessWidget {
       );
     }
 
-    // Calculate max value for node sizing
-    final maxVal = nodes.fold<double>(
-        0, (prev, n) => n.value > prev ? n.value : prev);
+    final maxVal = nodes.fold<double>(0, (prev, n) => n.value > prev ? n.value : prev);
 
     return SizedBox(
       height: height,
@@ -83,32 +85,98 @@ class GwpNodeMap extends StatelessWidget {
         builder: (context, constraints) {
           final w = constraints.maxWidth;
           final h = constraints.maxHeight;
+          final canvasSize = Size(w, h);
 
-          // Build positioned edges and nodes
           final edgeCoords = <_EdgeCoord>[];
+          final activeProjected = <(double, double)>[];
           for (final edge in edges) {
-            final from = regionMetaOf(regionIndex, edge.fromRegion)?.mapCoords;
-            final to = regionMetaOf(regionIndex, edge.toRegion)?.mapCoords;
-            if (from == null || to == null) continue;
+            final geometry = projectEdgeGeometry(
+              size: canvasSize,
+              fromCoords: regionMetaOf(regionIndex, edge.fromRegion)?.mapCoords,
+              toCoords: regionMetaOf(regionIndex, edge.toRegion)?.mapCoords,
+              arcLiftFactor: 0.20,
+              arcDepthFactor: 0.08,
+            );
+            if (geometry == null) continue;
             edgeCoords.add(_EdgeCoord(
-              from: Offset(from.$1 * w, from.$2 * h),
-              to: Offset(to.$1 * w, to.$2 * h),
+              geometry: geometry,
               count: edge.channelCount,
               enabled: edge.enabled,
             ));
           }
 
+          final visuals = <_NodeVisual>[];
+          final labelSpecs = <ProjectedLabelSpec>[];
+          final sorted = [...nodes]..sort((a, b) => b.value.compareTo(a.value));
+          final priorityByCode = <String, int>{
+            for (var i = 0; i < sorted.length; i++) sorted[i].regionCode: sorted.length - i,
+          };
+          final topCodes = sorted.take(3).map((n) => n.regionCode).toSet();
+
+          for (final node in nodes) {
+            final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
+            if (coords == null) continue;
+            final projected = FinanceMapProjection.projectPoint(canvasSize, coords);
+            final depth = FinanceMapProjection.projectDepth(coords);
+            activeProjected.add((projected.dx / w, projected.dy / h));
+
+            final ratio = maxVal > 0 ? node.value / maxVal : 0.5;
+            final radius =
+                (14.0 + 10.0 * math.log(1 + ratio * 9) / math.ln10) * (0.88 + depth * 0.16);
+            final flag = regionFlag(regionIndex, node.regionCode);
+            final labelSize = _measureNodePill(node.label);
+            labelSpecs.add(
+              ProjectedLabelSpec(
+                id: node.regionCode,
+                center: projected,
+                size: labelSize,
+                anchorRadius: radius,
+                priority: (priorityByCode[node.regionCode] ?? 0) * 100 + node.accountCount,
+                keepVisible: topCodes.contains(node.regionCode),
+                gap: 6,
+                maxRing: 3,
+                ringSpacing: 14,
+              ),
+            );
+            visuals.add(_NodeVisual(
+              node: node,
+              center: projected,
+              depth: depth,
+              radius: radius,
+              flag: flag,
+            ));
+          }
+
+          final placements = {
+            for (final placement in computeProjectedLabelPlacements(canvasSize, labelSpecs, padding: 4))
+              placement.id: placement,
+          };
+
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              // Simplified continent outlines + edge lines
               CustomPaint(
-                size: Size(w, h),
-                painter: _MapPainter(edges: edgeCoords),
+                size: canvasSize,
+                painter: _MapPainter(
+                  edges: edgeCoords,
+                  activeProjected: activeProjected,
+                  labelPlacements: visuals
+                      .map((visual) => _LeaderLine(
+                            center: visual.center,
+                            placement: placements[visual.node.regionCode],
+                          ))
+                      .where((line) => line.placement != null && line.placement!.visible)
+                      .toList(),
+                ),
               ),
-              // Account nodes
-              for (final node in nodes)
-                _buildNode(context, node, w, h, maxVal, regionIndex),
+              for (final visual in visuals) _buildNodeBubble(context, visual),
+              for (final visual in visuals)
+                if ((placements[visual.node.regionCode]?.visible ?? false))
+                  _buildNodePill(
+                    visual.node,
+                    visual.depth,
+                    placements[visual.node.regionCode]!,
+                  ),
             ],
           );
         },
@@ -116,156 +184,194 @@ class GwpNodeMap extends StatelessWidget {
     );
   }
 
-  Widget _buildNode(
-    BuildContext context,
-    MapNode node,
-    double w,
-    double h,
-    double maxVal,
-    RegionIndex regionIndex,
-  ) {
-    final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
-    if (coords == null) return const SizedBox.shrink();
-
-    final cx = coords.$1 * w;
-    final cy = coords.$2 * h;
-
-    // Radius proportional to log of value
-    final ratio = maxVal > 0 ? node.value / maxVal : 0.5;
-    final radius = 14.0 + 10.0 * math.log(1 + ratio * 9) / math.ln10;
-
-    final flag = regionFlag(regionIndex, node.regionCode);
-
+  Widget _buildNodeBubble(BuildContext context, _NodeVisual visual) {
     return Positioned(
-      left: cx - radius,
-      top: cy - radius,
+      left: visual.center.dx - visual.radius,
+      top: visual.center.dy - visual.radius,
       child: GestureDetector(
-        onTap: onNodeTap != null ? () => onNodeTap!(node.regionCode) : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: radius * 2,
-              height: radius * 2,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: GwpColors.actionPrimary.withValues(alpha: 0.2),
-                border: Border.all(
-                  color: GwpColors.actionPrimary.withValues(alpha: 0.6),
-                  width: 1.5,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                flag,
-                style: TextStyle(fontSize: radius * 0.7),
-              ),
+        onTap: onNodeTap != null ? () => onNodeTap!(visual.node.regionCode) : null,
+        child: Container(
+          width: visual.radius * 2,
+          height: visual.radius * 2,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: GwpColors.actionPrimary.withValues(alpha: 0.16 + visual.depth * 0.10),
+            border: Border.all(
+              color: GwpColors.actionPrimary.withValues(alpha: 0.48 + visual.depth * 0.20),
+              width: 1.5,
             ),
-            const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: GwpColors.surface2.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                node.label,
-                style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: GwpColors.textPrimary,
-                ),
-              ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            visual.flag,
+            style: TextStyle(fontSize: visual.radius * 0.7),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNodePill(
+    MapNode node,
+    double depth,
+    ProjectedLabelPlacement placement,
+  ) {
+    return Positioned(
+      left: placement.rect.left,
+      top: placement.rect.top,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: GwpColors.surface2.withValues(alpha: 0.80 + depth * 0.10),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            node.label,
+            style: const TextStyle(
+              fontFamily: GwpTypo.monoFont,
+              fontFeatures: GwpTypo.tabularFigures,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              color: GwpColors.textPrimary,
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+class _NodeVisual {
+  const _NodeVisual({
+    required this.node,
+    required this.center,
+    required this.depth,
+    required this.radius,
+    required this.flag,
+  });
+
+  final MapNode node;
+  final Offset center;
+  final double depth;
+  final double radius;
+  final String flag;
+}
+
+class _LeaderLine {
+  const _LeaderLine({required this.center, required this.placement});
+
+  final Offset center;
+  final ProjectedLabelPlacement? placement;
+}
+
 class _EdgeCoord {
   const _EdgeCoord({
-    required this.from,
-    required this.to,
+    required this.geometry,
     this.count = 1,
     this.enabled = true,
   });
-  final Offset from;
-  final Offset to;
+
+  final ProjectedEdgeGeometry geometry;
   final int count;
   final bool enabled;
 }
 
-/// Paints simplified continent outlines and channel edge bezier curves.
 class _MapPainter extends CustomPainter {
-  _MapPainter({required this.edges});
+  _MapPainter({
+    required this.edges,
+    required this.activeProjected,
+    required this.labelPlacements,
+  });
 
   final List<_EdgeCoord> edges;
+  final List<(double, double)> activeProjected;
+  final List<_LeaderLine> labelPlacements;
+  static final _surface = ProjectedLandSurface.forGrid(cols: 48, rows: 24);
 
   @override
   void paint(Canvas canvas, Size size) {
     _paintContinentDots(canvas, size);
     _paintEdges(canvas);
+    _paintLeaderLines(canvas);
   }
 
   void _paintContinentDots(Canvas canvas, Size size) {
-    // Draw a subtle dot grid to suggest a world map
-    final dotPaint = Paint()
-      ..color = GwpColors.border.withValues(alpha: 0.15)
-      ..style = PaintingStyle.fill;
+    for (var r = 0; r < _surface.rows; r++) {
+      for (var c = 0; c < _surface.cols; c++) {
+        if (!_surface.bitmap[r][c]) continue;
 
-    // Simplified continent regions as rectangular dot clusters
-    final continents = <(double, double, double, double)>[
-      // (xFrac, yFrac, wFrac, hFrac)
-      (0.08, 0.20, 0.22, 0.45), // Americas
-      (0.40, 0.15, 0.18, 0.50), // Europe + Africa
-      (0.62, 0.20, 0.28, 0.55), // Asia + Oceania
-    ];
+        final nx = (c + 0.5) / _surface.cols;
+        final ny = (r + 0.5) / _surface.rows;
+        final projected = Offset(nx * size.width, ny * size.height);
 
-    for (final c in continents) {
-      final startX = c.$1 * size.width;
-      final startY = c.$2 * size.height;
-      final endX = (c.$1 + c.$3) * size.width;
-      final endY = (c.$2 + c.$4) * size.height;
-
-      for (var x = startX; x < endX; x += 12) {
-        for (var y = startY; y < endY; y += 12) {
-          canvas.drawCircle(Offset(x, y), 1, dotPaint);
+        var isHot = false;
+        for (final active in activeProjected) {
+          final dx = nx - active.$1;
+          final dy = ny - active.$2;
+          if (dx * dx + dy * dy < 0.010) {
+            isHot = true;
+            break;
+          }
         }
+
+        canvas.drawCircle(
+          projected,
+          isHot ? 1.2 : 1.0,
+          Paint()
+            ..color = (isHot ? GwpColors.actionPrimary : GwpColors.border)
+                .withValues(alpha: isHot ? 0.22 : 0.16)
+            ..style = PaintingStyle.fill,
+        );
       }
     }
   }
 
   void _paintEdges(Canvas canvas) {
     for (final edge in edges) {
-      final paint = Paint()
-        ..color = edge.enabled
-            ? GwpColors.actionPrimary.withValues(alpha: 0.5)
-            : GwpColors.textMuted.withValues(alpha: 0.3)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = (0.8 + edge.count * 0.4).clamp(0.8, 3.0);
+      final depth = edge.geometry.depth;
+      final path = edge.geometry.buildPath();
 
-      // Bezier curve with control point above the midpoint
-      final mid = (edge.from + edge.to) / 2;
-      final dist = (edge.from - edge.to).distance;
-      final controlY = mid.dy - dist * 0.25;
-      final control = Offset(mid.dx, controlY);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = (edge.enabled ? GwpColors.actionPrimary : GwpColors.textMuted)
+              .withValues(alpha: edge.enabled ? 0.18 + depth * 0.18 : 0.12 + depth * 0.10)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = edge.geometry.recommendedStrokeWidth(
+            count: edge.count,
+            base: 0.75,
+            countFactor: 0.32,
+            depthBase: 0.84,
+            depthFactor: 0.24,
+            min: 0.75,
+            max: 2.4,
+          ),
+      );
+    }
+  }
 
-      final path = Path()
-        ..moveTo(edge.from.dx, edge.from.dy)
-        ..quadraticBezierTo(control.dx, control.dy, edge.to.dx, edge.to.dy);
-
-      canvas.drawPath(path, paint);
+  void _paintLeaderLines(Canvas canvas) {
+    for (final leader in labelPlacements) {
+      final placement = leader.placement;
+      if (placement == null || !placement.showLeaderLine) continue;
+      canvas.drawLine(
+        leader.center,
+        placement.attachPoint,
+        Paint()
+          ..color = GwpColors.textMuted.withValues(alpha: 0.28)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.7,
+      );
     }
   }
 
   @override
   bool shouldRepaint(_MapPainter old) =>
       edges.length != old.edges.length ||
-      _coordListEquals(edges, old.edges) == false;
+      activeProjected.length != old.activeProjected.length ||
+      labelPlacements.length != old.labelPlacements.length ||
+      !_coordListEquals(edges, old.edges);
 }
 
 bool _coordListEquals(List<_EdgeCoord> a, List<_EdgeCoord> b) {
@@ -273,7 +379,32 @@ bool _coordListEquals(List<_EdgeCoord> a, List<_EdgeCoord> b) {
   final n = a.length;
   if (n != b.length) return false;
   for (var i = 0; i < n; i++) {
-    if (a[i].from != b[i].from || a[i].to != b[i].to) return false;
+    if (a[i].geometry.from != b[i].geometry.from ||
+        a[i].geometry.to != b[i].geometry.to ||
+        a[i].geometry.control != b[i].geometry.control ||
+        a[i].geometry.fromDepth != b[i].geometry.fromDepth ||
+        a[i].geometry.toDepth != b[i].geometry.toDepth ||
+        a[i].count != b[i].count ||
+        a[i].enabled != b[i].enabled) {
+      return false;
+    }
   }
   return true;
+}
+
+Size _measureNodePill(String label) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: const TextStyle(
+        fontFamily: GwpTypo.monoFont,
+        fontFeatures: GwpTypo.tabularFigures,
+        fontSize: 9,
+        fontWeight: FontWeight.w600,
+        color: GwpColors.textPrimary,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  return Size(painter.width + 8, painter.height + 2);
 }
