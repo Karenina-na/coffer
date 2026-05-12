@@ -38,6 +38,7 @@ abstract class Channel with _$Channel {
     Decimal? dailyLimit,
     Decimal? singleLimit,
     required ChannelStatus status,
+    @Default(1000) int sortOrder,
     DateTime? effectiveFrom,
     DateTime? effectiveTo,
     required DateTime createdAt,

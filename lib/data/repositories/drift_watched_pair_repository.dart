@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:drift/drift.dart';
 
 import '../../core/errors.dart';
 import '../../core/result.dart';
@@ -20,6 +21,7 @@ class DriftWatchedPairRepository implements WatchedPairRepository {
         baseCurrency: r.baseCurrency,
         quoteCurrency: r.quoteCurrency,
         createdAt: r.createdAt,
+        sortOrder: r.sortOrder,
         thresholdHigh: _parseDec(r.thresholdHigh),
         thresholdLow: _parseDec(r.thresholdLow),
         alertChangePct: _parseDec(r.alertChangePct),
@@ -53,17 +55,21 @@ class DriftWatchedPairRepository implements WatchedPairRepository {
     try {
       final now = DateTime.now();
       final key = pairKeyOf(base, quote);
+      final all = await _dao.listAll();
+      final nextSortOrder = all.isEmpty ? 100 : (all.last.sortOrder + 10);
       await _dao.upsert(WatchedPairsCompanion.insert(
         pairKey: key,
         baseCurrency: base,
         quoteCurrency: quote,
         createdAt: now,
+        sortOrder: Value(nextSortOrder),
       ));
       return Ok(WatchedPair(
         pairKey: key,
         baseCurrency: base,
         quoteCurrency: quote,
         createdAt: now,
+        sortOrder: nextSortOrder,
       ));
     } catch (e) {
       return Err(StorageError('add watched pair failed: $e'));
@@ -112,6 +118,19 @@ class DriftWatchedPairRepository implements WatchedPairRepository {
       return const Ok(null);
     } catch (e) {
       return Err(StorageError('update thresholds failed: $e'));
+    }
+  }
+
+  @override
+  Future<Result<void, AppError>> reorder(List<String> pairKeys) async {
+    try {
+      final normalized = pairKeys.map((e) => e.trim().toUpperCase()).toList(growable: false);
+      for (var i = 0; i < normalized.length; i++) {
+        await _dao.updateSortOrder(normalized[i], 100 + i * 10);
+      }
+      return const Ok(null);
+    } catch (e) {
+      return Err(StorageError('reorder watched pairs failed: $e'));
     }
   }
 }

@@ -460,4 +460,9 @@ class _FakeDictRepository implements DictRepository {
   Stream<List<DictEntry>> watchByType(DictType type) async* {
     yield await listByType(type);
   }
+
+  @override
+  Future<Result<void, AppError>> reorderByType(DictType type, List<int> entryIds) {
+    throw UnimplementedError();
+  }
 }

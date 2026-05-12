@@ -75,13 +75,10 @@ class AccountListBody extends ConsumerWidget {
 // Aggregate data + grouped list
 // ──────────────────────────────────────────────────────────────
 
-/// Max items shown per group before "show more" is needed.
-const _kGroupPreviewLimit = 3;
-
 /// Number of top groups expanded by default.
 const _kAutoExpandCount = 2;
 
-class _AccountListView extends StatefulWidget {
+class _AccountListView extends ConsumerStatefulWidget {
   const _AccountListView({
     required this.accounts,
     required this.assets,
@@ -97,12 +94,12 @@ class _AccountListView extends StatefulWidget {
   final Set<String> missingAssetIds;
 
   @override
-  State<_AccountListView> createState() => _AccountListViewState();
+  ConsumerState<_AccountListView> createState() => _AccountListViewState();
 }
 
-class _AccountListViewState extends State<_AccountListView> {
+class _AccountListViewState extends ConsumerState<_AccountListView> {
   final _expandedGroups = <String>{};
-  final _showAllItems = <String>{};
+  final _regionOrder = <String>[];
   bool _initialized = false;
 
   List<Account> get accounts => widget.accounts;
@@ -179,7 +176,7 @@ class _AccountListViewState extends State<_AccountListView> {
       }
     }
 
-    final sortedRegions = grouped.keys.toList()
+    final fallbackRegions = grouped.keys.toList()
       ..sort((a, b) {
         final valueCmp = (regionNetWorth[b] ?? Decimal.zero).compareTo(
           regionNetWorth[a] ?? Decimal.zero,
@@ -187,6 +184,11 @@ class _AccountListViewState extends State<_AccountListView> {
         if (valueCmp != 0) return valueCmp;
         return regionLabel(regionIndex, a).compareTo(regionLabel(regionIndex, b));
       });
+    _regionOrder.removeWhere((code) => !grouped.containsKey(code));
+    for (final code in fallbackRegions) {
+      if (!_regionOrder.contains(code)) _regionOrder.add(code);
+    }
+    final sortedRegions = List<String>.from(_regionOrder);
 
     if (!_initialized) {
       _initialized = true;
@@ -203,23 +205,20 @@ class _AccountListViewState extends State<_AccountListView> {
         .length;
     final totalD = totalNetWorth.toDouble();
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 112),
-      children: [
-        _HeroCard(
-          totalNetWorth: totalNetWorth,
-          totalAccounts: accounts.length,
-          activeCount: activeCount,
-          regionCount: grouped.length,
-          totalAssets: assets.length,
-          valuationCurrency: widget.valuationCurrency,
-          missingCount: widget.missingAssetIds.length,
-          typeValue: typeValue,
-          regionValue: regionValue,
-          regionIndex: regionIndex,
-        ),
-        for (final region in sortedRegions) ...[
-          _RegionHeader(
+    final regionSections = <Widget>[
+      for (final region in sortedRegions)
+        _DraggableRegionSection(
+          key: ValueKey('account-region-$region'),
+          region: region,
+          onAcceptRegion: (dragged) => setState(() {
+            final from = _regionOrder.indexOf(dragged);
+            final to = _regionOrder.indexOf(region);
+            if (from == -1 || to == -1 || from == to) return;
+            final moved = _regionOrder.removeAt(from);
+            final insertAt = from < to ? to - 1 : to;
+            _regionOrder.insert(insertAt, moved);
+          }),
+          header: _RegionHeader(
             region: region,
             accountCount: grouped[region]!.values.fold<int>(
               0,
@@ -236,43 +235,51 @@ class _AccountListViewState extends State<_AccountListView> {
                 _expandedGroups.add(region);
               }
             }),
+            dragHandle: null,
           ),
-          if (_expandedGroups.contains(region)) ...[
-            for (final accountType in _sortedAccountTypes(
-              region,
-              grouped[region]!,
-              typeNetWorthByRegion,
-            )) ...[
-              _AccountTypeHeader(
-                accountType: accountType,
-                accountCount: grouped[region]![accountType]!.length,
-                netWorth:
-                    typeNetWorthByRegion[region]?[accountType] ?? Decimal.zero,
-              ),
-              for (final account in _visibleItems(
-                region,
-                accountType,
-                grouped[region]![accountType]!,
-              ))
-                _AccountCard(
-                  account: account,
-                  netWorth: netWorth[account.id],
-                  assetCount: assetCount[account.id] ?? 0,
-                  totalNetWorth: totalD,
-                  accountAssets: assetsByAccountId[account.id] ?? const [],
-                ),
-              if (!_showAllItems.contains(_typeGroupKey(region, accountType)) &&
-                  grouped[region]![accountType]!.length > _kGroupPreviewLimit)
-                _ShowMoreButton(
-                  remaining:
-                      grouped[region]![accountType]!.length - _kGroupPreviewLimit,
-                  onPressed: () => setState(
-                    () => _showAllItems.add(_typeGroupKey(region, accountType)),
-                  ),
-                ),
-            ],
-          ],
-        ],
+          children: _expandedGroups.contains(region)
+              ? [
+                  for (final accountType in _sortedAccountTypes(
+                    region,
+                    grouped[region]!,
+                    typeNetWorthByRegion,
+                  )) ...[
+                    _AccountTypeHeader(
+                      accountType: accountType,
+                      accountCount: grouped[region]![accountType]!.length,
+                      netWorth:
+                          typeNetWorthByRegion[region]?[accountType] ?? Decimal.zero,
+                    ),
+                    for (final account in grouped[region]![accountType]!)
+                      _AccountCard(
+                        account: account,
+                        netWorth: netWorth[account.id],
+                        assetCount: assetCount[account.id] ?? 0,
+                        totalNetWorth: totalD,
+                        accountAssets: assetsByAccountId[account.id] ?? const [],
+                      ),
+                  ],
+                ]
+              : const [],
+        ),
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 112),
+      children: [
+        _HeroCard(
+          totalNetWorth: totalNetWorth,
+          totalAccounts: accounts.length,
+          activeCount: activeCount,
+          regionCount: grouped.length,
+          totalAssets: assets.length,
+          valuationCurrency: widget.valuationCurrency,
+          missingCount: widget.missingAssetIds.length,
+          typeValue: typeValue,
+          regionValue: regionValue,
+          regionIndex: regionIndex,
+        ),
+        ...regionSections,
       ],
     );
   }
@@ -294,25 +301,77 @@ class _AccountListViewState extends State<_AccountListView> {
     return types;
   }
 
-  String _typeGroupKey(String region, AccountType type) =>
-      '$region|${type.code}';
-
-  List<Account> _visibleItems(
-    String region,
-    AccountType type,
-    List<Account> all,
-  ) {
-    if (_showAllItems.contains(_typeGroupKey(region, type)) ||
-        all.length <= _kGroupPreviewLimit) {
-      return all;
-    }
-    return all.take(_kGroupPreviewLimit).toList();
-  }
 }
 
 // ──────────────────────────────────────────────────────────────
 // Hero card with net worth + mini donuts
 // ──────────────────────────────────────────────────────────────
+
+class _DraggableRegionSection extends StatelessWidget {
+  const _DraggableRegionSection({
+    super.key,
+    required this.region,
+    required this.onAcceptRegion,
+    required this.header,
+    required this.children,
+  });
+
+  final String region;
+  final ValueChanged<String> onAcceptRegion;
+  final Widget header;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => details.data != region,
+      onAcceptWithDetails: (details) => onAcceptRegion(details.data),
+      builder: (context, candidateData, rejectedData) {
+        final active = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            border: active
+                ? Border(
+                    top: BorderSide(color: GwpColors.actionPrimary, width: 2),
+                  )
+                : null,
+          ),
+          child: Column(
+            key: key,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LongPressDraggable<String>(
+                data: region,
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: GwpColors.surface1,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: GwpColors.border, width: 0.5),
+                    ),
+                    child: Text(
+                      header is _RegionHeader ? (header as _RegionHeader).labelText : region,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: GwpColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                child: header,
+              ),
+              ...children,
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
 class _HeroCard extends StatelessWidget {
   const _HeroCard({
@@ -633,6 +692,7 @@ class _RegionHeader extends StatelessWidget {
     required this.expanded,
     required this.regionIndex,
     required this.onToggle,
+    this.dragHandle,
   });
 
   final String region;
@@ -642,10 +702,14 @@ class _RegionHeader extends StatelessWidget {
   final bool expanded;
   final RegionIndex regionIndex;
   final VoidCallback onToggle;
+  final Widget? dragHandle;
+
+  String get labelText => '$regionLabelText ($accountCount)';
+  String get regionLabelText => regionLabel(regionIndex, region);
 
   @override
   Widget build(BuildContext context) {
-    final label = regionLabel(regionIndex, region);
+    final label = regionLabelText;
     final pct = totalNetWorth > 0
         ? displayPercentDouble(netWorth.toDouble() / totalNetWorth * 100)
         : null;
@@ -691,6 +755,10 @@ class _RegionHeader extends StatelessWidget {
                     color: GwpColors.textMuted,
                   ),
                 ),
+                if (dragHandle != null) ...[
+                  const SizedBox(width: 4),
+                  dragHandle!,
+                ],
                 const Spacer(),
                 if (netWorth > Decimal.zero) ...[
                   Text(
@@ -1076,37 +1144,6 @@ class _AccountCard extends ConsumerWidget {
     return GwpStatusBadge(label: label, variant: variant);
   }
 
-}
-
-// ──────────────────────────────────────────────────────────────
-// "Show more" button
-// ──────────────────────────────────────────────────────────────
-
-class _ShowMoreButton extends StatelessWidget {
-  const _ShowMoreButton({required this.remaining, required this.onPressed});
-  final int remaining;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.xs,
-      ),
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: GwpColors.textSecondary,
-          side: const BorderSide(color: GwpColors.border, width: 0.5),
-          padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        icon: const Icon(Icons.expand_more, size: 16),
-        label: Text('展开剩余 $remaining 项', style: const TextStyle(fontSize: 12)),
-      ),
-    );
-  }
 }
 
 // ──────────────────────────────────────────────────────────────

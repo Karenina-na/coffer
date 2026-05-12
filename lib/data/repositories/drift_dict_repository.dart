@@ -189,6 +189,26 @@ class DriftDictRepository implements DictRepository {
       return Err(StorageError('deleteCustom failed: $e'));
     }
   }
+
+  @override
+  Future<Result<void, AppError>> reorderByType(
+    DictType type,
+    List<int> entryIds,
+  ) async {
+    try {
+      final existing = await _dao.listByType(type.code);
+      final existingIds = existing.map((e) => e.id).toSet();
+      if (!entryIds.every(existingIds.contains)) {
+        return const Err(ValidationError('reorder contains unknown dict entry id'));
+      }
+      for (var i = 0; i < entryIds.length; i++) {
+        await _dao.updateSortOrder(entryIds[i], 100 + i * 10);
+      }
+      return const Ok(null);
+    } catch (e) {
+      return Err(StorageError('reorderByType failed: $e'));
+    }
+  }
 }
 
 class DictFieldAbsent {

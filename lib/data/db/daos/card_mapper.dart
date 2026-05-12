@@ -32,6 +32,7 @@ class CardMapper {
         billingAddress: row.billingAddress,
         isVirtual: row.isVirtual,
         status: CardStatus.fromCode(row.status),
+        sortOrder: row.sortOrder,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       );
@@ -57,6 +58,7 @@ class CardMapper {
         billingAddress: _val(c.billingAddress),
         isVirtual: Value(c.isVirtual),
         status: c.status.code,
+        sortOrder: Value(c.sortOrder),
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
       );
@@ -84,6 +86,7 @@ class CardMapper {
         billingAddress: Value(c.billingAddress),
         isVirtual: Value(c.isVirtual),
         status: Value(c.status.code),
+        sortOrder: Value(c.sortOrder),
         createdAt: Value(c.createdAt),
         updatedAt: Value(c.updatedAt),
       );

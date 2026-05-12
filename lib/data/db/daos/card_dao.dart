@@ -12,8 +12,10 @@ class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
   Stream<List<CardRow>> watchAll() {
     return (select(cards)
           ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
             (t) => OrderingTerm(
                 expression: t.createdAt, mode: OrderingMode.desc),
+            (t) => OrderingTerm.asc(t.id),
           ]))
         .watch();
   }
@@ -22,8 +24,10 @@ class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
     return (select(cards)
           ..where((t) => t.accountId.equals(accountId))
           ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
             (t) => OrderingTerm(
                 expression: t.createdAt, mode: OrderingMode.desc),
+            (t) => OrderingTerm.asc(t.id),
           ]))
         .watch();
   }
@@ -56,5 +60,18 @@ class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
 
   Future<int> deleteById(String id) {
     return (delete(cards)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<int> updateSortOrder({
+    required String id,
+    required int sortOrder,
+    required DateTime updatedAt,
+  }) {
+    return (update(cards)..where((t) => t.id.equals(id))).write(
+      CardsCompanion(
+        sortOrder: Value(sortOrder),
+        updatedAt: Value(updatedAt),
+      ),
+    );
   }
 }

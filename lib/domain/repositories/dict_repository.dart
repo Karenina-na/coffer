@@ -51,6 +51,11 @@ abstract interface class DictRepository {
 
   /// 删除自定义条目。拒绝删除 `isBuiltin = true` 的条目。
   Future<Result<void, AppError>> deleteCustom(int id);
+
+  Future<Result<void, AppError>> reorderByType(
+    DictType type,
+    List<int> entryIds,
+  );
 }
 
 /// Sentinel used to distinguish "not passed" from `null` in [DictRepository.updateEntry].

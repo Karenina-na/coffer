@@ -62,29 +62,51 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
           }
           final enabled = list.where((c) => c.status == ChannelStatus.enabled).length;
           final protocols = list.map((c) => c.transferProtocol).toSet().length;
-          return ListView(
+          return ReorderableListView.builder(
             padding: const EdgeInsets.only(
               left: GwpSpacing.base,
               right: GwpSpacing.base,
               top: GwpSpacing.md,
               bottom: 16,
             ),
-            children: [
-              _SummaryHeader(
-                total: list.length,
-                enabled: enabled,
-                protocols: protocols,
-              ),
-              const SizedBox(height: GwpSpacing.md),
-              for (var i = 0; i < list.length; i++) ...[
-                _ChannelCard(
-                  channel: list[i],
-                  regionIndex: regionIndex,
-                  protocolIndex: protocolIndex,
+            buildDefaultDragHandles: false,
+            header: Column(
+              children: [
+                _SummaryHeader(
+                  total: list.length,
+                  enabled: enabled,
+                  protocols: protocols,
                 ),
-                if (i < list.length - 1) const SizedBox(height: GwpSpacing.sm),
+                const SizedBox(height: GwpSpacing.md),
               ],
-            ],
+            ),
+            itemCount: list.length,
+            onReorder: (oldIndex, newIndex) async {
+              if (newIndex > oldIndex) newIndex -= 1;
+              final reordered = [...list];
+              final moved = reordered.removeAt(oldIndex);
+              reordered.insert(newIndex, moved);
+              final result = await ref
+                  .read(channelRepositoryProvider)
+                  .reorder(reordered.map((e) => e.id).toList(growable: false));
+              if (result.isErr && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('重排失败：${result.errorOrNull?.message ?? '未知错误'}'),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (_, i) => Padding(
+              key: ValueKey('channel-${list[i].id}'),
+              padding: EdgeInsets.only(bottom: i < list.length - 1 ? GwpSpacing.sm : 0),
+              child: _ChannelCard(
+                channel: list[i],
+                regionIndex: regionIndex,
+                protocolIndex: protocolIndex,
+                reorderIndex: i,
+              ),
+            ),
           );
         },
       ),
@@ -203,11 +225,13 @@ class _ChannelCard extends ConsumerWidget {
     required this.channel,
     required this.regionIndex,
     required this.protocolIndex,
+    required this.reorderIndex,
   });
 
   final Channel channel;
   final RegionIndex regionIndex;
   final ProtocolIndex protocolIndex;
+  final int reorderIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -233,19 +257,21 @@ class _ChannelCard extends ConsumerWidget {
       if (limits.isNotEmpty) limits.join(' '),
     ].join(' · ');
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => context.push('/channels/${channel.id}'),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: GwpColors.surface1,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: GwpColors.border, width: 0.5),
-          ),
-          child: Row(
-            children: [
+    return ReorderableDelayedDragStartListener(
+      index: reorderIndex,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/channels/${channel.id}'),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: GwpColors.surface1,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: GwpColors.border, width: 0.5),
+            ),
+            child: Row(
+              children: [
               // Left color bar
               Container(
                 width: 4,
@@ -354,7 +380,8 @@ class _ChannelCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(width: GwpSpacing.md),
-            ],
+              ],
+            ),
           ),
         ),
       ),

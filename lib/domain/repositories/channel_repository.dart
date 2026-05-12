@@ -11,4 +11,6 @@ abstract interface class ChannelRepository {
   Future<Result<Channel, AppError>> upsert(Channel channel);
 
   Future<Result<void, AppError>> setStatus(String id, ChannelStatus status);
+
+  Future<Result<void, AppError>> reorder(List<String> channelIds);
 }

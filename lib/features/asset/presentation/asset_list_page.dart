@@ -64,52 +64,13 @@ class AssetListBody extends ConsumerWidget {
 }
 
 // ──────────────────────────────────────────────────────────────
-// "Show more" button
-// ──────────────────────────────────────────────────────────────
-
-class _ShowMoreButton extends StatelessWidget {
-  const _ShowMoreButton({required this.remaining, required this.onPressed});
-  final int remaining;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.xs,
-      ),
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: GwpColors.textSecondary,
-          side: const BorderSide(color: GwpColors.border, width: 0.5),
-          padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        icon: const Icon(Icons.expand_more, size: 16),
-        label: Text(
-          '展开剩余 $remaining 项',
-          style: const TextStyle(fontSize: 12),
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
 // Grouped asset list
 // ──────────────────────────────────────────────────────────────
-
-/// Max items shown per group before "show more" is needed.
-const _kGroupPreviewLimit = 3;
 
 /// Number of top groups expanded by default.
 const _kAutoExpandCount = 2;
 
-class _AssetListView extends StatefulWidget {
+class _AssetListView extends ConsumerStatefulWidget {
   const _AssetListView({
     required this.assets,
     required this.accounts,
@@ -125,12 +86,13 @@ class _AssetListView extends StatefulWidget {
   final Set<String> missingAssetIds;
 
   @override
-  State<_AssetListView> createState() => _AssetListViewState();
+  ConsumerState<_AssetListView> createState() => _AssetListViewState();
 }
 
-class _AssetListViewState extends State<_AssetListView> {
+class _AssetListViewState extends ConsumerState<_AssetListView> {
   final _expandedGroups = <String>{};
-  final _showAllItems = <String>{};
+  final _regionOrder = <String>[];
+  String? _draggingRegion;
   bool _initialized = false;
 
   List<ValuedAsset> get assets => widget.assets;
@@ -205,7 +167,7 @@ class _AssetListViewState extends State<_AssetListView> {
       accountTotal[accountId] = (accountTotal[accountId] ?? Decimal.zero) + amount;
     }
 
-    final sortedRegions = grouped.keys.toList()
+    final fallbackRegions = grouped.keys.toList()
       ..sort((a, b) {
         final valueCmp = (regionTotal[b] ?? Decimal.zero).compareTo(
           regionTotal[a] ?? Decimal.zero,
@@ -213,6 +175,11 @@ class _AssetListViewState extends State<_AssetListView> {
         if (valueCmp != 0) return valueCmp;
         return regionLabel(regionIndex, a).compareTo(regionLabel(regionIndex, b));
       });
+    _regionOrder.removeWhere((code) => !grouped.containsKey(code));
+    for (final code in fallbackRegions) {
+      if (!_regionOrder.contains(code)) _regionOrder.add(code);
+    }
+    final sortedRegions = List<String>.from(_regionOrder);
 
     if (!_initialized) {
       _initialized = true;
@@ -224,21 +191,23 @@ class _AssetListViewState extends State<_AssetListView> {
       }
     }
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 112),
-      children: [
-        _PortfolioHero(
-          totalValue: totalValue,
-          totalGain: totalGain,
-          assetCount: assets.length,
-          valuationCurrency: widget.valuationCurrency,
-          missingCount: widget.missingAssetIds.length,
-          hasGainData: gainableCount > 0,
-          typeBreakdown: typeBreakdown,
-          currencyBreakdown: currencyBreakdown,
-        ),
-        for (final region in sortedRegions) ...[
-          _RegionHeader(
+    final regionSections = <Widget>[
+      for (final region in sortedRegions)
+        _DraggableRegionSection(
+          key: ValueKey('asset-region-$region'),
+          region: region,
+          draggingRegion: _draggingRegion,
+          onDragStarted: () => setState(() => _draggingRegion = region),
+          onDragEnded: () => setState(() => _draggingRegion = null),
+          onAcceptRegion: (dragged) => setState(() {
+            final from = _regionOrder.indexOf(dragged);
+            final to = _regionOrder.indexOf(region);
+            if (from == -1 || to == -1 || from == to) return;
+            final moved = _regionOrder.removeAt(from);
+            final insertAt = from < to ? to - 1 : to;
+            _regionOrder.insert(insertAt, moved);
+          }),
+          header: _RegionHeader(
             region: region,
             accountCount: grouped[region]!.values.fold<int>(
               0,
@@ -255,58 +224,53 @@ class _AssetListViewState extends State<_AssetListView> {
                 _expandedGroups.add(region);
               }
             }),
+            dragHandle: null,
           ),
-          if (_expandedGroups.contains(region)) ...[
-            for (final accountType in _sortedAccountTypes(
-              region,
-              grouped[region]!,
-              typeTotalByRegion,
-            )) ...[
-              _AccountTypeHeader(
-                accountType: accountType,
-                accountCount: grouped[region]![accountType]!.length,
-                netWorth: typeTotalByRegion[region]?[accountType] ?? Decimal.zero,
-              ),
-              for (final accountId in _visibleAccounts(
-                region,
-                accountType,
-                grouped[region]![accountType]!,
-                accountMap,
-                accountTotal,
-              )) ...[
-                _AccountGroupHeader(
-                  account: accountMap[accountId],
-                  assets: grouped[region]![accountType]![accountId]!,
-                  totalValue: totalD,
-                ),
-                for (final asset in _visibleAssets(
-                  accountId,
-                  grouped[region]![accountType]![accountId]!,
-                ))
-                  _AssetCard(asset: asset, totalValue: totalD),
-                if (!_showAllItems.contains(_assetGroupKey(accountId)) &&
-                    grouped[region]![accountType]![accountId]!.length >
-                        _kGroupPreviewLimit)
-                  _ShowMoreButton(
-                    remaining:
-                        grouped[region]![accountType]![accountId]!.length -
-                        _kGroupPreviewLimit,
-                    onPressed: () =>
-                        setState(() => _showAllItems.add(_assetGroupKey(accountId))),
-                  ),
-              ],
-              if (!_showAllItems.contains(_typeGroupKey(region, accountType)) &&
-                  grouped[region]![accountType]!.length > _kGroupPreviewLimit)
-                _ShowMoreButton(
-                  remaining:
-                      grouped[region]![accountType]!.length - _kGroupPreviewLimit,
-                  onPressed: () => setState(
-                    () => _showAllItems.add(_typeGroupKey(region, accountType)),
-                  ),
-                ),
-            ],
-          ],
-        ],
+          children: _expandedGroups.contains(region)
+              ? [
+                  for (final accountType in _sortedAccountTypes(
+                    region,
+                    grouped[region]!,
+                    typeTotalByRegion,
+                  )) ...[
+                    _AccountTypeHeader(
+                      accountType: accountType,
+                      accountCount: grouped[region]![accountType]!.length,
+                      netWorth: typeTotalByRegion[region]?[accountType] ?? Decimal.zero,
+                    ),
+                    for (final accountId in _allAccounts(
+                      grouped[region]![accountType]!,
+                      accountMap,
+                      accountTotal,
+                    )) ...[
+                      _AccountGroupHeader(
+                        account: accountMap[accountId],
+                        assets: grouped[region]![accountType]![accountId]!,
+                        totalValue: totalD,
+                      ),
+                      for (final asset in grouped[region]![accountType]![accountId]!)
+                        _AssetCard(asset: asset, totalValue: totalD),
+                    ],
+                  ],
+                ]
+              : const [],
+        ),
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 112),
+      children: [
+        _PortfolioHero(
+          totalValue: totalValue,
+          totalGain: totalGain,
+          assetCount: assets.length,
+          valuationCurrency: widget.valuationCurrency,
+          missingCount: widget.missingAssetIds.length,
+          hasGainData: gainableCount > 0,
+          typeBreakdown: typeBreakdown,
+          currencyBreakdown: currencyBreakdown,
+        ),
+        ...regionSections,
       ],
     );
   }
@@ -328,9 +292,7 @@ class _AssetListViewState extends State<_AssetListView> {
     return types;
   }
 
-  List<String> _visibleAccounts(
-    String region,
-    AccountType type,
+  List<String> _allAccounts(
     Map<String, List<ValuedAsset>> accountGroups,
     Map<String, Account> accountMap,
     Map<String, Decimal> accountTotal,
@@ -345,30 +307,87 @@ class _AssetListViewState extends State<_AssetListView> {
         final bName = accountMap[b]?.institutionName ?? b;
         return aName.compareTo(bName);
       });
-    if (_showAllItems.contains(_typeGroupKey(region, type)) ||
-        accountIds.length <= _kGroupPreviewLimit) {
-      return accountIds;
-    }
-    return accountIds.take(_kGroupPreviewLimit).toList();
+    return accountIds;
   }
-
-  List<ValuedAsset> _visibleAssets(String accountId, List<ValuedAsset> all) {
-    if (_showAllItems.contains(_assetGroupKey(accountId)) ||
-        all.length <= _kGroupPreviewLimit) {
-      return all;
-    }
-    return all.take(_kGroupPreviewLimit).toList();
-  }
-
-  String _typeGroupKey(String region, AccountType type) =>
-      '$region|${type.code}';
-
-  String _assetGroupKey(String accountId) => 'asset|$accountId';
 }
 
 // ──────────────────────────────────────────────────────────────
 // Portfolio hero card with donuts
 // ──────────────────────────────────────────────────────────────
+
+class _DraggableRegionSection extends StatelessWidget {
+  const _DraggableRegionSection({
+    super.key,
+    required this.region,
+    required this.draggingRegion,
+    required this.onDragStarted,
+    required this.onDragEnded,
+    required this.onAcceptRegion,
+    required this.header,
+    required this.children,
+  });
+
+  final String region;
+  final String? draggingRegion;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnded;
+  final ValueChanged<String> onAcceptRegion;
+  final Widget header;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => details.data != region,
+      onAcceptWithDetails: (details) => onAcceptRegion(details.data),
+      builder: (context, candidateData, rejectedData) {
+        final active = candidateData.isNotEmpty && draggingRegion != region;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            border: active
+                ? Border(
+                    top: BorderSide(color: GwpColors.actionPrimary, width: 2),
+                  )
+                : null,
+          ),
+          child: Column(
+            key: key,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LongPressDraggable<String>(
+                data: region,
+                onDragStarted: onDragStarted,
+                onDragEnd: (_) => onDragEnded(),
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: GwpColors.surface1,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: GwpColors.border, width: 0.5),
+                    ),
+                    child: Text(
+                      header is _RegionHeader ? (header as _RegionHeader).labelText : region,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: GwpColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                child: header,
+              ),
+              ...children,
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
 class _PortfolioHero extends StatelessWidget {
   const _PortfolioHero({
@@ -670,6 +689,7 @@ class _RegionHeader extends StatelessWidget {
     required this.expanded,
     required this.regionIndex,
     required this.onToggle,
+    this.dragHandle,
   });
 
   final String region;
@@ -679,10 +699,14 @@ class _RegionHeader extends StatelessWidget {
   final bool expanded;
   final RegionIndex regionIndex;
   final VoidCallback onToggle;
+  final Widget? dragHandle;
+
+  String get labelText => '$regionLabelText ($accountCount)';
+  String get regionLabelText => regionLabel(regionIndex, region);
 
   @override
   Widget build(BuildContext context) {
-    final label = regionLabel(regionIndex, region);
+    final label = regionLabelText;
     final pct = totalNetWorth > 0
         ? '${(netWorth.toDouble() / totalNetWorth * 100).toStringAsFixed(1)}%'
         : null;
@@ -728,6 +752,10 @@ class _RegionHeader extends StatelessWidget {
                     color: GwpColors.textMuted,
                   ),
                 ),
+                if (dragHandle != null) ...[
+                  const SizedBox(width: 4),
+                  dragHandle!,
+                ],
                 const Spacer(),
                 if (netWorth > Decimal.zero) ...[
                   Text(

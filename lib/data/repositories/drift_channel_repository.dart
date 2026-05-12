@@ -61,4 +61,20 @@ class DriftChannelRepository implements ChannelRepository {
       return Err(StorageError('setStatus failed: $e'));
     }
   }
+
+  @override
+  Future<Result<void, AppError>> reorder(List<String> channelIds) async {
+    try {
+      for (var i = 0; i < channelIds.length; i++) {
+        await _dao.updateSortOrder(
+          id: channelIds[i],
+          sortOrder: 100 + i * 10,
+          updatedAt: _now(),
+        );
+      }
+      return const Ok(null);
+    } catch (e) {
+      return Err(StorageError('reorder channels failed: $e'));
+    }
+  }
 }

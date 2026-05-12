@@ -65,4 +65,10 @@ class DictEntryDao extends DatabaseAccessor<AppDatabase>
           ..where((t) => t.id.equals(id) & t.isBuiltin.equals(false)))
         .go();
   }
+
+  Future<int> updateSortOrder(int id, int sortOrder) {
+    return (update(dictEntries)..where((t) => t.id.equals(id))).write(
+      DictEntriesCompanion(sortOrder: Value(sortOrder)),
+    );
+  }
 }

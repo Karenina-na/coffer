@@ -17,6 +17,7 @@ import 'tables/channels.dart';
 import 'tables/dict_entries.dart';
 import 'tables/events.dart';
 import 'tables/exchange_rates.dart';
+import 'tables/region_group_orders.dart';
 import 'tables/search_history_entries.dart';
 import 'tables/watched_pairs.dart';
 import 'daos/account_dao.dart';
@@ -50,6 +51,7 @@ part 'database.g.dart';
     DictEntries,
     ExchangeRates,
     Events,
+    RegionGroupOrders,
     SearchHistoryEntries,
     WatchedPairs,
   ],
@@ -74,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -514,6 +516,48 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 25) {
           await _seedBuiltinDictEntries(this);
+        }
+        if (from < 26) {
+          await customStatement(
+            'ALTER TABLE watched_pairs ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 1000',
+          );
+          await customStatement(
+            'ALTER TABLE channels ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 1000',
+          );
+          await customStatement(
+            'ALTER TABLE cards ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 1000',
+          );
+          await m.createTable(regionGroupOrders);
+
+          final watchedRows = await customSelect(
+            "SELECT pair_key FROM watched_pairs ORDER BY pair_key ASC",
+          ).get();
+          for (var i = 0; i < watchedRows.length; i++) {
+            await customStatement(
+              'UPDATE watched_pairs SET sort_order = ? WHERE pair_key = ?',
+              [100 + i * 10, watchedRows[i].read<String>('pair_key')],
+            );
+          }
+
+          final channelRows = await customSelect(
+            'SELECT id FROM channels ORDER BY created_at DESC, id ASC',
+          ).get();
+          for (var i = 0; i < channelRows.length; i++) {
+            await customStatement(
+              'UPDATE channels SET sort_order = ? WHERE id = ?',
+              [100 + i * 10, channelRows[i].read<String>('id')],
+            );
+          }
+
+          final cardRows = await customSelect(
+            'SELECT id FROM cards ORDER BY created_at DESC, id ASC',
+          ).get();
+          for (var i = 0; i < cardRows.length; i++) {
+            await customStatement(
+              'UPDATE cards SET sort_order = ? WHERE id = ?',
+              [100 + i * 10, cardRows[i].read<String>('id')],
+            );
+          }
         }
       }); // end transaction
     },

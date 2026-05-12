@@ -152,6 +152,11 @@ class _CapturingChannelRepository implements ChannelRepository {
 
   @override
   Stream<List<Channel>> watchAll() => const Stream.empty();
+
+  @override
+  Future<Result<void, AppError>> reorder(List<String> channelIds) {
+    throw UnimplementedError();
+  }
 }
 
 class _FakeDictRepository implements DictRepository {
@@ -190,6 +195,11 @@ class _FakeDictRepository implements DictRepository {
   @override
   Stream<List<DictEntry>> watchByType(DictType type) async* {
     yield await listByType(type);
+  }
+
+  @override
+  Future<Result<void, AppError>> reorderByType(DictType type, List<int> entryIds) {
+    throw UnimplementedError();
   }
 }
 

@@ -32,6 +32,8 @@ abstract interface class CardRepository {
 
   Future<Result<void, AppError>> delete(String id);
 
+  Future<Result<void, AppError>> reorder(List<String> cardIds);
+
   /// 按需解密返回卡号明文，仅在"查看真实卡号"场景调用。
   Future<Result<String, AppError>> decryptCardNo(String id);
 

@@ -41,6 +41,8 @@ class Cards extends Table {
   BoolColumn get isVirtual =>
       boolean().named('is_virtual').withDefault(const Constant(false))();
   TextColumn get status => text()();
+  IntColumn get sortOrder =>
+      integer().named('sort_order').withDefault(const Constant(1000))();
   DateTimeColumn get createdAt => dateTime().named('created_at')();
   DateTimeColumn get updatedAt => dateTime().named('updated_at')();
 

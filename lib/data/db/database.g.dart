@@ -802,6 +802,18 @@ class $ChannelsTable extends Channels
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1000),
+  );
   static const VerificationMeta _effectiveFromMeta = const VerificationMeta(
     'effectiveFrom',
   );
@@ -860,6 +872,7 @@ class $ChannelsTable extends Channels
     dailyLimit,
     singleLimit,
     status,
+    sortOrder,
     effectiveFrom,
     effectiveTo,
     createdAt,
@@ -960,6 +973,12 @@ class $ChannelsTable extends Channels
     } else if (isInserting) {
       context.missing(_statusMeta);
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     if (data.containsKey('effective_from')) {
       context.handle(
         _effectiveFromMeta,
@@ -1047,6 +1066,10 @@ class $ChannelsTable extends Channels
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
       effectiveFrom: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}effective_from'],
@@ -1084,6 +1107,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
   final String? dailyLimit;
   final String? singleLimit;
   final String status;
+  final int sortOrder;
   final DateTime? effectiveFrom;
   final DateTime? effectiveTo;
   final DateTime createdAt;
@@ -1100,6 +1124,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     this.dailyLimit,
     this.singleLimit,
     required this.status,
+    required this.sortOrder,
     this.effectiveFrom,
     this.effectiveTo,
     required this.createdAt,
@@ -1131,6 +1156,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       map['single_limit'] = Variable<String>(singleLimit);
     }
     map['status'] = Variable<String>(status);
+    map['sort_order'] = Variable<int>(sortOrder);
     if (!nullToAbsent || effectiveFrom != null) {
       map['effective_from'] = Variable<DateTime>(effectiveFrom);
     }
@@ -1167,6 +1193,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           ? const Value.absent()
           : Value(singleLimit),
       status: Value(status),
+      sortOrder: Value(sortOrder),
       effectiveFrom: effectiveFrom == null && nullToAbsent
           ? const Value.absent()
           : Value(effectiveFrom),
@@ -1197,6 +1224,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       dailyLimit: serializer.fromJson<String?>(json['dailyLimit']),
       singleLimit: serializer.fromJson<String?>(json['singleLimit']),
       status: serializer.fromJson<String>(json['status']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
       effectiveFrom: serializer.fromJson<DateTime?>(json['effectiveFrom']),
       effectiveTo: serializer.fromJson<DateTime?>(json['effectiveTo']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1220,6 +1248,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
       'dailyLimit': serializer.toJson<String?>(dailyLimit),
       'singleLimit': serializer.toJson<String?>(singleLimit),
       'status': serializer.toJson<String>(status),
+      'sortOrder': serializer.toJson<int>(sortOrder),
       'effectiveFrom': serializer.toJson<DateTime?>(effectiveFrom),
       'effectiveTo': serializer.toJson<DateTime?>(effectiveTo),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1239,6 +1268,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     Value<String?> dailyLimit = const Value.absent(),
     Value<String?> singleLimit = const Value.absent(),
     String? status,
+    int? sortOrder,
     Value<DateTime?> effectiveFrom = const Value.absent(),
     Value<DateTime?> effectiveTo = const Value.absent(),
     DateTime? createdAt,
@@ -1259,6 +1289,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     dailyLimit: dailyLimit.present ? dailyLimit.value : this.dailyLimit,
     singleLimit: singleLimit.present ? singleLimit.value : this.singleLimit,
     status: status ?? this.status,
+    sortOrder: sortOrder ?? this.sortOrder,
     effectiveFrom: effectiveFrom.present
         ? effectiveFrom.value
         : this.effectiveFrom,
@@ -1289,6 +1320,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           ? data.singleLimit.value
           : this.singleLimit,
       status: data.status.present ? data.status.value : this.status,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       effectiveFrom: data.effectiveFrom.present
           ? data.effectiveFrom.value
           : this.effectiveFrom,
@@ -1314,6 +1346,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           ..write('dailyLimit: $dailyLimit, ')
           ..write('singleLimit: $singleLimit, ')
           ..write('status: $status, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('effectiveFrom: $effectiveFrom, ')
           ..write('effectiveTo: $effectiveTo, ')
           ..write('createdAt: $createdAt, ')
@@ -1335,6 +1368,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
     dailyLimit,
     singleLimit,
     status,
+    sortOrder,
     effectiveFrom,
     effectiveTo,
     createdAt,
@@ -1355,6 +1389,7 @@ class ChannelRow extends DataClass implements Insertable<ChannelRow> {
           other.dailyLimit == this.dailyLimit &&
           other.singleLimit == this.singleLimit &&
           other.status == this.status &&
+          other.sortOrder == this.sortOrder &&
           other.effectiveFrom == this.effectiveFrom &&
           other.effectiveTo == this.effectiveTo &&
           other.createdAt == this.createdAt &&
@@ -1373,6 +1408,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
   final Value<String?> dailyLimit;
   final Value<String?> singleLimit;
   final Value<String> status;
+  final Value<int> sortOrder;
   final Value<DateTime?> effectiveFrom;
   final Value<DateTime?> effectiveTo;
   final Value<DateTime> createdAt;
@@ -1390,6 +1426,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     this.dailyLimit = const Value.absent(),
     this.singleLimit = const Value.absent(),
     this.status = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.effectiveFrom = const Value.absent(),
     this.effectiveTo = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1408,6 +1445,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     this.dailyLimit = const Value.absent(),
     this.singleLimit = const Value.absent(),
     required String status,
+    this.sortOrder = const Value.absent(),
     this.effectiveFrom = const Value.absent(),
     this.effectiveTo = const Value.absent(),
     required DateTime createdAt,
@@ -1431,6 +1469,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     Expression<String>? dailyLimit,
     Expression<String>? singleLimit,
     Expression<String>? status,
+    Expression<int>? sortOrder,
     Expression<DateTime>? effectiveFrom,
     Expression<DateTime>? effectiveTo,
     Expression<DateTime>? createdAt,
@@ -1450,6 +1489,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
       if (dailyLimit != null) 'daily_limit': dailyLimit,
       if (singleLimit != null) 'single_limit': singleLimit,
       if (status != null) 'status': status,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (effectiveFrom != null) 'effective_from': effectiveFrom,
       if (effectiveTo != null) 'effective_to': effectiveTo,
       if (createdAt != null) 'created_at': createdAt,
@@ -1470,6 +1510,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     Value<String?>? dailyLimit,
     Value<String?>? singleLimit,
     Value<String>? status,
+    Value<int>? sortOrder,
     Value<DateTime?>? effectiveFrom,
     Value<DateTime?>? effectiveTo,
     Value<DateTime>? createdAt,
@@ -1489,6 +1530,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
       dailyLimit: dailyLimit ?? this.dailyLimit,
       singleLimit: singleLimit ?? this.singleLimit,
       status: status ?? this.status,
+      sortOrder: sortOrder ?? this.sortOrder,
       effectiveFrom: effectiveFrom ?? this.effectiveFrom,
       effectiveTo: effectiveTo ?? this.effectiveTo,
       createdAt: createdAt ?? this.createdAt,
@@ -1535,6 +1577,9 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (effectiveFrom.present) {
       map['effective_from'] = Variable<DateTime>(effectiveFrom.value);
     }
@@ -1567,6 +1612,7 @@ class ChannelsCompanion extends UpdateCompanion<ChannelRow> {
           ..write('dailyLimit: $dailyLimit, ')
           ..write('singleLimit: $singleLimit, ')
           ..write('status: $status, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('effectiveFrom: $effectiveFrom, ')
           ..write('effectiveTo: $effectiveTo, ')
           ..write('createdAt: $createdAt, ')
@@ -4478,6 +4524,18 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1000),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4522,6 +4580,7 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     billingAddress,
     isVirtual,
     status,
+    sortOrder,
     createdAt,
     updatedAt,
   ];
@@ -4708,6 +4767,12 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     } else if (isInserting) {
       context.missing(_statusMeta);
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4813,6 +4878,10 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -4854,6 +4923,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
   final String? billingAddress;
   final bool isVirtual;
   final String status;
+  final int sortOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
   const CardRow({
@@ -4877,6 +4947,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     this.billingAddress,
     required this.isVirtual,
     required this.status,
+    required this.sortOrder,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -4921,6 +4992,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     }
     map['is_virtual'] = Variable<bool>(isVirtual);
     map['status'] = Variable<String>(status);
+    map['sort_order'] = Variable<int>(sortOrder);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -4966,6 +5038,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           : Value(billingAddress),
       isVirtual: Value(isVirtual),
       status: Value(status),
+      sortOrder: Value(sortOrder),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -5001,6 +5074,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       billingAddress: serializer.fromJson<String?>(json['billingAddress']),
       isVirtual: serializer.fromJson<bool>(json['isVirtual']),
       status: serializer.fromJson<String>(json['status']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -5029,6 +5103,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       'billingAddress': serializer.toJson<String?>(billingAddress),
       'isVirtual': serializer.toJson<bool>(isVirtual),
       'status': serializer.toJson<String>(status),
+      'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -5055,6 +5130,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     Value<String?> billingAddress = const Value.absent(),
     bool? isVirtual,
     String? status,
+    int? sortOrder,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => CardRow(
@@ -5092,6 +5168,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
         : this.billingAddress,
     isVirtual: isVirtual ?? this.isVirtual,
     status: status ?? this.status,
+    sortOrder: sortOrder ?? this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -5145,6 +5222,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           : this.billingAddress,
       isVirtual: data.isVirtual.present ? data.isVirtual.value : this.isVirtual,
       status: data.status.present ? data.status.value : this.status,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -5173,6 +5251,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           ..write('billingAddress: $billingAddress, ')
           ..write('isVirtual: $isVirtual, ')
           ..write('status: $status, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -5201,6 +5280,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     billingAddress,
     isVirtual,
     status,
+    sortOrder,
     createdAt,
     updatedAt,
   ]);
@@ -5228,6 +5308,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           other.billingAddress == this.billingAddress &&
           other.isVirtual == this.isVirtual &&
           other.status == this.status &&
+          other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -5253,6 +5334,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
   final Value<String?> billingAddress;
   final Value<bool> isVirtual;
   final Value<String> status;
+  final Value<int> sortOrder;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -5277,6 +5359,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     this.billingAddress = const Value.absent(),
     this.isVirtual = const Value.absent(),
     this.status = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5302,6 +5385,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     this.billingAddress = const Value.absent(),
     this.isVirtual = const Value.absent(),
     required String status,
+    this.sortOrder = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -5337,6 +5421,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Expression<String>? billingAddress,
     Expression<bool>? isVirtual,
     Expression<String>? status,
+    Expression<int>? sortOrder,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -5364,6 +5449,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       if (billingAddress != null) 'billing_address': billingAddress,
       if (isVirtual != null) 'is_virtual': isVirtual,
       if (status != null) 'status': status,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -5391,6 +5477,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Value<String?>? billingAddress,
     Value<bool>? isVirtual,
     Value<String>? status,
+    Value<int>? sortOrder,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -5417,6 +5504,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       billingAddress: billingAddress ?? this.billingAddress,
       isVirtual: isVirtual ?? this.isVirtual,
       status: status ?? this.status,
+      sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -5488,6 +5576,9 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -5523,6 +5614,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
           ..write('billingAddress: $billingAddress, ')
           ..write('isVirtual: $isVirtual, ')
           ..write('status: $status, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -8265,6 +8357,274 @@ class EventsCompanion extends UpdateCompanion<EventRow> {
   }
 }
 
+class $RegionGroupOrdersTable extends RegionGroupOrders
+    with TableInfo<$RegionGroupOrdersTable, RegionGroupOrderRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RegionGroupOrdersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sceneMeta = const VerificationMeta('scene');
+  @override
+  late final GeneratedColumn<String> scene = GeneratedColumn<String>(
+    'scene',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _regionCodeMeta = const VerificationMeta(
+    'regionCode',
+  );
+  @override
+  late final GeneratedColumn<String> regionCode = GeneratedColumn<String>(
+    'region_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1000),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [scene, regionCode, sortOrder];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'region_group_orders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RegionGroupOrderRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scene')) {
+      context.handle(
+        _sceneMeta,
+        scene.isAcceptableOrUnknown(data['scene']!, _sceneMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sceneMeta);
+    }
+    if (data.containsKey('region_code')) {
+      context.handle(
+        _regionCodeMeta,
+        regionCode.isAcceptableOrUnknown(data['region_code']!, _regionCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_regionCodeMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scene, regionCode};
+  @override
+  RegionGroupOrderRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RegionGroupOrderRow(
+      scene: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scene'],
+      )!,
+      regionCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}region_code'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $RegionGroupOrdersTable createAlias(String alias) {
+    return $RegionGroupOrdersTable(attachedDatabase, alias);
+  }
+}
+
+class RegionGroupOrderRow extends DataClass
+    implements Insertable<RegionGroupOrderRow> {
+  final String scene;
+  final String regionCode;
+  final int sortOrder;
+  const RegionGroupOrderRow({
+    required this.scene,
+    required this.regionCode,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scene'] = Variable<String>(scene);
+    map['region_code'] = Variable<String>(regionCode);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  RegionGroupOrdersCompanion toCompanion(bool nullToAbsent) {
+    return RegionGroupOrdersCompanion(
+      scene: Value(scene),
+      regionCode: Value(regionCode),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory RegionGroupOrderRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RegionGroupOrderRow(
+      scene: serializer.fromJson<String>(json['scene']),
+      regionCode: serializer.fromJson<String>(json['regionCode']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scene': serializer.toJson<String>(scene),
+      'regionCode': serializer.toJson<String>(regionCode),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  RegionGroupOrderRow copyWith({
+    String? scene,
+    String? regionCode,
+    int? sortOrder,
+  }) => RegionGroupOrderRow(
+    scene: scene ?? this.scene,
+    regionCode: regionCode ?? this.regionCode,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  RegionGroupOrderRow copyWithCompanion(RegionGroupOrdersCompanion data) {
+    return RegionGroupOrderRow(
+      scene: data.scene.present ? data.scene.value : this.scene,
+      regionCode: data.regionCode.present
+          ? data.regionCode.value
+          : this.regionCode,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RegionGroupOrderRow(')
+          ..write('scene: $scene, ')
+          ..write('regionCode: $regionCode, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(scene, regionCode, sortOrder);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RegionGroupOrderRow &&
+          other.scene == this.scene &&
+          other.regionCode == this.regionCode &&
+          other.sortOrder == this.sortOrder);
+}
+
+class RegionGroupOrdersCompanion extends UpdateCompanion<RegionGroupOrderRow> {
+  final Value<String> scene;
+  final Value<String> regionCode;
+  final Value<int> sortOrder;
+  final Value<int> rowid;
+  const RegionGroupOrdersCompanion({
+    this.scene = const Value.absent(),
+    this.regionCode = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RegionGroupOrdersCompanion.insert({
+    required String scene,
+    required String regionCode,
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : scene = Value(scene),
+       regionCode = Value(regionCode);
+  static Insertable<RegionGroupOrderRow> custom({
+    Expression<String>? scene,
+    Expression<String>? regionCode,
+    Expression<int>? sortOrder,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scene != null) 'scene': scene,
+      if (regionCode != null) 'region_code': regionCode,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RegionGroupOrdersCompanion copyWith({
+    Value<String>? scene,
+    Value<String>? regionCode,
+    Value<int>? sortOrder,
+    Value<int>? rowid,
+  }) {
+    return RegionGroupOrdersCompanion(
+      scene: scene ?? this.scene,
+      regionCode: regionCode ?? this.regionCode,
+      sortOrder: sortOrder ?? this.sortOrder,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scene.present) {
+      map['scene'] = Variable<String>(scene.value);
+    }
+    if (regionCode.present) {
+      map['region_code'] = Variable<String>(regionCode.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RegionGroupOrdersCompanion(')
+          ..write('scene: $scene, ')
+          ..write('regionCode: $regionCode, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SearchHistoryEntriesTable extends SearchHistoryEntries
     with TableInfo<$SearchHistoryEntriesTable, SearchHistoryEntryRow> {
   @override
@@ -8947,6 +9307,18 @@ class $WatchedPairsTable extends WatchedPairs
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1000),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     pairKey,
@@ -8956,6 +9328,7 @@ class $WatchedPairsTable extends WatchedPairs
     thresholdHigh,
     thresholdLow,
     alertChangePct,
+    sortOrder,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9034,6 +9407,12 @@ class $WatchedPairsTable extends WatchedPairs
         ),
       );
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     return context;
   }
 
@@ -9071,6 +9450,10 @@ class $WatchedPairsTable extends WatchedPairs
         DriftSqlType.string,
         data['${effectivePrefix}alert_change_pct'],
       ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
     );
   }
 
@@ -9088,6 +9471,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
   final String? thresholdHigh;
   final String? thresholdLow;
   final String? alertChangePct;
+  final int sortOrder;
   const WatchedPairRow({
     required this.pairKey,
     required this.baseCurrency,
@@ -9096,6 +9480,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
     this.thresholdHigh,
     this.thresholdLow,
     this.alertChangePct,
+    required this.sortOrder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9113,6 +9498,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
     if (!nullToAbsent || alertChangePct != null) {
       map['alert_change_pct'] = Variable<String>(alertChangePct);
     }
+    map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
 
@@ -9131,6 +9517,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
       alertChangePct: alertChangePct == null && nullToAbsent
           ? const Value.absent()
           : Value(alertChangePct),
+      sortOrder: Value(sortOrder),
     );
   }
 
@@ -9147,6 +9534,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
       thresholdHigh: serializer.fromJson<String?>(json['thresholdHigh']),
       thresholdLow: serializer.fromJson<String?>(json['thresholdLow']),
       alertChangePct: serializer.fromJson<String?>(json['alertChangePct']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
   @override
@@ -9160,6 +9548,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
       'thresholdHigh': serializer.toJson<String?>(thresholdHigh),
       'thresholdLow': serializer.toJson<String?>(thresholdLow),
       'alertChangePct': serializer.toJson<String?>(alertChangePct),
+      'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
 
@@ -9171,6 +9560,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
     Value<String?> thresholdHigh = const Value.absent(),
     Value<String?> thresholdLow = const Value.absent(),
     Value<String?> alertChangePct = const Value.absent(),
+    int? sortOrder,
   }) => WatchedPairRow(
     pairKey: pairKey ?? this.pairKey,
     baseCurrency: baseCurrency ?? this.baseCurrency,
@@ -9183,6 +9573,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
     alertChangePct: alertChangePct.present
         ? alertChangePct.value
         : this.alertChangePct,
+    sortOrder: sortOrder ?? this.sortOrder,
   );
   WatchedPairRow copyWithCompanion(WatchedPairsCompanion data) {
     return WatchedPairRow(
@@ -9203,6 +9594,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
       alertChangePct: data.alertChangePct.present
           ? data.alertChangePct.value
           : this.alertChangePct,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
 
@@ -9215,7 +9607,8 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
           ..write('createdAt: $createdAt, ')
           ..write('thresholdHigh: $thresholdHigh, ')
           ..write('thresholdLow: $thresholdLow, ')
-          ..write('alertChangePct: $alertChangePct')
+          ..write('alertChangePct: $alertChangePct, ')
+          ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
   }
@@ -9229,6 +9622,7 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
     thresholdHigh,
     thresholdLow,
     alertChangePct,
+    sortOrder,
   );
   @override
   bool operator ==(Object other) =>
@@ -9240,7 +9634,8 @@ class WatchedPairRow extends DataClass implements Insertable<WatchedPairRow> {
           other.createdAt == this.createdAt &&
           other.thresholdHigh == this.thresholdHigh &&
           other.thresholdLow == this.thresholdLow &&
-          other.alertChangePct == this.alertChangePct);
+          other.alertChangePct == this.alertChangePct &&
+          other.sortOrder == this.sortOrder);
 }
 
 class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
@@ -9251,6 +9646,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
   final Value<String?> thresholdHigh;
   final Value<String?> thresholdLow;
   final Value<String?> alertChangePct;
+  final Value<int> sortOrder;
   final Value<int> rowid;
   const WatchedPairsCompanion({
     this.pairKey = const Value.absent(),
@@ -9260,6 +9656,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
     this.thresholdHigh = const Value.absent(),
     this.thresholdLow = const Value.absent(),
     this.alertChangePct = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   WatchedPairsCompanion.insert({
@@ -9270,6 +9667,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
     this.thresholdHigh = const Value.absent(),
     this.thresholdLow = const Value.absent(),
     this.alertChangePct = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : pairKey = Value(pairKey),
        baseCurrency = Value(baseCurrency),
@@ -9283,6 +9681,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
     Expression<String>? thresholdHigh,
     Expression<String>? thresholdLow,
     Expression<String>? alertChangePct,
+    Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9293,6 +9692,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
       if (thresholdHigh != null) 'threshold_high': thresholdHigh,
       if (thresholdLow != null) 'threshold_low': thresholdLow,
       if (alertChangePct != null) 'alert_change_pct': alertChangePct,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9305,6 +9705,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
     Value<String?>? thresholdHigh,
     Value<String?>? thresholdLow,
     Value<String?>? alertChangePct,
+    Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
     return WatchedPairsCompanion(
@@ -9315,6 +9716,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
       thresholdHigh: thresholdHigh ?? this.thresholdHigh,
       thresholdLow: thresholdLow ?? this.thresholdLow,
       alertChangePct: alertChangePct ?? this.alertChangePct,
+      sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9343,6 +9745,9 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
     if (alertChangePct.present) {
       map['alert_change_pct'] = Variable<String>(alertChangePct.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9359,6 +9764,7 @@ class WatchedPairsCompanion extends UpdateCompanion<WatchedPairRow> {
           ..write('thresholdHigh: $thresholdHigh, ')
           ..write('thresholdLow: $thresholdLow, ')
           ..write('alertChangePct: $alertChangePct, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9383,6 +9789,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DictEntriesTable dictEntries = $DictEntriesTable(this);
   late final $ExchangeRatesTable exchangeRates = $ExchangeRatesTable(this);
   late final $EventsTable events = $EventsTable(this);
+  late final $RegionGroupOrdersTable regionGroupOrders =
+      $RegionGroupOrdersTable(this);
   late final $SearchHistoryEntriesTable searchHistoryEntries =
       $SearchHistoryEntriesTable(this);
   late final $WatchedPairsTable watchedPairs = $WatchedPairsTable(this);
@@ -9425,6 +9833,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     dictEntries,
     exchangeRates,
     events,
+    regionGroupOrders,
     searchHistoryEntries,
     watchedPairs,
   ];
@@ -10085,6 +10494,7 @@ typedef $$ChannelsTableCreateCompanionBuilder =
       Value<String?> dailyLimit,
       Value<String?> singleLimit,
       required String status,
+      Value<int> sortOrder,
       Value<DateTime?> effectiveFrom,
       Value<DateTime?> effectiveTo,
       required DateTime createdAt,
@@ -10104,6 +10514,7 @@ typedef $$ChannelsTableUpdateCompanionBuilder =
       Value<String?> dailyLimit,
       Value<String?> singleLimit,
       Value<String> status,
+      Value<int> sortOrder,
       Value<DateTime?> effectiveFrom,
       Value<DateTime?> effectiveTo,
       Value<DateTime> createdAt,
@@ -10200,6 +10611,11 @@ class $$ChannelsTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10313,6 +10729,11 @@ class $$ChannelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get effectiveFrom => $composableBuilder(
     column: $table.effectiveFrom,
     builder: (column) => ColumnOrderings(column),
@@ -10385,6 +10806,9 @@ class $$ChannelsTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 
   GeneratedColumn<DateTime> get effectiveFrom => $composableBuilder(
     column: $table.effectiveFrom,
@@ -10467,6 +10891,7 @@ class $$ChannelsTableTableManager
                 Value<String?> dailyLimit = const Value.absent(),
                 Value<String?> singleLimit = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<DateTime?> effectiveFrom = const Value.absent(),
                 Value<DateTime?> effectiveTo = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -10484,6 +10909,7 @@ class $$ChannelsTableTableManager
                 dailyLimit: dailyLimit,
                 singleLimit: singleLimit,
                 status: status,
+                sortOrder: sortOrder,
                 effectiveFrom: effectiveFrom,
                 effectiveTo: effectiveTo,
                 createdAt: createdAt,
@@ -10503,6 +10929,7 @@ class $$ChannelsTableTableManager
                 Value<String?> dailyLimit = const Value.absent(),
                 Value<String?> singleLimit = const Value.absent(),
                 required String status,
+                Value<int> sortOrder = const Value.absent(),
                 Value<DateTime?> effectiveFrom = const Value.absent(),
                 Value<DateTime?> effectiveTo = const Value.absent(),
                 required DateTime createdAt,
@@ -10520,6 +10947,7 @@ class $$ChannelsTableTableManager
                 dailyLimit: dailyLimit,
                 singleLimit: singleLimit,
                 status: status,
+                sortOrder: sortOrder,
                 effectiveFrom: effectiveFrom,
                 effectiveTo: effectiveTo,
                 createdAt: createdAt,
@@ -12671,6 +13099,7 @@ typedef $$CardsTableCreateCompanionBuilder =
       Value<String?> billingAddress,
       Value<bool> isVirtual,
       required String status,
+      Value<int> sortOrder,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -12697,6 +13126,7 @@ typedef $$CardsTableUpdateCompanionBuilder =
       Value<String?> billingAddress,
       Value<bool> isVirtual,
       Value<String> status,
+      Value<int> sortOrder,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -12824,6 +13254,11 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12965,6 +13400,11 @@ class $$CardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -13093,6 +13533,9 @@ class $$CardsTableAnnotationComposer
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -13171,6 +13614,7 @@ class $$CardsTableTableManager
                 Value<String?> billingAddress = const Value.absent(),
                 Value<bool> isVirtual = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -13195,6 +13639,7 @@ class $$CardsTableTableManager
                 billingAddress: billingAddress,
                 isVirtual: isVirtual,
                 status: status,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -13221,6 +13666,7 @@ class $$CardsTableTableManager
                 Value<String?> billingAddress = const Value.absent(),
                 Value<bool> isVirtual = const Value.absent(),
                 required String status,
+                Value<int> sortOrder = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -13245,6 +13691,7 @@ class $$CardsTableTableManager
                 billingAddress: billingAddress,
                 isVirtual: isVirtual,
                 status: status,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -14549,6 +14996,183 @@ typedef $$EventsTableProcessedTableManager =
       EventRow,
       PrefetchHooks Function()
     >;
+typedef $$RegionGroupOrdersTableCreateCompanionBuilder =
+    RegionGroupOrdersCompanion Function({
+      required String scene,
+      required String regionCode,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+typedef $$RegionGroupOrdersTableUpdateCompanionBuilder =
+    RegionGroupOrdersCompanion Function({
+      Value<String> scene,
+      Value<String> regionCode,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+
+class $$RegionGroupOrdersTableFilterComposer
+    extends Composer<_$AppDatabase, $RegionGroupOrdersTable> {
+  $$RegionGroupOrdersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scene => $composableBuilder(
+    column: $table.scene,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get regionCode => $composableBuilder(
+    column: $table.regionCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RegionGroupOrdersTableOrderingComposer
+    extends Composer<_$AppDatabase, $RegionGroupOrdersTable> {
+  $$RegionGroupOrdersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scene => $composableBuilder(
+    column: $table.scene,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get regionCode => $composableBuilder(
+    column: $table.regionCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RegionGroupOrdersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RegionGroupOrdersTable> {
+  $$RegionGroupOrdersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scene =>
+      $composableBuilder(column: $table.scene, builder: (column) => column);
+
+  GeneratedColumn<String> get regionCode => $composableBuilder(
+    column: $table.regionCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+}
+
+class $$RegionGroupOrdersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RegionGroupOrdersTable,
+          RegionGroupOrderRow,
+          $$RegionGroupOrdersTableFilterComposer,
+          $$RegionGroupOrdersTableOrderingComposer,
+          $$RegionGroupOrdersTableAnnotationComposer,
+          $$RegionGroupOrdersTableCreateCompanionBuilder,
+          $$RegionGroupOrdersTableUpdateCompanionBuilder,
+          (
+            RegionGroupOrderRow,
+            BaseReferences<
+              _$AppDatabase,
+              $RegionGroupOrdersTable,
+              RegionGroupOrderRow
+            >,
+          ),
+          RegionGroupOrderRow,
+          PrefetchHooks Function()
+        > {
+  $$RegionGroupOrdersTableTableManager(
+    _$AppDatabase db,
+    $RegionGroupOrdersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RegionGroupOrdersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RegionGroupOrdersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RegionGroupOrdersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> scene = const Value.absent(),
+                Value<String> regionCode = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RegionGroupOrdersCompanion(
+                scene: scene,
+                regionCode: regionCode,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String scene,
+                required String regionCode,
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RegionGroupOrdersCompanion.insert(
+                scene: scene,
+                regionCode: regionCode,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RegionGroupOrdersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RegionGroupOrdersTable,
+      RegionGroupOrderRow,
+      $$RegionGroupOrdersTableFilterComposer,
+      $$RegionGroupOrdersTableOrderingComposer,
+      $$RegionGroupOrdersTableAnnotationComposer,
+      $$RegionGroupOrdersTableCreateCompanionBuilder,
+      $$RegionGroupOrdersTableUpdateCompanionBuilder,
+      (
+        RegionGroupOrderRow,
+        BaseReferences<
+          _$AppDatabase,
+          $RegionGroupOrdersTable,
+          RegionGroupOrderRow
+        >,
+      ),
+      RegionGroupOrderRow,
+      PrefetchHooks Function()
+    >;
 typedef $$SearchHistoryEntriesTableCreateCompanionBuilder =
     SearchHistoryEntriesCompanion Function({
       Value<int> id,
@@ -14863,6 +15487,7 @@ typedef $$WatchedPairsTableCreateCompanionBuilder =
       Value<String?> thresholdHigh,
       Value<String?> thresholdLow,
       Value<String?> alertChangePct,
+      Value<int> sortOrder,
       Value<int> rowid,
     });
 typedef $$WatchedPairsTableUpdateCompanionBuilder =
@@ -14874,6 +15499,7 @@ typedef $$WatchedPairsTableUpdateCompanionBuilder =
       Value<String?> thresholdHigh,
       Value<String?> thresholdLow,
       Value<String?> alertChangePct,
+      Value<int> sortOrder,
       Value<int> rowid,
     });
 
@@ -14918,6 +15544,11 @@ class $$WatchedPairsTableFilterComposer
 
   ColumnFilters<String> get alertChangePct => $composableBuilder(
     column: $table.alertChangePct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -14965,6 +15596,11 @@ class $$WatchedPairsTableOrderingComposer
     column: $table.alertChangePct,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WatchedPairsTableAnnotationComposer
@@ -15006,6 +15642,9 @@ class $$WatchedPairsTableAnnotationComposer
     column: $table.alertChangePct,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 }
 
 class $$WatchedPairsTableTableManager
@@ -15046,6 +15685,7 @@ class $$WatchedPairsTableTableManager
                 Value<String?> thresholdHigh = const Value.absent(),
                 Value<String?> thresholdLow = const Value.absent(),
                 Value<String?> alertChangePct = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WatchedPairsCompanion(
                 pairKey: pairKey,
@@ -15055,6 +15695,7 @@ class $$WatchedPairsTableTableManager
                 thresholdHigh: thresholdHigh,
                 thresholdLow: thresholdLow,
                 alertChangePct: alertChangePct,
+                sortOrder: sortOrder,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -15066,6 +15707,7 @@ class $$WatchedPairsTableTableManager
                 Value<String?> thresholdHigh = const Value.absent(),
                 Value<String?> thresholdLow = const Value.absent(),
                 Value<String?> alertChangePct = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WatchedPairsCompanion.insert(
                 pairKey: pairKey,
@@ -15075,6 +15717,7 @@ class $$WatchedPairsTableTableManager
                 thresholdHigh: thresholdHigh,
                 thresholdLow: thresholdLow,
                 alertChangePct: alertChangePct,
+                sortOrder: sortOrder,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -15126,6 +15769,8 @@ class $AppDatabaseManager {
       $$ExchangeRatesTableTableManager(_db, _db.exchangeRates);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db, _db.events);
+  $$RegionGroupOrdersTableTableManager get regionGroupOrders =>
+      $$RegionGroupOrdersTableTableManager(_db, _db.regionGroupOrders);
   $$SearchHistoryEntriesTableTableManager get searchHistoryEntries =>
       $$SearchHistoryEntriesTableTableManager(_db, _db.searchHistoryEntries);
   $$WatchedPairsTableTableManager get watchedPairs =>

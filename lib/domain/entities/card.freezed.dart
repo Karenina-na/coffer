@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$BankCard {
 
- String get id; String get accountId; String get cardOrganization; String get cardNoMasked; String? get cardNoCiphertext; CardType get cardType; int get expireMonth; int get expireYear; String? get cvvCiphertext; String get issuerName; String? get currency; bool get supportsAllCurrencies; List<String> get supportedCurrencies; Decimal? get creditLimit; Decimal? get availableCredit; int? get billingCycleDay; int? get paymentDueDay; String? get billingAddress; bool get isVirtual; CardStatus get status; DateTime get createdAt; DateTime get updatedAt;
+ String get id; String get accountId; String get cardOrganization; String get cardNoMasked; String? get cardNoCiphertext; CardType get cardType; int get expireMonth; int get expireYear; String? get cvvCiphertext; String get issuerName; String? get currency; bool get supportsAllCurrencies; List<String> get supportedCurrencies; Decimal? get creditLimit; Decimal? get availableCredit; int? get billingCycleDay; int? get paymentDueDay; String? get billingAddress; bool get isVirtual; CardStatus get status; int get sortOrder; DateTime get createdAt; DateTime get updatedAt;
 /// Create a copy of BankCard
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,12 +25,12 @@ $BankCardCopyWith<BankCard> get copyWith => _$BankCardCopyWithImpl<BankCard>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BankCard&&(identical(other.id, id) || other.id == id)&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.cardOrganization, cardOrganization) || other.cardOrganization == cardOrganization)&&(identical(other.cardNoMasked, cardNoMasked) || other.cardNoMasked == cardNoMasked)&&(identical(other.cardNoCiphertext, cardNoCiphertext) || other.cardNoCiphertext == cardNoCiphertext)&&(identical(other.cardType, cardType) || other.cardType == cardType)&&(identical(other.expireMonth, expireMonth) || other.expireMonth == expireMonth)&&(identical(other.expireYear, expireYear) || other.expireYear == expireYear)&&(identical(other.cvvCiphertext, cvvCiphertext) || other.cvvCiphertext == cvvCiphertext)&&(identical(other.issuerName, issuerName) || other.issuerName == issuerName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.supportsAllCurrencies, supportsAllCurrencies) || other.supportsAllCurrencies == supportsAllCurrencies)&&const DeepCollectionEquality().equals(other.supportedCurrencies, supportedCurrencies)&&(identical(other.creditLimit, creditLimit) || other.creditLimit == creditLimit)&&(identical(other.availableCredit, availableCredit) || other.availableCredit == availableCredit)&&(identical(other.billingCycleDay, billingCycleDay) || other.billingCycleDay == billingCycleDay)&&(identical(other.paymentDueDay, paymentDueDay) || other.paymentDueDay == paymentDueDay)&&(identical(other.billingAddress, billingAddress) || other.billingAddress == billingAddress)&&(identical(other.isVirtual, isVirtual) || other.isVirtual == isVirtual)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BankCard&&(identical(other.id, id) || other.id == id)&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.cardOrganization, cardOrganization) || other.cardOrganization == cardOrganization)&&(identical(other.cardNoMasked, cardNoMasked) || other.cardNoMasked == cardNoMasked)&&(identical(other.cardNoCiphertext, cardNoCiphertext) || other.cardNoCiphertext == cardNoCiphertext)&&(identical(other.cardType, cardType) || other.cardType == cardType)&&(identical(other.expireMonth, expireMonth) || other.expireMonth == expireMonth)&&(identical(other.expireYear, expireYear) || other.expireYear == expireYear)&&(identical(other.cvvCiphertext, cvvCiphertext) || other.cvvCiphertext == cvvCiphertext)&&(identical(other.issuerName, issuerName) || other.issuerName == issuerName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.supportsAllCurrencies, supportsAllCurrencies) || other.supportsAllCurrencies == supportsAllCurrencies)&&const DeepCollectionEquality().equals(other.supportedCurrencies, supportedCurrencies)&&(identical(other.creditLimit, creditLimit) || other.creditLimit == creditLimit)&&(identical(other.availableCredit, availableCredit) || other.availableCredit == availableCredit)&&(identical(other.billingCycleDay, billingCycleDay) || other.billingCycleDay == billingCycleDay)&&(identical(other.paymentDueDay, paymentDueDay) || other.paymentDueDay == paymentDueDay)&&(identical(other.billingAddress, billingAddress) || other.billingAddress == billingAddress)&&(identical(other.isVirtual, isVirtual) || other.isVirtual == isVirtual)&&(identical(other.status, status) || other.status == status)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,id,accountId,cardOrganization,cardNoMasked,cardNoCiphertext,cardType,expireMonth,expireYear,cvvCiphertext,issuerName,currency,supportsAllCurrencies,const DeepCollectionEquality().hash(supportedCurrencies),creditLimit,availableCredit,billingCycleDay,paymentDueDay,billingAddress,isVirtual,status,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,accountId,cardOrganization,cardNoMasked,cardNoCiphertext,cardType,expireMonth,expireYear,cvvCiphertext,issuerName,currency,supportsAllCurrencies,const DeepCollectionEquality().hash(supportedCurrencies),creditLimit,availableCredit,billingCycleDay,paymentDueDay,billingAddress,isVirtual,status,sortOrder,createdAt,updatedAt]);
 
 
 
@@ -41,7 +41,7 @@ abstract mixin class $BankCardCopyWith<$Res>  {
   factory $BankCardCopyWith(BankCard value, $Res Function(BankCard) _then) = _$BankCardCopyWithImpl;
 @useResult
 $Res call({
- String id, String accountId, String cardOrganization, String cardNoMasked, String? cardNoCiphertext, CardType cardType, int expireMonth, int expireYear, String? cvvCiphertext, String issuerName, String? currency, bool supportsAllCurrencies, List<String> supportedCurrencies, Decimal? creditLimit, Decimal? availableCredit, int? billingCycleDay, int? paymentDueDay, String? billingAddress, bool isVirtual, CardStatus status, DateTime createdAt, DateTime updatedAt
+ String id, String accountId, String cardOrganization, String cardNoMasked, String? cardNoCiphertext, CardType cardType, int expireMonth, int expireYear, String? cvvCiphertext, String issuerName, String? currency, bool supportsAllCurrencies, List<String> supportedCurrencies, Decimal? creditLimit, Decimal? availableCredit, int? billingCycleDay, int? paymentDueDay, String? billingAddress, bool isVirtual, CardStatus status, int sortOrder, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -58,7 +58,7 @@ class _$BankCardCopyWithImpl<$Res>
 
 /// Create a copy of BankCard
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? accountId = null,Object? cardOrganization = null,Object? cardNoMasked = null,Object? cardNoCiphertext = freezed,Object? cardType = null,Object? expireMonth = null,Object? expireYear = null,Object? cvvCiphertext = freezed,Object? issuerName = null,Object? currency = freezed,Object? supportsAllCurrencies = null,Object? supportedCurrencies = null,Object? creditLimit = freezed,Object? availableCredit = freezed,Object? billingCycleDay = freezed,Object? paymentDueDay = freezed,Object? billingAddress = freezed,Object? isVirtual = null,Object? status = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? accountId = null,Object? cardOrganization = null,Object? cardNoMasked = null,Object? cardNoCiphertext = freezed,Object? cardType = null,Object? expireMonth = null,Object? expireYear = null,Object? cvvCiphertext = freezed,Object? issuerName = null,Object? currency = freezed,Object? supportsAllCurrencies = null,Object? supportedCurrencies = null,Object? creditLimit = freezed,Object? availableCredit = freezed,Object? billingCycleDay = freezed,Object? paymentDueDay = freezed,Object? billingAddress = freezed,Object? isVirtual = null,Object? status = null,Object? sortOrder = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
@@ -80,7 +80,8 @@ as int?,paymentDueDay: freezed == paymentDueDay ? _self.paymentDueDay : paymentD
 as int?,billingAddress: freezed == billingAddress ? _self.billingAddress : billingAddress // ignore: cast_nullable_to_non_nullable
 as String?,isVirtual: null == isVirtual ? _self.isVirtual : isVirtual // ignore: cast_nullable_to_non_nullable
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as CardStatus,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as CardStatus,sortOrder: null == sortOrder ? _self.sortOrder : sortOrder // ignore: cast_nullable_to_non_nullable
+as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
@@ -167,10 +168,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String accountId,  String cardOrganization,  String cardNoMasked,  String? cardNoCiphertext,  CardType cardType,  int expireMonth,  int expireYear,  String? cvvCiphertext,  String issuerName,  String? currency,  bool supportsAllCurrencies,  List<String> supportedCurrencies,  Decimal? creditLimit,  Decimal? availableCredit,  int? billingCycleDay,  int? paymentDueDay,  String? billingAddress,  bool isVirtual,  CardStatus status,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String accountId,  String cardOrganization,  String cardNoMasked,  String? cardNoCiphertext,  CardType cardType,  int expireMonth,  int expireYear,  String? cvvCiphertext,  String issuerName,  String? currency,  bool supportsAllCurrencies,  List<String> supportedCurrencies,  Decimal? creditLimit,  Decimal? availableCredit,  int? billingCycleDay,  int? paymentDueDay,  String? billingAddress,  bool isVirtual,  CardStatus status,  int sortOrder,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BankCard() when $default != null:
-return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMasked,_that.cardNoCiphertext,_that.cardType,_that.expireMonth,_that.expireYear,_that.cvvCiphertext,_that.issuerName,_that.currency,_that.supportsAllCurrencies,_that.supportedCurrencies,_that.creditLimit,_that.availableCredit,_that.billingCycleDay,_that.paymentDueDay,_that.billingAddress,_that.isVirtual,_that.status,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMasked,_that.cardNoCiphertext,_that.cardType,_that.expireMonth,_that.expireYear,_that.cvvCiphertext,_that.issuerName,_that.currency,_that.supportsAllCurrencies,_that.supportedCurrencies,_that.creditLimit,_that.availableCredit,_that.billingCycleDay,_that.paymentDueDay,_that.billingAddress,_that.isVirtual,_that.status,_that.sortOrder,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -188,10 +189,10 @@ return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMask
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String accountId,  String cardOrganization,  String cardNoMasked,  String? cardNoCiphertext,  CardType cardType,  int expireMonth,  int expireYear,  String? cvvCiphertext,  String issuerName,  String? currency,  bool supportsAllCurrencies,  List<String> supportedCurrencies,  Decimal? creditLimit,  Decimal? availableCredit,  int? billingCycleDay,  int? paymentDueDay,  String? billingAddress,  bool isVirtual,  CardStatus status,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String accountId,  String cardOrganization,  String cardNoMasked,  String? cardNoCiphertext,  CardType cardType,  int expireMonth,  int expireYear,  String? cvvCiphertext,  String issuerName,  String? currency,  bool supportsAllCurrencies,  List<String> supportedCurrencies,  Decimal? creditLimit,  Decimal? availableCredit,  int? billingCycleDay,  int? paymentDueDay,  String? billingAddress,  bool isVirtual,  CardStatus status,  int sortOrder,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _BankCard():
-return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMasked,_that.cardNoCiphertext,_that.cardType,_that.expireMonth,_that.expireYear,_that.cvvCiphertext,_that.issuerName,_that.currency,_that.supportsAllCurrencies,_that.supportedCurrencies,_that.creditLimit,_that.availableCredit,_that.billingCycleDay,_that.paymentDueDay,_that.billingAddress,_that.isVirtual,_that.status,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMasked,_that.cardNoCiphertext,_that.cardType,_that.expireMonth,_that.expireYear,_that.cvvCiphertext,_that.issuerName,_that.currency,_that.supportsAllCurrencies,_that.supportedCurrencies,_that.creditLimit,_that.availableCredit,_that.billingCycleDay,_that.paymentDueDay,_that.billingAddress,_that.isVirtual,_that.status,_that.sortOrder,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -208,10 +209,10 @@ return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMask
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String accountId,  String cardOrganization,  String cardNoMasked,  String? cardNoCiphertext,  CardType cardType,  int expireMonth,  int expireYear,  String? cvvCiphertext,  String issuerName,  String? currency,  bool supportsAllCurrencies,  List<String> supportedCurrencies,  Decimal? creditLimit,  Decimal? availableCredit,  int? billingCycleDay,  int? paymentDueDay,  String? billingAddress,  bool isVirtual,  CardStatus status,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String accountId,  String cardOrganization,  String cardNoMasked,  String? cardNoCiphertext,  CardType cardType,  int expireMonth,  int expireYear,  String? cvvCiphertext,  String issuerName,  String? currency,  bool supportsAllCurrencies,  List<String> supportedCurrencies,  Decimal? creditLimit,  Decimal? availableCredit,  int? billingCycleDay,  int? paymentDueDay,  String? billingAddress,  bool isVirtual,  CardStatus status,  int sortOrder,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _BankCard() when $default != null:
-return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMasked,_that.cardNoCiphertext,_that.cardType,_that.expireMonth,_that.expireYear,_that.cvvCiphertext,_that.issuerName,_that.currency,_that.supportsAllCurrencies,_that.supportedCurrencies,_that.creditLimit,_that.availableCredit,_that.billingCycleDay,_that.paymentDueDay,_that.billingAddress,_that.isVirtual,_that.status,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMasked,_that.cardNoCiphertext,_that.cardType,_that.expireMonth,_that.expireYear,_that.cvvCiphertext,_that.issuerName,_that.currency,_that.supportsAllCurrencies,_that.supportedCurrencies,_that.creditLimit,_that.availableCredit,_that.billingCycleDay,_that.paymentDueDay,_that.billingAddress,_that.isVirtual,_that.status,_that.sortOrder,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -223,7 +224,7 @@ return $default(_that.id,_that.accountId,_that.cardOrganization,_that.cardNoMask
 
 
 class _BankCard extends BankCard {
-  const _BankCard({required this.id, required this.accountId, required this.cardOrganization, required this.cardNoMasked, this.cardNoCiphertext, required this.cardType, required this.expireMonth, required this.expireYear, this.cvvCiphertext, required this.issuerName, this.currency, this.supportsAllCurrencies = false, final  List<String> supportedCurrencies = const <String>[], this.creditLimit, this.availableCredit, this.billingCycleDay, this.paymentDueDay, this.billingAddress, this.isVirtual = false, required this.status, required this.createdAt, required this.updatedAt}): _supportedCurrencies = supportedCurrencies,super._();
+  const _BankCard({required this.id, required this.accountId, required this.cardOrganization, required this.cardNoMasked, this.cardNoCiphertext, required this.cardType, required this.expireMonth, required this.expireYear, this.cvvCiphertext, required this.issuerName, this.currency, this.supportsAllCurrencies = false, final  List<String> supportedCurrencies = const <String>[], this.creditLimit, this.availableCredit, this.billingCycleDay, this.paymentDueDay, this.billingAddress, this.isVirtual = false, required this.status, this.sortOrder = 1000, required this.createdAt, required this.updatedAt}): _supportedCurrencies = supportedCurrencies,super._();
   
 
 @override final  String id;
@@ -252,6 +253,7 @@ class _BankCard extends BankCard {
 @override final  String? billingAddress;
 @override@JsonKey() final  bool isVirtual;
 @override final  CardStatus status;
+@override@JsonKey() final  int sortOrder;
 @override final  DateTime createdAt;
 @override final  DateTime updatedAt;
 
@@ -265,12 +267,12 @@ _$BankCardCopyWith<_BankCard> get copyWith => __$BankCardCopyWithImpl<_BankCard>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BankCard&&(identical(other.id, id) || other.id == id)&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.cardOrganization, cardOrganization) || other.cardOrganization == cardOrganization)&&(identical(other.cardNoMasked, cardNoMasked) || other.cardNoMasked == cardNoMasked)&&(identical(other.cardNoCiphertext, cardNoCiphertext) || other.cardNoCiphertext == cardNoCiphertext)&&(identical(other.cardType, cardType) || other.cardType == cardType)&&(identical(other.expireMonth, expireMonth) || other.expireMonth == expireMonth)&&(identical(other.expireYear, expireYear) || other.expireYear == expireYear)&&(identical(other.cvvCiphertext, cvvCiphertext) || other.cvvCiphertext == cvvCiphertext)&&(identical(other.issuerName, issuerName) || other.issuerName == issuerName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.supportsAllCurrencies, supportsAllCurrencies) || other.supportsAllCurrencies == supportsAllCurrencies)&&const DeepCollectionEquality().equals(other._supportedCurrencies, _supportedCurrencies)&&(identical(other.creditLimit, creditLimit) || other.creditLimit == creditLimit)&&(identical(other.availableCredit, availableCredit) || other.availableCredit == availableCredit)&&(identical(other.billingCycleDay, billingCycleDay) || other.billingCycleDay == billingCycleDay)&&(identical(other.paymentDueDay, paymentDueDay) || other.paymentDueDay == paymentDueDay)&&(identical(other.billingAddress, billingAddress) || other.billingAddress == billingAddress)&&(identical(other.isVirtual, isVirtual) || other.isVirtual == isVirtual)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BankCard&&(identical(other.id, id) || other.id == id)&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.cardOrganization, cardOrganization) || other.cardOrganization == cardOrganization)&&(identical(other.cardNoMasked, cardNoMasked) || other.cardNoMasked == cardNoMasked)&&(identical(other.cardNoCiphertext, cardNoCiphertext) || other.cardNoCiphertext == cardNoCiphertext)&&(identical(other.cardType, cardType) || other.cardType == cardType)&&(identical(other.expireMonth, expireMonth) || other.expireMonth == expireMonth)&&(identical(other.expireYear, expireYear) || other.expireYear == expireYear)&&(identical(other.cvvCiphertext, cvvCiphertext) || other.cvvCiphertext == cvvCiphertext)&&(identical(other.issuerName, issuerName) || other.issuerName == issuerName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.supportsAllCurrencies, supportsAllCurrencies) || other.supportsAllCurrencies == supportsAllCurrencies)&&const DeepCollectionEquality().equals(other._supportedCurrencies, _supportedCurrencies)&&(identical(other.creditLimit, creditLimit) || other.creditLimit == creditLimit)&&(identical(other.availableCredit, availableCredit) || other.availableCredit == availableCredit)&&(identical(other.billingCycleDay, billingCycleDay) || other.billingCycleDay == billingCycleDay)&&(identical(other.paymentDueDay, paymentDueDay) || other.paymentDueDay == paymentDueDay)&&(identical(other.billingAddress, billingAddress) || other.billingAddress == billingAddress)&&(identical(other.isVirtual, isVirtual) || other.isVirtual == isVirtual)&&(identical(other.status, status) || other.status == status)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,id,accountId,cardOrganization,cardNoMasked,cardNoCiphertext,cardType,expireMonth,expireYear,cvvCiphertext,issuerName,currency,supportsAllCurrencies,const DeepCollectionEquality().hash(_supportedCurrencies),creditLimit,availableCredit,billingCycleDay,paymentDueDay,billingAddress,isVirtual,status,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,accountId,cardOrganization,cardNoMasked,cardNoCiphertext,cardType,expireMonth,expireYear,cvvCiphertext,issuerName,currency,supportsAllCurrencies,const DeepCollectionEquality().hash(_supportedCurrencies),creditLimit,availableCredit,billingCycleDay,paymentDueDay,billingAddress,isVirtual,status,sortOrder,createdAt,updatedAt]);
 
 
 
@@ -281,7 +283,7 @@ abstract mixin class _$BankCardCopyWith<$Res> implements $BankCardCopyWith<$Res>
   factory _$BankCardCopyWith(_BankCard value, $Res Function(_BankCard) _then) = __$BankCardCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String accountId, String cardOrganization, String cardNoMasked, String? cardNoCiphertext, CardType cardType, int expireMonth, int expireYear, String? cvvCiphertext, String issuerName, String? currency, bool supportsAllCurrencies, List<String> supportedCurrencies, Decimal? creditLimit, Decimal? availableCredit, int? billingCycleDay, int? paymentDueDay, String? billingAddress, bool isVirtual, CardStatus status, DateTime createdAt, DateTime updatedAt
+ String id, String accountId, String cardOrganization, String cardNoMasked, String? cardNoCiphertext, CardType cardType, int expireMonth, int expireYear, String? cvvCiphertext, String issuerName, String? currency, bool supportsAllCurrencies, List<String> supportedCurrencies, Decimal? creditLimit, Decimal? availableCredit, int? billingCycleDay, int? paymentDueDay, String? billingAddress, bool isVirtual, CardStatus status, int sortOrder, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -298,7 +300,7 @@ class __$BankCardCopyWithImpl<$Res>
 
 /// Create a copy of BankCard
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? accountId = null,Object? cardOrganization = null,Object? cardNoMasked = null,Object? cardNoCiphertext = freezed,Object? cardType = null,Object? expireMonth = null,Object? expireYear = null,Object? cvvCiphertext = freezed,Object? issuerName = null,Object? currency = freezed,Object? supportsAllCurrencies = null,Object? supportedCurrencies = null,Object? creditLimit = freezed,Object? availableCredit = freezed,Object? billingCycleDay = freezed,Object? paymentDueDay = freezed,Object? billingAddress = freezed,Object? isVirtual = null,Object? status = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? accountId = null,Object? cardOrganization = null,Object? cardNoMasked = null,Object? cardNoCiphertext = freezed,Object? cardType = null,Object? expireMonth = null,Object? expireYear = null,Object? cvvCiphertext = freezed,Object? issuerName = null,Object? currency = freezed,Object? supportsAllCurrencies = null,Object? supportedCurrencies = null,Object? creditLimit = freezed,Object? availableCredit = freezed,Object? billingCycleDay = freezed,Object? paymentDueDay = freezed,Object? billingAddress = freezed,Object? isVirtual = null,Object? status = null,Object? sortOrder = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_BankCard(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
@@ -320,7 +322,8 @@ as int?,paymentDueDay: freezed == paymentDueDay ? _self.paymentDueDay : paymentD
 as int?,billingAddress: freezed == billingAddress ? _self.billingAddress : billingAddress // ignore: cast_nullable_to_non_nullable
 as String?,isVirtual: null == isVirtual ? _self.isVirtual : isVirtual // ignore: cast_nullable_to_non_nullable
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as CardStatus,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as CardStatus,sortOrder: null == sortOrder ? _self.sortOrder : sortOrder // ignore: cast_nullable_to_non_nullable
+as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));

@@ -45,6 +45,7 @@ abstract class BankCard with _$BankCard {
     String? billingAddress,
     @Default(false) bool isVirtual,
     required CardStatus status,
+    @Default(1000) int sortOrder,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _BankCard;

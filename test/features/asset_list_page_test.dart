@@ -210,7 +210,7 @@ void main() {
     expect(find.text('b1'), findsNothing);
   });
 
-  testWidgets('show more expands only the current account type subgroup and account assets', (
+  testWidgets('renders all grouped accounts and assets by default', (
     tester,
   ) async {
     final accounts = [
@@ -243,26 +243,14 @@ void main() {
 
     expect(find.text('HSBC (4)'), findsOneWidget);
     expect(find.text('Barclays (1)'), findsOneWidget);
-    expect(find.text('Lloyds (1)'), findsNothing);
-    expect(find.text('NatWest (1)'), findsNothing);
-
-    await scrollToFinder(tester, find.text('展开剩余 1 项').last);
-    await tester.tap(find.text('展开剩余 1 项').last);
-    await tester.pumpAndSettle();
-
     expect(find.text('Lloyds (1)'), findsOneWidget);
-    expect(find.text('c1'), findsOneWidget);
-    expect(find.text('c2'), findsOneWidget);
-    expect(find.text('c3'), findsOneWidget);
-    expect(find.text('c4'), findsNothing);
-
-    await scrollToFinder(tester, find.text('展开剩余 1 项').first);
-    await tester.tap(find.text('展开剩余 1 项').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('c4'), findsOneWidget);
     await scrollToText(tester, 'NatWest (1)');
     expect(find.text('NatWest (1)'), findsOneWidget);
     expect(find.text('IBKR UK (1)'), findsOneWidget);
+    expect(find.text('c1'), findsOneWidget);
+    expect(find.text('c2'), findsOneWidget);
+    expect(find.text('c3'), findsOneWidget);
+    expect(find.text('c4'), findsOneWidget);
+    expect(find.textContaining('展开剩余'), findsNothing);
   });
 }

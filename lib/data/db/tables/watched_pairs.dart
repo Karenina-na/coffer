@@ -23,6 +23,8 @@ class WatchedPairs extends Table {
       text().named('threshold_low').nullable()();
   TextColumn get alertChangePct =>
       text().named('alert_change_pct').nullable()();
+  IntColumn get sortOrder =>
+      integer().named('sort_order').withDefault(const Constant(1000))();
 
   @override
   Set<Column> get primaryKey => {pairKey};

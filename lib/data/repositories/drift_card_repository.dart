@@ -146,6 +146,22 @@ class DriftCardRepository implements CardRepository {
   }
 
   @override
+  Future<Result<void, AppError>> reorder(List<String> cardIds) async {
+    try {
+      for (var i = 0; i < cardIds.length; i++) {
+        await _dao.updateSortOrder(
+          id: cardIds[i],
+          sortOrder: 100 + i * 10,
+          updatedAt: _now(),
+        );
+      }
+      return const Ok(null);
+    } catch (e) {
+      return Err(StorageError('reorder cards failed: $e'));
+    }
+  }
+
+  @override
   Future<Result<String, AppError>> decryptCardNo(String id) =>
       _decrypt(id, CryptoPurpose.cardNo, (c) => c.cardNoCiphertext);
 

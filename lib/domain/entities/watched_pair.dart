@@ -11,6 +11,7 @@ abstract class WatchedPair with _$WatchedPair {
     required String baseCurrency,
     required String quoteCurrency,
     required DateTime createdAt,
+    @Default(1000) int sortOrder,
 
     /// 绝对值上沿：最新汇率 ≥ 此值触发 RATE_ALERT（kind=high）。
     Decimal? thresholdHigh,

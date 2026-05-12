@@ -162,7 +162,7 @@ void main() {
     expect(hsbcTopLeft.dy, lessThan(ibkrTopLeft.dy));
   });
 
-  testWidgets('show more expands only the current type subgroup', (tester) async {
+  testWidgets('renders all accounts in each type subgroup by default', (tester) async {
     final accounts = [
       buildAccount(id: 'gb-bank-1', type: AccountType.bank, region: 'GB', name: 'Bank A'),
       buildAccount(id: 'gb-bank-2', type: AccountType.bank, region: 'GB', name: 'Bank B'),
@@ -191,19 +191,11 @@ void main() {
     expect(find.text('Bank A'), findsOneWidget);
     expect(find.text('Bank B'), findsOneWidget);
     expect(find.text('Bank C'), findsOneWidget);
-    expect(find.text('Bank D'), findsNothing);
-    await scrollToText(tester, 'Broker A');
-    expect(find.text('Broker A'), findsOneWidget);
-    await scrollToText(tester, '展开剩余 1 项');
-    expect(find.text('展开剩余 1 项'), findsOneWidget);
-
-    await tester.tap(find.text('展开剩余 1 项'));
-    await tester.pumpAndSettle();
-
     await scrollToText(tester, 'Bank D');
     expect(find.text('Bank D'), findsOneWidget);
     await scrollToText(tester, 'Broker A');
     expect(find.text('Broker A'), findsOneWidget);
+    expect(find.textContaining('展开剩余'), findsNothing);
   });
 
   testWidgets('collapsing a region hides subgroup headers and cards', (tester) async {

@@ -12,13 +12,19 @@ class WatchedPairDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<WatchedPairRow>> watchAll() {
     return (select(watchedPairs)
-          ..orderBy([(t) => OrderingTerm.asc(t.pairKey)]))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.pairKey),
+          ]))
         .watch();
   }
 
   Future<List<WatchedPairRow>> listAll() {
     return (select(watchedPairs)
-          ..orderBy([(t) => OrderingTerm.asc(t.pairKey)]))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.pairKey),
+          ]))
         .get();
   }
 
@@ -42,5 +48,11 @@ class WatchedPairDao extends DatabaseAccessor<AppDatabase>
       thresholdLow: Value(thresholdLow),
       alertChangePct: Value(alertChangePct),
     ));
+  }
+
+  Future<void> updateSortOrder(String pairKey, int sortOrder) {
+    return (update(watchedPairs)..where((t) => t.pairKey.equals(pairKey))).write(
+      WatchedPairsCompanion(sortOrder: Value(sortOrder)),
+    );
   }
 }

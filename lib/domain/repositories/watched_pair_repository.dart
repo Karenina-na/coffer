@@ -20,4 +20,6 @@ abstract interface class WatchedPairRepository {
     required Decimal? thresholdLow,
     required Decimal? alertChangePct,
   });
+
+  Future<Result<void, AppError>> reorder(List<String> pairKeys);
 }

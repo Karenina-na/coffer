@@ -163,60 +163,94 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
     if (entries.isEmpty) {
       return const Center(child: Text('暂无条目，从右上「更多 → 新建」新增'));
     }
-    return ListView.separated(
+    return ReorderableListView.builder(
       padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),
       itemCount: entries.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      buildDefaultDragHandles: false,
+      onReorder: (oldIndex, newIndex) async {
+        if (newIndex > oldIndex) newIndex -= 1;
+        final reordered = [...entries];
+        final moved = reordered.removeAt(oldIndex);
+        reordered.insert(newIndex, moved);
+        final r = await ref
+            .read(dictRepositoryProvider)
+            .reorderByType(type, reordered.map((e) => e.id).toList(growable: false));
+        if (!context.mounted) return;
+        r.when(
+          ok: (_) {},
+          err: (e) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('重排失败：${errorToMessage(e)}')),
+          ),
+        );
+      },
       itemBuilder: (_, i) {
         final e = entries[i];
-        return ListTile(
-          title: Row(
-            children: [
-              if (_isRegion && e.flagEmoji != null) ...[
-                Text(e.flagEmoji!, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: GwpSpacing.sm),
-              ],
-              Flexible(
-                child: Text(
-                  e.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+        return Column(
+          key: ValueKey('dict-entry-${e.id}'),
+          children: [
+            ListTile(
+              title: Row(
+                children: [
+                  if (_isRegion && e.flagEmoji != null) ...[
+                    Text(e.flagEmoji!, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: GwpSpacing.sm),
+                  ],
+                  Flexible(
+                    child: Text(
+                      e.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: GwpSpacing.sm),
+                  Text(
+                    e.code,
+                    style: const TextStyle(
+                      fontFamily: GwpTypo.monoFont,
+                      fontSize: 12,
+                      color: GwpColors.textMuted,
+                    ),
+                  ),
+                  if (e.isBuiltin) ...[
+                    const SizedBox(width: GwpSpacing.sm),
+                    const BuiltinBadge(),
+                  ],
+                ],
               ),
-              const SizedBox(width: GwpSpacing.sm),
-              Text(
-                e.code,
-                style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontSize: 12,
-                  color: GwpColors.textMuted,
-                ),
+              subtitle: _isRegion
+                  ? _buildRegionSubtitle(e, regionNameByCode)
+                  : e.nameEn == null
+                      ? null
+                      : Text(e.nameEn!),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PopupMenuButton<String>(
+                    onSelected: (v) async {
+                      if (v == 'edit') {
+                        await _showEditDialog(context, ref, entry: e);
+                      } else if (v == 'delete') {
+                        await _confirmDelete(context, ref, e);
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                      if (!e.isBuiltin)
+                        const PopupMenuItem(value: 'delete', child: Text('删除')),
+                    ],
+                  ),
+                  ReorderableDelayedDragStartListener(
+                    index: i,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.drag_handle, color: GwpColors.textMuted),
+                    ),
+                  ),
+                ],
               ),
-              if (e.isBuiltin) ...[
-                const SizedBox(width: GwpSpacing.sm),
-                const BuiltinBadge(),
-              ],
-            ],
-          ),
-          subtitle: _isRegion
-              ? _buildRegionSubtitle(e, regionNameByCode)
-              : e.nameEn == null
-              ? null
-              : Text(e.nameEn!),
-          trailing: PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'edit') {
-                await _showEditDialog(context, ref, entry: e);
-              } else if (v == 'delete') {
-                await _confirmDelete(context, ref, e);
-              }
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 'edit', child: Text('编辑')),
-              if (!e.isBuiltin)
-                const PopupMenuItem(value: 'delete', child: Text('删除')),
-            ],
-          ),
+            ),
+            const Divider(height: 1),
+          ],
         );
       },
     );

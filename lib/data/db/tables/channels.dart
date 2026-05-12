@@ -18,6 +18,8 @@ class Channels extends Table {
   TextColumn get dailyLimit => text().named('daily_limit').nullable()();
   TextColumn get singleLimit => text().named('single_limit').nullable()();
   TextColumn get status => text()();
+  IntColumn get sortOrder =>
+      integer().named('sort_order').withDefault(const Constant(1000))();
   DateTimeColumn get effectiveFrom =>
       dateTime().named('effective_from').nullable()();
   DateTimeColumn get effectiveTo =>

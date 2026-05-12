@@ -19,20 +19,6 @@ import 'card_detail_sheet.dart';
 import 'card_providers.dart';
 import 'wallet_card_tile.dart';
 
-/// 卡片列表排序维度。
-///
-/// 默认 [expiry]：已过期 / 即将到期的卡置顶，方便用户快速续卡。
-enum _CardSort { expiry, createdDesc, issuer, type }
-
-extension on _CardSort {
-  String get label => switch (this) {
-        _CardSort.expiry => '按到期日（紧急优先）',
-        _CardSort.createdDesc => '按创建时间（新）',
-        _CardSort.issuer => '按发卡行',
-        _CardSort.type => '按卡类型',
-      };
-}
-
 class CardListPage extends ConsumerStatefulWidget {
   const CardListPage({super.key});
 
@@ -41,7 +27,6 @@ class CardListPage extends ConsumerStatefulWidget {
 }
 
 class _CardListPageState extends ConsumerState<CardListPage> {
-  _CardSort _sort = _CardSort.expiry;
   late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
 
@@ -72,40 +57,7 @@ class _CardListPageState extends ConsumerState<CardListPage> {
     );
   }
 
-  List<BankCard> _applySort(List<BankCard> input) {
-    final list = [...input];
-    switch (_sort) {
-      case _CardSort.expiry:
-        // 到期紧急度排序：expired → critical → warn → none，内部按 daysLeft 升序
-        // （已过期天数更久的放后面，即将到期天数更少的放前面）
-        list.sort((a, b) {
-          final ea = ExpirySignal.of(a);
-          final eb = ExpirySignal.of(b);
-          final pa = _toneWeight(ea.tone);
-          final pb = _toneWeight(eb.tone);
-          if (pa != pb) return pa.compareTo(pb);
-          return ea.daysLeft.compareTo(eb.daysLeft);
-        });
-      case _CardSort.createdDesc:
-        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      case _CardSort.issuer:
-        list.sort((a, b) => a.issuerName.compareTo(b.issuerName));
-      case _CardSort.type:
-        list.sort((a, b) {
-          final t = a.cardType.code.compareTo(b.cardType.code);
-          if (t != 0) return t;
-          return a.issuerName.compareTo(b.issuerName);
-        });
-    }
-    return list;
-  }
-
-  static int _toneWeight(ExpiryTone t) => switch (t) {
-        ExpiryTone.expired => 0,
-        ExpiryTone.critical => 1,
-        ExpiryTone.warn => 2,
-        ExpiryTone.none => 3,
-      };
+  List<BankCard> _orderedCards(List<BankCard> input) => [...input];
 
   @override
   Widget build(BuildContext context) {
@@ -116,35 +68,9 @@ class _CardListPageState extends ConsumerState<CardListPage> {
       for (final a in accounts.value ?? const <Account>[]) a.id: a,
     };
     return Scaffold(
-      appBar: AppTopBar(
-        title: const Text('卡片'),
+      appBar: const AppTopBar(
+        title: Text('卡片'),
         showAppIcon: true,
-        actions: [
-          PopupMenuButton<_CardSort>(
-            tooltip: '排序',
-            icon: const Icon(Icons.swap_vert),
-            onSelected: (v) => setState(() => _sort = v),
-            itemBuilder: (_) => [
-              for (final m in _CardSort.values)
-                PopupMenuItem(
-                  value: m,
-                  child: Row(
-                    children: [
-                      Icon(
-                        m == _sort
-                            ? Icons.check_circle
-                            : Icons.circle_outlined,
-                        size: 16,
-                        color: m == _sort ? GwpColors.actionPrimary : null,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(m.label),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ],
       ),
       body: cards.when(
         loading: () => const Center(
@@ -162,29 +88,48 @@ class _CardListPageState extends ConsumerState<CardListPage> {
               subtitle: '从右上「更多 → 新建」添加第一张卡',
             );
           }
-          final sorted = _applySort(raw);
+          final sorted = _orderedCards(raw);
           final summary = _summarize(raw);
-          return CustomScrollView(
-            slivers: [
-              if (summary != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: summary,
-                  ),
-                ),
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  16, 12, 16,
-                  FloatingNavLayout.totalFloatingHeight(context) + 24,
-                ),
-                sliver: SliverList.separated(
-                  itemCount: sorted.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 16),
-                  itemBuilder: (_, i) {
-                    final c = sorted[i];
-                    final acc = byId[c.accountId];
-                    return WalletCardTile(
+          return ReorderableListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                FloatingNavLayout.totalFloatingHeight(context) + 24,
+              ),
+              buildDefaultDragHandles: false,
+              header: summary == null
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: summary,
+                    ),
+              itemCount: sorted.length,
+              onReorder: (oldIndex, newIndex) async {
+                if (newIndex > oldIndex) newIndex -= 1;
+                final reordered = [...sorted];
+                final moved = reordered.removeAt(oldIndex);
+                reordered.insert(newIndex, moved);
+                final result = await ref
+                    .read(cardRepositoryProvider)
+                    .reorder(reordered.map((e) => e.id).toList(growable: false));
+                if (result.isErr && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('重排失败：${result.errorOrNull?.message ?? '未知错误'}'),
+                    ),
+                  );
+                }
+              },
+              itemBuilder: (_, i) {
+                final c = sorted[i];
+                final acc = byId[c.accountId];
+                return Padding(
+                  key: ValueKey('card-${c.id}'),
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ReorderableDelayedDragStartListener(
+                    index: i,
+                    child: WalletCardTile(
                       card: c,
                       account: acc,
                       regionMeta: regionMetaOf(regionIndex, acc?.sovereigntyRegion ?? ''),
@@ -193,12 +138,11 @@ class _CardListPageState extends ConsumerState<CardListPage> {
                         card: c,
                         account: acc,
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
+                    ),
+                  ),
+                );
+              },
+            );
         },
       ),
     );

@@ -13,8 +13,10 @@ class ChannelDao extends DatabaseAccessor<AppDatabase>
   Stream<List<ChannelRow>> watchAll() {
     return (select(channels)
           ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
             (t) => OrderingTerm(
                 expression: t.createdAt, mode: OrderingMode.desc),
+            (t) => OrderingTerm.asc(t.id),
           ]))
         .watch();
   }
@@ -36,6 +38,19 @@ class ChannelDao extends DatabaseAccessor<AppDatabase>
     return (update(channels)..where((t) => t.id.equals(id))).write(
       ChannelsCompanion(
         status: Value(status),
+        updatedAt: Value(updatedAt),
+      ),
+    );
+  }
+
+  Future<int> updateSortOrder({
+    required String id,
+    required int sortOrder,
+    required DateTime updatedAt,
+  }) {
+    return (update(channels)..where((t) => t.id.equals(id))).write(
+      ChannelsCompanion(
+        sortOrder: Value(sortOrder),
         updatedAt: Value(updatedAt),
       ),
     );

@@ -65,4 +65,9 @@ class ManageWatchedPairUseCase {
       alertChangePct: alertChangePct,
     );
   }
+
+  Future<Result<void, AppError>> reorder(List<String> pairKeys) {
+    if (pairKeys.isEmpty) return Future.value(const Ok(null));
+    return _repo.reorder(pairKeys);
+  }
 }
