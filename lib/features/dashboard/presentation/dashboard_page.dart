@@ -41,6 +41,7 @@ final dashboardRefreshProviders = <dynamic>[
   allocationByTypeProvider,
   allocationByRegionProvider,
   nodeMapDataProvider,
+  nodeMapAggregateDataProvider,
   netWorthTrendProvider,
   trendDeltaProvider,
   upcomingBillsProvider,

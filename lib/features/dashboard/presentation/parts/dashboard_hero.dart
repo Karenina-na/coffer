@@ -39,6 +39,8 @@ class _SectionHeader extends StatelessWidget {
 
 enum _MapLayer { edges, regionDots, labels, glow }
 
+enum _MapScope { country, aggregate }
+
 class _MapPreset {
   const _MapPreset(this.label, this.layers);
   final String label;
@@ -139,12 +141,23 @@ List<Offset> heroProjectGuide(Size size, double yNorm, {int samples = 24}) {
 // Hero widget
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-class _GridMapHero extends ConsumerWidget {
+class _GridMapHero extends ConsumerStatefulWidget {
   const _GridMapHero();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mapAsync = ref.watch(nodeMapDataProvider);
+  ConsumerState<_GridMapHero> createState() => _GridMapHeroState();
+}
+
+class _GridMapHeroState extends ConsumerState<_GridMapHero> {
+  _MapScope _scope = _MapScope.country;
+
+  @override
+  Widget build(BuildContext context) {
+    final mapAsync = ref.watch(
+      _scope == _MapScope.country
+          ? nodeMapDataProvider
+          : nodeMapAggregateDataProvider,
+    );
     final regionIndex =
         ref.watch(regionMetaIndexProvider).value ?? const {};
 
@@ -159,8 +172,12 @@ class _GridMapHero extends ConsumerWidget {
         ),
       ),
       error: (_, _) => const SizedBox(height: 210),
-      data: (mapData) =>
-          _GridMapContent(mapData: mapData, regionIndex: regionIndex),
+      data: (mapData) => _GridMapContent(
+        mapData: mapData,
+        regionIndex: regionIndex,
+        scope: _scope,
+        onScopeChanged: (scope) => setState(() => _scope = scope),
+      ),
     );
   }
 }
@@ -170,9 +187,16 @@ class _GridMapHero extends ConsumerWidget {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class _GridMapContent extends StatefulWidget {
-  const _GridMapContent({required this.mapData, required this.regionIndex});
+  const _GridMapContent({
+    required this.mapData,
+    required this.regionIndex,
+    required this.scope,
+    required this.onScopeChanged,
+  });
   final NodeMapData mapData;
   final RegionIndex regionIndex;
+  final _MapScope scope;
+  final ValueChanged<_MapScope> onScopeChanged;
 
   @override
   State<_GridMapContent> createState() => _GridMapContentState();
@@ -232,16 +256,19 @@ class _GridMapContentState extends State<_GridMapContent>
         initialLayers: _layers,
         initialContinents: _visibleContinents ?? dataContinents,
         availableContinents: dataContinents,
-        onChanged: (idx, layers, continents) {
+        initialScope: widget.scope,
+        onChanged: (idx, layers, continents, scope) {
           setState(() {
             _presetIdx = idx;
             _layers = Set.from(layers);
-            // null if all selected
             _visibleContinents =
                 continents.length == dataContinents.length
                     ? null
                     : Set.from(continents);
           });
+          if (widget.scope != scope) {
+            widget.onScopeChanged(scope);
+          }
         },
       ),
     );
@@ -381,7 +408,7 @@ class _GridMapContentState extends State<_GridMapContent>
                   top: 8,
                   left: 10,
                   child: Text(
-                    '全球持仓分布',
+                    widget.scope == _MapScope.country ? '全球持仓分布' : '全球区域分布',
                     style: TextStyle(
                       color: GwpColors.textMuted.withValues(alpha: 0.28),
                       fontSize: 8.5,
@@ -583,7 +610,7 @@ class _GridMapContentState extends State<_GridMapContent>
                       key: ValueKey(regionCount),
                       icon: Icons.language_rounded,
                       value: '$regionCount',
-                      label: '个地区',
+                      label: widget.scope == _MapScope.country ? '个地区' : '个区域',
                     ),
                   ),
                   const SizedBox(width: GwpSpacing.md),
@@ -628,7 +655,7 @@ class _GridMapContentState extends State<_GridMapContent>
                               width: 0.5),
                         ),
                         child: Text(
-                          '主导 ${topNode.regionCode} · ${topPct.toStringAsFixed(0)}%',
+                          '主导 ${regionLabel(widget.regionIndex, topNode.regionCode)} · ${topPct.toStringAsFixed(0)}%',
                           style: const TextStyle(
                             fontFamily: GwpTypo.monoFont,
                             color: GwpColors.actionPrimary,
@@ -672,6 +699,7 @@ class _FilterSheet extends StatefulWidget {
     required this.initialLayers,
     required this.initialContinents,
     required this.availableContinents,
+    required this.initialScope,
     required this.onChanged,
   });
 
@@ -679,8 +707,13 @@ class _FilterSheet extends StatefulWidget {
   final Set<_MapLayer> initialLayers;
   final Set<String> initialContinents;
   final Set<String> availableContinents;
+  final _MapScope initialScope;
   final void Function(
-      int presetIdx, Set<_MapLayer> layers, Set<String> continents) onChanged;
+    int presetIdx,
+    Set<_MapLayer> layers,
+    Set<String> continents,
+    _MapScope scope,
+  ) onChanged;
 
   @override
   State<_FilterSheet> createState() => _FilterSheetState();
@@ -690,6 +723,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late int _presetIdx;
   late Set<_MapLayer> _layers;
   late Set<String> _continents;
+  late _MapScope _scope;
 
   @override
   void initState() {
@@ -697,6 +731,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     _presetIdx = widget.initialPresetIdx;
     _layers = Set.from(widget.initialLayers);
     _continents = Set.from(widget.initialContinents);
+    _scope = widget.initialScope;
   }
 
   void _selectPreset(int idx) {
@@ -731,7 +766,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 
   void _notify() =>
-      widget.onChanged(_presetIdx, _layers, _continents);
+      widget.onChanged(_presetIdx, _layers, _continents, _scope);
 
   @override
   Widget build(BuildContext context) {
@@ -777,6 +812,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                     _presetIdx = _kDefaultPresetIdx;
                     _layers = Set.from(_kPresets[_kDefaultPresetIdx].layers);
                     _continents = Set.from(widget.availableContinents);
+                    _scope = widget.initialScope;
                   });
                   _notify();
                 },
@@ -789,6 +825,55 @@ class _FilterSheetState extends State<_FilterSheet> {
                   ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: GwpSpacing.base),
+
+          const Text(
+            '地图粒度',
+            style: TextStyle(
+                color: GwpColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: GwpSpacing.sm),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final option in _MapScope.values)
+                GestureDetector(
+                  onTap: () {
+                    setState(() => _scope = option);
+                    _notify();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _scope == option
+                          ? GwpColors.actionPrimary.withValues(alpha: 0.15)
+                          : GwpColors.surface2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _scope == option
+                            ? GwpColors.actionPrimary
+                            : GwpColors.border,
+                        width: _scope == option ? 1.0 : 0.5,
+                      ),
+                    ),
+                    child: Text(
+                      option == _MapScope.country ? '国家视图' : '区域视图',
+                      style: TextStyle(
+                        color: _scope == option
+                            ? GwpColors.actionPrimary
+                            : GwpColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight:
+                            _scope == option ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: GwpSpacing.base),

@@ -115,18 +115,54 @@ void main() {
     );
   });
 
-  test('onCreate 为内置 CRYPTO 写入南极坐标', () async {
+  test('onCreate 预置金融国家/地区内置集合与关键锚点', () async {
     final rows = await db.customSelect(
-      "SELECT continent, map_lon, map_lat, anchor_lon, anchor_lat FROM dict_entries "
-      "WHERE type = 'SOVEREIGNTY_REGION' AND code = 'CRYPTO'",
+      "SELECT code, name, name_en, is_builtin, continent, anchor_lon, anchor_lat FROM dict_entries "
+      "WHERE type = 'SOVEREIGNTY_REGION' ORDER BY sort_order, code",
     ).get();
-    expect(rows, hasLength(1));
-    final row = rows.single;
-    expect(row.read<String>('continent'), '数字');
-    expect(row.read<double>('map_lon'), 18.0);
-    expect(row.read<double>('map_lat'), -82.0);
-    expect(row.read<double>('anchor_lon'), 18.0);
-    expect(row.read<double>('anchor_lat'), -82.0);
+    expect(
+      rows.map((r) => r.read<String>('code')).toList(),
+      [
+        'HK',
+        'CN',
+        'US',
+        'SG',
+        'GB',
+        'DE',
+        'FR',
+        'IT',
+        'JP',
+        'KR',
+        'TW',
+        'MY',
+        'CA',
+        'AU',
+        'EU',
+        'CRYPTO',
+      ],
+    );
+
+    final byCode = {
+      for (final row in rows) row.read<String>('code'): row,
+    };
+
+    expect(byCode['DE']!.read<String>('name'), '德国');
+    expect(byCode['DE']!.read<String>('name_en'), 'Germany');
+    expect(byCode['DE']!.read<int>('is_builtin'), 1);
+    expect(byCode['DE']!.read<String>('continent'), '欧洲');
+    expect(byCode['DE']!.read<double>('anchor_lon'), 8.6821);
+    expect(byCode['DE']!.read<double>('anchor_lat'), 50.1109);
+
+    expect(byCode['EU']!.read<String>('name'), '欧盟');
+    expect(byCode['EU']!.read<String>('name_en'), 'European Union');
+    expect(byCode['EU']!.read<int>('is_builtin'), 1);
+    expect(byCode['EU']!.read<String>('continent'), '欧洲');
+    expect(byCode['EU']!.read<double>('anchor_lon'), 4.3517);
+    expect(byCode['EU']!.read<double>('anchor_lat'), 50.8503);
+
+    expect(byCode['CRYPTO']!.read<String>('continent'), '数字');
+    expect(byCode['CRYPTO']!.read<double>('anchor_lon'), 18.0);
+    expect(byCode['CRYPTO']!.read<double>('anchor_lat'), -82.0);
   });
 
   test('连接打开后启用 foreign_keys，非法 account_channels 写入会失败', () async {

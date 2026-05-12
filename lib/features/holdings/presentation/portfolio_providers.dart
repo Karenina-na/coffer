@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/gwp_bar_rank.dart';
 import '../../../core/ui/gwp_radar_chart.dart';
+import '../../../core/ui/region_meta.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/asset.dart';
@@ -11,6 +12,7 @@ import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
 import '../../channel/presentation/channel_providers.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../dashboard/presentation/dashboard_providers.dart';
 
 class _PortfolioInputs {
@@ -168,14 +170,21 @@ final portfolioByCurrencyProvider =
   return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.currency);
 });
 
-/// Asset allocation grouped by sovereignty region (via account join).
+/// Asset allocation grouped by sovereignty region parent aggregate (e.g. EU).
 final portfolioByRegionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
   final assets = inputs.valuedAssets;
+  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
   final map = {for (final a in accounts) a.id: a.sovereigntyRegion};
-  return _groupAndSlice(assets, (a) => map[a.asset.accountId] ?? '未知');
+  return _groupAndSlice(
+    assets,
+    (a) => regionAggregateLabel(
+      regionIndex,
+      map[a.asset.accountId] ?? '未知',
+    ),
+  );
 });
 
 /// Asset allocation grouped by institution (via account join).

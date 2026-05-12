@@ -18,6 +18,7 @@ class RegionMeta {
     this.color,
     this.mapCoords,
     this.flag,
+    this.parentCode,
     this.parentName,
   });
 
@@ -37,6 +38,9 @@ class RegionMeta {
 
   /// Accent color for region chips, list bar indicators, etc.
   final Color? color;
+
+  /// Parent region code (e.g. `'EU'` for `DE`).
+  final String? parentCode;
 
   /// Parent region display name (e.g. `'欧盟'` for `DE`). Looked up
   /// from the same index when building from a DictEntry.
@@ -82,6 +86,7 @@ class RegionMeta {
       color: color,
       mapCoords: coords,
       flag: entry.flagEmoji,
+      parentCode: entry.parentRegion,
       parentName: entry.parentRegion != null
           ? parentNames[entry.parentRegion]
           : null,
@@ -111,9 +116,29 @@ String regionLabel(RegionIndex index, String code) {
   return meta.displayName;
 }
 
+/// Parent/aggregate label for [code].
+/// Returns parent region name when present (e.g. `欧盟` for `DE`),
+/// otherwise falls back to [regionLabel].
+String regionAggregateLabel(RegionIndex index, String code) {
+  final meta = index[code];
+  if (meta == null) return code;
+  return meta.parentName ?? meta.displayName;
+}
+
+/// Canonical grouping key for analytics views.
+/// EU child regions roll up to `EU`; other regions keep their own code.
+String regionAggregateKey(RegionIndex index, String code) {
+  final meta = index[code];
+  return meta?.parentCode ?? code;
+}
+
 /// Accent [Color] for [code]; falls back to [GwpColors.textMuted].
 Color regionColor(RegionIndex index, String code) =>
     index[code]?.color ?? GwpColors.textMuted;
+
+/// Accent [Color] for aggregate region display; falls back to child color.
+Color regionAggregateColor(RegionIndex index, String code) =>
+    regionColor(index, regionAggregateKey(index, code));
 
 /// Emoji flag for [code]; falls back to [code] itself.
 String regionFlag(RegionIndex index, String code) =>

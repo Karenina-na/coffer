@@ -8,6 +8,8 @@ import '../../domain/entities/card.dart';
 import '../../domain/entities/domain_event.dart';
 import '../../domain/entities/watched_pair.dart';
 import '../../features/account/presentation/account_providers.dart';
+import '../../data/providers/dict_providers.dart';
+import 'region_meta.dart';
 import '../../features/asset/presentation/asset_providers.dart';
 import '../../features/card/presentation/card_detail_sheet.dart';
 import '../../features/card/presentation/card_providers.dart';
@@ -713,6 +715,7 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
 
 FeatureSearchConfig<Account> _buildAccountsConfig(WidgetRef ref) {
   final accounts = ref.read(accountListProvider).value ?? const <Account>[];
+  final regionIndex = ref.read(regionMetaIndexProvider).value ?? const {};
   final types = accounts.map((a) => a.accountType).toSet().toList()
     ..sort((a, b) => a.code.compareTo(b.code));
   final statuses = accounts.map((a) => a.status).toSet().toList()
@@ -725,7 +728,7 @@ FeatureSearchConfig<Account> _buildAccountsConfig(WidgetRef ref) {
     identityOf: (a) => a.id,
     titleOf: (a) => a.institutionName,
     subtitleOf: (a) =>
-        '${a.accountType.code} · ${a.sovereigntyRegion}'
+        '${a.accountType.code} · ${regionLabel(regionIndex, a.sovereigntyRegion)}'
         '${a.accountNo != null ? ' · ${a.accountNo}' : ''}',
     extraFields: (a) => [
       a.accountNo ?? '',
@@ -762,7 +765,7 @@ FeatureSearchConfig<Account> _buildAccountsConfig(WidgetRef ref) {
           chips: [
             for (final r in regions)
               SearchFilterChipSpec<Account>(
-                label: r,
+                label: regionLabel(regionIndex, r),
                 predicate: (a) => a.sovereigntyRegion == r,
               ),
           ],

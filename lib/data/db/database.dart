@@ -74,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -361,12 +361,12 @@ class AppDatabase extends _$AppDatabase {
           );
         }
         if (from < 18) {
-          // v17 → v18：精简内置主权地区预设，只保留 HK / CN / US / SG / GB / CRYPTO。
+          // v17 → v18：清理旧的内置主权地区集合；当前保留项目认可的金融国家/地区预设。
           // 删除不在新预设内的旧地区（用户自建的地区 is_builtin=0 不受影响）。
           await customStatement(
             "DELETE FROM dict_entries "
             "WHERE type = 'SOVEREIGNTY_REGION' AND is_builtin = 1 "
-            "AND code NOT IN ('HK','CN','US','SG','GB','CRYPTO')",
+            "AND code NOT IN ('HK','CN','US','SG','GB','DE','FR','IT','JP','KR','TW','MY','CA','AU','EU','CRYPTO')",
           );
           // 把「中国香港」更名为「香港」（仅更新 NULL 或旧值，保留用户自定义）。
           await customStatement(
@@ -387,7 +387,7 @@ class AppDatabase extends _$AppDatabase {
             "        '🔐', '数字', '0xFF38BDF8', 18.0, -82.0, "
             "        $now18, $now18)",
           );
-          // 回填其余 5 个内置地区的 UI 元数据（只写 NULL 列，不覆盖用户改动）。
+          // 回填当前内置金融地区集合的 UI 元数据（只写 NULL 列，不覆盖用户改动）。
           await _backfillRegionMeta(this);
         }
         if (from < 19) {
@@ -512,6 +512,9 @@ class AppDatabase extends _$AppDatabase {
           await _seedBuiltinDictEntries(this);
           await seedBuiltinChannels(this);
         }
+        if (from < 25) {
+          await _seedBuiltinDictEntries(this);
+        }
       }); // end transaction
     },
     beforeOpen: (details) async {
@@ -553,13 +556,23 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
     ['CHATS', '港元即时支付结算系统', 'Clearing House Automated Transfer System'],
   ]);
 
-  // 主权地区：覆盖常见账户归属地；ISO 3166-1 alpha-2 + 虚拟区域代码。
+  // 主权地区：覆盖主要金融国家 / 地区；ISO 3166-1 alpha-2 + 区域/虚拟代码。
   await seed('SOVEREIGNTY_REGION', const [
     ['HK', '香港', 'Hong Kong'],
     ['CN', '中国大陆', 'China'],
     ['US', '美国', 'United States'],
     ['SG', '新加坡', 'Singapore'],
     ['GB', '英国', 'United Kingdom'],
+    ['DE', '德国', 'Germany'],
+    ['FR', '法国', 'France'],
+    ['IT', '意大利', 'Italy'],
+    ['JP', '日本', 'Japan'],
+    ['KR', '韩国', 'South Korea'],
+    ['TW', '中国台湾', 'Taiwan'],
+    ['MY', '马来西亚', 'Malaysia'],
+    ['CA', '加拿大', 'Canada'],
+    ['AU', '澳大利亚', 'Australia'],
+    ['EU', '欧盟', 'European Union'],
     ['CRYPTO', '加密', 'Crypto'],
   ]);
 
@@ -661,6 +674,16 @@ Future<void> _backfillRegionMeta(AppDatabase db) async {
     ['US', '🇺🇸', '美洲', '0xFF64748B', -98.5795, 39.8283],
     ['SG', '🇸🇬', '亚太', '0xFF22C55E', 103.8198, 1.3521],
     ['GB', '🇬🇧', '欧洲', '0xFFA78BFA', -3.4360, 55.3781],
+    ['DE', '🇩🇪', '欧洲', '0xFF7B6BD4', 10.4515, 51.1657],
+    ['FR', '🇫🇷', '欧洲', '0xFF8B5CF6', 2.2137, 46.2276],
+    ['IT', '🇮🇹', '欧洲', '0xFF9F7AEA', 12.5674, 41.8719],
+    ['JP', '🇯🇵', '亚太', '0xFFDC2626', 138.2529, 36.2048],
+    ['KR', '🇰🇷', '亚太', '0xFF2563EB', 127.7669, 35.9078],
+    ['TW', '🇹🇼', '亚太', '0xFF14B8A6', 120.9605, 23.6978],
+    ['MY', '🇲🇾', '亚太', '0xFF06B6D4', 101.9758, 4.2105],
+    ['CA', '🇨🇦', '美洲', '0xFF10B981', -106.3468, 56.1304],
+    ['AU', '🇦🇺', '亚太', '0xFF0EA5E9', 133.7751, -25.2744],
+    ['EU', '🇪🇺', '欧洲', '0xFF6366F1', 10.0, 50.0],
     ['CRYPTO', '🔐', '数字', '0xFF38BDF8', 18.0, -82.0],
   ];
   for (final r in regions) {
@@ -697,6 +720,7 @@ Future<void> _backfillRegionAnchors(AppDatabase db) async {
     ['TW', 121.5654, 25.0330],
     ['MY', 101.6869, 3.1390],
     ['AU', 151.2093, -33.8688],
+    ['EU', 4.3517, 50.8503],
     ['CRYPTO', 18.0, -82.0],
   ];
   for (final r in anchors) {

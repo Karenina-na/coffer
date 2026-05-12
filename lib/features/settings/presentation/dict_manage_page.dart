@@ -61,7 +61,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
 
   bool get _isRegion => type == DictType.sovereigntyRegion;
 
-  Widget _buildRegionSubtitle(DictEntry e) {
+  Widget _buildRegionSubtitle(DictEntry e, Map<String, String> regionNameByCode) {
     final parts = <Widget>[];
     if (e.continent != null) {
       parts.add(const Icon(Icons.public, size: 12, color: GwpColors.textMuted));
@@ -96,9 +96,10 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
     }
     if (e.parentRegion != null) {
       if (parts.isNotEmpty) parts.add(const SizedBox(width: 8));
+      final parentLabel = regionNameByCode[e.parentRegion!] ?? e.parentRegion!;
       parts.add(
         Text(
-          '⊂ ${e.parentRegion}',
+          '⊂ $parentLabel',
           style: const TextStyle(fontSize: 11, color: GwpColors.info),
         ),
       );
@@ -155,6 +156,10 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
     WidgetRef ref,
     List<DictEntry> entries,
   ) {
+    final regionNameByCode = {
+      for (final entry in entries)
+        if (entry.type == DictType.sovereigntyRegion) entry.code: entry.name,
+    };
     if (entries.isEmpty) {
       return const Center(child: Text('暂无条目，从右上「更多 → 新建」新增'));
     }
@@ -194,7 +199,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
             ],
           ),
           subtitle: _isRegion
-              ? _buildRegionSubtitle(e)
+              ? _buildRegionSubtitle(e, regionNameByCode)
               : e.nameEn == null
               ? null
               : Text(e.nameEn!),

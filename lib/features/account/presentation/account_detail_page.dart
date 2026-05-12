@@ -17,6 +17,7 @@ import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
 import '../../../core/ui/protocol_display.dart';
+import '../../../core/ui/region_meta.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
@@ -373,15 +374,19 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     valuedAssetsByAccountProvider(widget.accountId),
                   ),
                 ),
-                data: (valued) => _Body(
-                  account: account,
-                  assets: assets,
-                  valuedAssets: valued.assets,
-                  cardsAsync: cardsAsync,
-                  valuationCurrency: valuationCurrency,
-                  missingRateCount: valued.missingAssetIds.length,
-                  accountId: widget.accountId,
-                ),
+                data: (valued) {
+                  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+                  return _Body(
+                    account: account,
+                    accountRegionLabel: regionLabel(regionIndex, account.sovereigntyRegion),
+                    assets: assets,
+                    valuedAssets: valued.assets,
+                    cardsAsync: cardsAsync,
+                    valuationCurrency: valuationCurrency,
+                    missingRateCount: valued.missingAssetIds.length,
+                    accountId: widget.accountId,
+                  );
+                },
               );
             },
           );
@@ -398,6 +403,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
 class _Body extends StatelessWidget {
   const _Body({
     required this.account,
+    required this.accountRegionLabel,
     required this.assets,
     required this.valuedAssets,
     required this.cardsAsync,
@@ -407,6 +413,7 @@ class _Body extends StatelessWidget {
   });
 
   final Account account;
+  final String accountRegionLabel;
   final List<Asset> assets;
   final List<ValuedAsset> valuedAssets;
   final AsyncValue<List<BankCard>> cardsAsync;
@@ -424,6 +431,7 @@ class _Body extends StatelessWidget {
       children: [
         _AccountHero(
           account: account,
+          accountRegionLabel: accountRegionLabel,
           assets: assets,
           valuedAssets: valuedAssets,
           cardsAsync: cardsAsync,
@@ -466,6 +474,7 @@ class _Body extends StatelessWidget {
 class _AccountHero extends StatelessWidget {
   const _AccountHero({
     required this.account,
+    required this.accountRegionLabel,
     required this.assets,
     required this.valuedAssets,
     required this.cardsAsync,
@@ -474,6 +483,7 @@ class _AccountHero extends StatelessWidget {
   });
 
   final Account account;
+  final String accountRegionLabel;
   final List<Asset> assets;
   final List<ValuedAsset> valuedAssets;
   final AsyncValue<List<BankCard>> cardsAsync;
@@ -531,7 +541,7 @@ class _AccountHero extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                       '${account.accountType.labelZh} · ${account.sovereigntyRegion}'
+                      '${account.accountType.labelZh} · $accountRegionLabel'
                       '${account.accountNo != null ? ' · ${account.accountNo}' : ''}',
                       style: const TextStyle(
                         fontSize: 12,

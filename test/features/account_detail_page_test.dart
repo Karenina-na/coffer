@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:gwp/core/errors.dart';
 import 'package:gwp/core/result.dart';
+import 'package:gwp/core/ui/region_meta.dart';
 import 'package:gwp/data/providers/dict_providers.dart';
 import 'package:gwp/domain/entities/account.dart';
 import 'package:gwp/domain/entities/account_channel.dart';
@@ -131,6 +132,16 @@ Future<void> _pumpPage(
       updatedAt: now,
     ),
   ];
+  final regionEntries = [
+    DictEntry(
+      id: 201,
+      type: DictType.sovereigntyRegion,
+      code: 'CN',
+      name: '中国大陆',
+      createdAt: now,
+      updatedAt: now,
+    ),
+  ];
 
   await tester.pumpWidget(
     ProviderScope(
@@ -159,6 +170,14 @@ Future<void> _pumpPage(
         ),
         dictEntriesProvider(DictType.transferProtocol).overrideWith(
           (ref) => Stream.value(protocolEntries),
+        ),
+        dictEntriesProvider(DictType.sovereigntyRegion).overrideWith(
+          (ref) => Stream.value(regionEntries),
+        ),
+        regionMetaIndexProvider.overrideWith(
+          (ref) => Stream.value({
+            'CN': const RegionMeta(code: 'CN', displayName: '中国大陆'),
+          }),
         ),
         if (saveConfigUseCase != null)
           saveAccountChannelConfigUseCaseProvider.overrideWithValue(saveConfigUseCase),

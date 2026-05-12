@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/money/money.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/region_meta.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/entities/card_enums.dart';
@@ -172,6 +174,7 @@ class _CardDetailSheetState extends ConsumerState<CardDetailSheet> {
     final c = widget.card;
     final brand = BrandTheme.of(c.cardOrganization);
     final scheme = Theme.of(context).colorScheme;
+    final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
 
     return DraggableScrollableSheet(
       expand: false,
@@ -303,6 +306,10 @@ class _CardDetailSheetState extends ConsumerState<CardDetailSheet> {
               if (widget.account != null)
                 _AccountLinkTile(
                   account: widget.account!,
+                  accountRegionLabel: regionLabel(
+                    regionIndex,
+                    widget.account!.sovereigntyRegion,
+                  ),
                   onTap: () {
                     Navigator.of(context).pop();
                     context.push('/accounts/${widget.account!.id}');
@@ -1052,8 +1059,13 @@ class _ExpiryRow extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _AccountLinkTile extends StatelessWidget {
-  const _AccountLinkTile({required this.account, required this.onTap});
+  const _AccountLinkTile({
+    required this.account,
+    required this.accountRegionLabel,
+    required this.onTap,
+  });
   final Account account;
+  final String accountRegionLabel;
   final VoidCallback onTap;
 
   @override
@@ -1099,7 +1111,7 @@ class _AccountLinkTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${account.accountType.labelZh} · ${account.sovereigntyRegion}'
+                      '${account.accountType.labelZh} · $accountRegionLabel'
                       '${account.accountNo != null ? ' · ${account.accountNo}' : ''}',
                       style: TextStyle(
                         fontSize: 11,

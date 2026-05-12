@@ -18,6 +18,8 @@ import '../../../core/ui/gwp_mini_chart.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_status_badge.dart';
 import '../../../core/ui/sync_window_menu_button.dart';
+import '../../../core/ui/region_meta.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
@@ -227,6 +229,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
           }
           final accountAsync = ref.watch(accountByIdProvider(asset.accountId));
           final account = accountAsync.asData?.value;
+          final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
           final valuationCurrency = ref.watch(valuationCurrencyProvider);
           final allPoints = _extractPoints(historyAsync.asData?.value ?? const []);
           final filtered = _filterByRange(allPoints, _rangeDays);
@@ -285,7 +288,15 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                 _SectionCard(
                   icon: Icons.account_balance_outlined,
                   title: '关联账户',
-                  children: [_AccountLinkCard(asset: asset, account: account)],
+                  children: [
+                    _AccountLinkCard(
+                      asset: asset,
+                      account: account,
+                      accountRegionLabel: account == null
+                          ? null
+                          : regionLabel(regionIndex, account.sovereigntyRegion),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: GwpSpacing.md),
                 _SectionCard(
@@ -1600,9 +1611,14 @@ class _MetricCell extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _AccountLinkCard extends StatelessWidget {
-  const _AccountLinkCard({required this.asset, required this.account});
+  const _AccountLinkCard({
+    required this.asset,
+    required this.account,
+    required this.accountRegionLabel,
+  });
   final Asset asset;
   final Account? account;
+  final String? accountRegionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1674,7 +1690,7 @@ class _AccountLinkCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${a.accountType.labelZh} · ${a.sovereigntyRegion}'
+                      '${a.accountType.labelZh} · ${accountRegionLabel ?? a.sovereigntyRegion}'
                       '${a.accountNo != null ? ' · ${a.accountNo}' : ''}',
                       style: const TextStyle(
                         fontSize: 11,

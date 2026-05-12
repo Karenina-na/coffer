@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/money/money.dart';
+import '../../../core/ui/region_meta.dart';
 import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/ui/gwp_node_map.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
@@ -15,6 +16,7 @@ import '../../asset/presentation/asset_providers.dart';
 import '../../card/presentation/card_providers.dart';
 import '../../channel/presentation/channel_providers.dart';
 import '../../event/presentation/event_providers.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../data/providers/exchange_rate_providers.dart';
 
 class DashboardSummary {
@@ -177,6 +179,24 @@ final allocationByRegionProvider =
   return _toSortedSlices(bucket);
 });
 
+final allocationByRegionAggregateProvider =
+    FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
+  final valued = await ref.watch(valuedAssetsProvider.future);
+  final accounts = await ref.watch(accountListProvider.future);
+  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+  final accountById = {for (final account in accounts) account.id: account};
+  final bucket = <String, Decimal>{};
+  for (final item in valued.assets) {
+    final marketValue = item.valuedAmount;
+    if (marketValue == null) continue;
+    final region =
+        accountById[item.asset.accountId]?.sovereigntyRegion ?? 'UNKNOWN';
+    final aggregate = regionAggregateKey(regionIndex, region);
+    bucket[aggregate] = (bucket[aggregate] ?? Decimal.zero) + marketValue;
+  }
+  return _toSortedSlices(bucket);
+});
+
 class NodeMapData {
   const NodeMapData({
     required this.nodes,
@@ -187,11 +207,15 @@ class NodeMapData {
   final List<MapEdge> edges;
 }
 
-final nodeMapDataProvider = FutureProvider.autoDispose<NodeMapData>((ref) async {
+Future<NodeMapData> _buildNodeMapData(
+  Ref ref, {
+  required bool aggregateParents,
+}) async {
   final accounts = await ref.watch(accountListProvider.future);
   final valued = await ref.watch(valuedAssetsProvider.future);
   final channels = await ref.watch(channelListProvider.future);
   final accountChannels = await ref.watch(accountChannelListProvider.future);
+  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
 
   final assetTotalsByAccount = <String, Decimal>{};
   for (final item in valued.assets) {
@@ -205,7 +229,9 @@ final nodeMapDataProvider = FutureProvider.autoDispose<NodeMapData>((ref) async 
   final regionAccountCounts = <String, int>{};
   final regionByAccountId = <String, String>{};
   for (final account in accounts) {
-    final region = account.sovereigntyRegion;
+    final region = aggregateParents
+        ? regionAggregateKey(regionIndex, account.sovereigntyRegion)
+        : account.sovereigntyRegion;
     regionByAccountId[account.id] = region;
     regionTotals[region] = (regionTotals[region] ?? Decimal.zero) +
         (assetTotalsByAccount[account.id] ?? Decimal.zero);
@@ -258,6 +284,15 @@ final nodeMapDataProvider = FutureProvider.autoDispose<NodeMapData>((ref) async 
       .toList(growable: false);
 
   return NodeMapData(nodes: nodes, edges: edges);
+}
+
+final nodeMapDataProvider = FutureProvider.autoDispose<NodeMapData>((ref) {
+  return _buildNodeMapData(ref, aggregateParents: false);
+});
+
+final nodeMapAggregateDataProvider =
+    FutureProvider.autoDispose<NodeMapData>((ref) {
+  return _buildNodeMapData(ref, aggregateParents: true);
 });
 
 enum BillKind { statementDay, paymentDue }

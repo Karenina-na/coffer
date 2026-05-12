@@ -42,7 +42,7 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
   FutureProvider<List<AllocationSlice>> get _provider => switch (_mode) {
         _AllocMode.currency => allocationByCurrencyProvider,
         _AllocMode.type => allocationByTypeProvider,
-        _AllocMode.region => allocationByRegionProvider,
+        _AllocMode.region => allocationByRegionAggregateProvider,
       };
 
   Color _colorOf(String key, int idx) => switch (_mode) {

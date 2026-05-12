@@ -10,6 +10,7 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
 import '../../../core/ui/protocol_display.dart';
+import '../../../core/ui/region_meta.dart';
 import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/channel.dart';
@@ -70,6 +71,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   Widget build(BuildContext context) {
     final c = widget.channel;
     final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
+    final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const <String, RegionMeta>{};
     final ProtocolIndex protocolIndex = {
       for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
     };
@@ -84,9 +86,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       children: [
         _headerCard(context, c, protocolIndex),
         const SizedBox(height: 16),
-        _ruleCard(context, c),
+        _ruleCard(context, c, regionIndex),
         const SizedBox(height: 16),
-        _MembersCard(channel: c),
+        _MembersCard(channel: c, regionIndex: regionIndex),
         const SizedBox(height: 16),
         Row(children: [
           Expanded(
@@ -150,7 +152,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     );
   }
 
-  Widget _ruleCard(BuildContext context, Channel c) {
+  Widget _ruleCard(BuildContext context, Channel c, RegionIndex regionIndex) {
     final rules = <_RuleItem>[
       _RuleItem(
         icon: Icons.toggle_on_outlined,
@@ -189,7 +191,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         value: c.dailyLimit?.toString() ?? '不限',
         ok: true,
       ),
-      ..._regionRules(c),
+      ..._regionRules(c, regionIndex),
     ];
     return Card(
       child: Padding(
@@ -219,7 +221,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     return '${f(c.effectiveFrom)}  →  ${f(c.effectiveTo)}';
   }
 
-  List<_RuleItem> _regionRules(Channel c) {
+  List<_RuleItem> _regionRules(Channel c, RegionIndex regionIndex) {
     final rule = c.sovereigntyRegionRule;
     if (rule == null || rule.isEmpty) {
       return [
@@ -232,8 +234,14 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       ];
     }
     final items = <_RuleItem>[];
-    final allowed = (rule['allowedRegions'] as List?)?.join(', ');
-    final blocked = (rule['blockedRegions'] as List?)?.join(', ');
+    final allowed = (rule['allowedRegions'] as List?)
+        ?.whereType<String>()
+        .map((code) => regionLabel(regionIndex, code))
+        .join(', ');
+    final blocked = (rule['blockedRegions'] as List?)
+        ?.whereType<String>()
+        .map((code) => regionLabel(regionIndex, code))
+        .join(', ');
     final sameRegion = rule['requireSameRegion'] == true;
     if (allowed != null && allowed.isNotEmpty) {
       items.add(_RuleItem(
@@ -299,9 +307,10 @@ class _RuleItem {
 
 /// 展示当前已接入此 Channel 的账户列表；管理动作在账户详情页完成。
 class _MembersCard extends ConsumerWidget {
-  const _MembersCard({required this.channel});
+  const _MembersCard({required this.channel, required this.regionIndex});
 
   final Channel channel;
+  final RegionIndex regionIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -359,7 +368,7 @@ class _MembersCard extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '${member.account.accountType.labelZh} · ${member.account.sovereigntyRegion}',
+                                '${member.account.accountType.labelZh} · ${regionLabel(regionIndex, member.account.sovereigntyRegion)}',
                               ),
                               const SizedBox(height: 2),
                               Text(

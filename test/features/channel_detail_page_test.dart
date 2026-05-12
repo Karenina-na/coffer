@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:gwp/core/ui/region_meta.dart';
 import 'package:gwp/domain/entities/account.dart';
 import 'package:gwp/domain/entities/account_channel.dart';
 import 'package:gwp/domain/entities/account_enums.dart';
@@ -90,6 +91,12 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
               updatedAt: now,
             ),
           ]),
+        ),
+        regionMetaIndexProvider.overrideWith(
+          (ref) => Stream.value({
+            'CN': const RegionMeta(code: 'CN', displayName: '中国大陆'),
+            'US': const RegionMeta(code: 'US', displayName: '美国'),
+          }),
         ),
       ],
       child: const MaterialApp(

@@ -77,7 +77,7 @@ final _topologyModelProvider = FutureProvider.autoDispose<_TopologyModel>((ref) 
       id: 'acc:${a.id}',
       label: a.institutionName,
       kind: _NodeKind.account,
-      region: a.sovereigntyRegion,
+      region: regionLabel(regionIndex, a.sovereigntyRegion),
       color: regionColor(regionIndex, a.sovereigntyRegion),
     ));
   }

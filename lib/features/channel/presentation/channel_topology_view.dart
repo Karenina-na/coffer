@@ -4,6 +4,8 @@ import 'package:graphview/GraphView.dart';
 
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/region_meta.dart';
+import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account.dart';
 import '../../account/presentation/account_providers.dart';
 import 'channel_providers.dart';
@@ -169,15 +171,17 @@ class _TopologyGraph extends ConsumerWidget {
             ),
           );
         }
-        return _GraphContainer(data: data);
+        final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+        return _GraphContainer(data: data, regionIndex: regionIndex);
       },
     );
   }
 }
 
 class _GraphContainer extends StatelessWidget {
-  const _GraphContainer({required this.data});
+  const _GraphContainer({required this.data, required this.regionIndex});
   final _TopologyData data;
+  final RegionIndex regionIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +230,9 @@ class _GraphContainer extends StatelessWidget {
           final acct = data.accountMap[id];
           return _NodeChip(
             label: acct?.institutionName ?? id.substring(0, 6),
-            region: acct?.sovereigntyRegion ?? '',
+            region: acct == null
+                ? ''
+                : regionLabel(regionIndex, acct.sovereigntyRegion),
           );
         },
       ),
