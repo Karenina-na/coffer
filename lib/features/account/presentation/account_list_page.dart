@@ -539,8 +539,8 @@ class _MiniDonut extends StatelessWidget {
 
   Widget _legendRow(_DonutSlice s, double total) {
     final pct = total > 0
-        ? displayPercentDouble(s.value / total * 100, fractionDigits: 1)
-        : '0.0%';
+        ? displayPercentDouble(s.value / total * 100)
+        : '0.00%';
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(

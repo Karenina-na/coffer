@@ -1170,7 +1170,7 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
 
     final pct = widget.totalValue > 0 ? (node.value / widget.totalValue) : 0.0;
     final pctStr =
-        widget.totalValue > 0 ? '${(pct * 100).toStringAsFixed(1)}%' : '—';
+        widget.totalValue > 0 ? '${(pct * 100).toStringAsFixed(2)}%' : '—';
 
     final continent = regionMetaOf(widget.regionIndex, node.regionCode)?.continent;
     final accentColor =

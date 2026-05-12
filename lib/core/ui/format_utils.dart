@@ -29,7 +29,7 @@ String displayDouble(
 
 String displayPercent(
   Decimal val, {
-  int fractionDigits = Money.defaultDisplayFractionDigits,
+  int fractionDigits = 2,
   bool alwaysShowSign = false,
 }) => Money.formatPercent(
   val,
@@ -39,7 +39,7 @@ String displayPercent(
 
 String displayPercentDouble(
   double val, {
-  int fractionDigits = Money.defaultDisplayFractionDigits,
+  int fractionDigits = 2,
   bool alwaysShowSign = false,
 }) => Money.formatPercentFromDouble(
   val,

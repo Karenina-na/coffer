@@ -550,7 +550,7 @@ class _PairRateCard extends ConsumerWidget {
                         child: GwpNumberText(
                           value: changePct == null
                               ? '—'
-                              : displayPercent(changePct, fractionDigits: 1, alwaysShowSign: true),
+                              : displayPercent(changePct, alwaysShowSign: true),
                           sign: sign,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

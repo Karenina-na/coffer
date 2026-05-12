@@ -246,7 +246,7 @@ class _AllocLegendRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${(pct * 100).toStringAsFixed(1)}%',
+            '${(pct * 100).toStringAsFixed(2)}%',
             style: const TextStyle(
               fontSize: 11,
               fontFamily: GwpTypo.monoFont,

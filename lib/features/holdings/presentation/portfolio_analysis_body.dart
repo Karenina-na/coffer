@@ -507,7 +507,7 @@ class _AssetRankingSection extends ConsumerWidget {
                 height: (ranked.length * 24.0).clamp(120, 240),
                 child: GwpBarRank(
                   items: ranked,
-                  formatValue: (v) => '${total > 0 ? displayPercentDouble(v / total * 100) : '0.0000%'}  ${compactValueCJK(v)}',
+                  formatValue: (v) => '${total > 0 ? displayPercentDouble(v / total * 100) : '0.00%'}  ${compactValueCJK(v)}',
                 ),
               ),
               const SizedBox(height: 8),
