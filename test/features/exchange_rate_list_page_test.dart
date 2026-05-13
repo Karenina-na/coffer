@@ -127,6 +127,7 @@ Future<void> _pumpPage(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        currencyFlagProvider.overrideWith((ref) => const {}),
         watchedPairListProvider.overrideWith(
           (ref) => Stream.value(
             [

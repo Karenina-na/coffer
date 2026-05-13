@@ -479,7 +479,7 @@ void main() {
     expect(find.text('USD/CNY'), findsWidgets);
     expect(router.routeInformationProvider.value.uri.toString(), '/rates');
 
-    await tester.drag(find.byType(ListView).first, const Offset(18, -280));
+    await tester.drag(find.byType(ReorderableListView).first, const Offset(18, -280));
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/rates');

@@ -98,16 +98,41 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
               subtitle: '点右上「管理币对」添加，再从「更多 → 数据同步」拉取最新数据',
             );
           }
-          return ListView(
+          return ReorderableListView(
+            buildDefaultDragHandles: false,
             padding: EdgeInsets.only(
               bottom: FloatingNavLayout.totalFloatingHeight(context) + 24,
             ),
+            header: Column(
+              children: [
+                _RatesSummaryCard(pairs: list),
+                const SizedBox(height: GwpSpacing.sm),
+              ],
+            ),
             children: [
-              _RatesSummaryCard(pairs: list),
-              const SizedBox(height: GwpSpacing.sm),
-              for (final pair in list)
-                _PairRateCard(pair: pair),
+              for (var i = 0; i < list.length; i++)
+                ReorderableDelayedDragStartListener(
+                  index: i,
+                  key: ValueKey('rate-${list[i].pairKey}'),
+                  child: _PairRateCard(pair: list[i]),
+                ),
             ],
+            onReorder: (oldIndex, newIndex) async {
+              if (newIndex > oldIndex) newIndex -= 1;
+              final reordered = [...list];
+              final moved = reordered.removeAt(oldIndex);
+              reordered.insert(newIndex, moved);
+              final result = await ref
+                  .read(manageWatchedPairUseCaseProvider)
+                  .reorder(reordered.map((e) => e.pairKey).toList(growable: false));
+              if (!context.mounted) return;
+              result.when(
+                ok: (_) {},
+                err: (e) => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('重排失败：${errorToMessage(e)}')),
+                ),
+              );
+            },
           );
         },
       ),
@@ -392,6 +417,31 @@ _PairSeriesSummary? _pairSeriesSummaryFromAsync(AsyncValue<List<ExchangeRate>> a
 }
 
 // ──────────────────────────────────────────────────────────────
+// Shared currency flag pair
+// ──────────────────────────────────────────────────────────────
+
+class _CurrencyFlags extends ConsumerWidget {
+  const _CurrencyFlags({required this.base, required this.quote});
+
+  final String base;
+  final String quote;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final flagMap = ref.watch(currencyFlagProvider);
+    String flag(String code) => flagMap[code] ?? code;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(flag(base), style: const TextStyle(fontSize: 14)),
+        const SizedBox(height: 2),
+        Text(flag(quote), style: const TextStyle(fontSize: 14)),
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
 // Pair rate card (card-wrapped, larger sparkline)
 // ──────────────────────────────────────────────────────────────
 
@@ -479,6 +529,11 @@ class _PairRateCard extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                _CurrencyFlags(
+                  base: pair.baseCurrency,
+                  quote: pair.quoteCurrency,
+                ),
+                const SizedBox(width: GwpSpacing.sm),
                 Expanded(
                   flex: 4,
                   child: Column(
@@ -687,91 +742,85 @@ class _PairTile extends ConsumerWidget {
         horizontal: GwpSpacing.base,
         vertical: GwpSpacing.xs,
       ),
-      child: ReorderableDelayedDragStartListener(
-        index: reorderIndex,
-        child: Material(
-          color: GwpColors.surface1,
-          borderRadius: BorderRadius.circular(10),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => PairDetailPage(pairKey: pair.pairKey),
+      child: Material(
+        color: GwpColors.surface1,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute<void>(
+                builder: (_) => PairDetailPage(pairKey: pair.pairKey),
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: GwpColors.border, width: 0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: GwpSpacing.base,
+              vertical: GwpSpacing.md,
+            ),
+            child: Row(
+              children: [
+                _CurrencyFlags(
+                  base: pair.baseCurrency,
+                  quote: pair.quoteCurrency,
                 ),
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: GwpColors.border, width: 0.5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: GwpSpacing.base,
-                vertical: GwpSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: GwpColors.surface3,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.sync_alt_outlined,
-                      size: 18,
-                      color: GwpColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: GwpSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          pair.pairKey,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: GwpColors.textPrimary,
-                          ),
+                const SizedBox(width: GwpSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pair.pairKey,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: GwpColors.textPrimary,
                         ),
-                        Text(
-                          '${pair.baseCurrency} → ${pair.quoteCurrency}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: GwpColors.textMuted,
-                          ),
+                      ),
+                      Text(
+                        '${pair.baseCurrency} → ${pair.quoteCurrency}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: GwpColors.textMuted,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: '移除',
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 20,
-                      color: GwpColors.negative,
-                    ),
-                    onPressed: () async {
-                      final r = await ref
-                          .read(manageWatchedPairUseCaseProvider)
-                          .remove(pair.pairKey);
-                      if (!context.mounted) return;
-                      r.when(
-                        ok: (_) {},
-                        err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('移除失败：${errorToMessage(e)}')),
-                        ),
-                      );
-                    },
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: '移除',
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: GwpColors.negative,
                   ),
-                ],
-              ),
+                  onPressed: () async {
+                    final r = await ref
+                        .read(manageWatchedPairUseCaseProvider)
+                        .remove(pair.pairKey);
+                    if (!context.mounted) return;
+                    r.when(
+                      ok: (_) {},
+                      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('移除失败：${errorToMessage(e)}')),
+                      ),
+                    );
+                  },
+                ),
+                ReorderableDelayedDragStartListener(
+                  index: reorderIndex,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.drag_handle, color: GwpColors.textMuted),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
