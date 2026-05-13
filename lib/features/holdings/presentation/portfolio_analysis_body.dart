@@ -8,6 +8,7 @@ import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_bar_rank.dart';
 import '../../../core/ui/gwp_radar_chart.dart';
+import '../../../core/ui/horizontal_gesture_guard.dart';
 import 'portfolio_providers.dart';
 
 /// Fourth tab body in holdings page — portfolio analysis dashboard.
@@ -561,32 +562,34 @@ class _DimensionExplorerState extends ConsumerState<_DimensionExplorer> {
           // Chip row
           SizedBox(
             height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _labels.length,
-              separatorBuilder: (_, _) => const SizedBox(width: GwpSpacing.sm),
-              itemBuilder: (_, i) => ChoiceChip(
-                avatar: Icon(_icons[i], size: 14),
-                label: Text(_labels[i]),
-                selected: _selectedIndex == i,
-                onSelected: (_) => setState(() => _selectedIndex = i),
-                selectedColor:
-                    GwpColors.actionPrimary.withValues(alpha: 0.15),
-                backgroundColor: GwpColors.surface2,
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  color: _selectedIndex == i
-                      ? GwpColors.actionPrimary
-                      : GwpColors.textSecondary,
+            child: HorizontalGestureGuard(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _labels.length,
+                separatorBuilder: (_, _) => const SizedBox(width: GwpSpacing.sm),
+                itemBuilder: (_, i) => ChoiceChip(
+                  avatar: Icon(_icons[i], size: 14),
+                  label: Text(_labels[i]),
+                  selected: _selectedIndex == i,
+                  onSelected: (_) => setState(() => _selectedIndex = i),
+                  selectedColor:
+                      GwpColors.actionPrimary.withValues(alpha: 0.15),
+                  backgroundColor: GwpColors.surface2,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: _selectedIndex == i
+                        ? GwpColors.actionPrimary
+                        : GwpColors.textSecondary,
+                  ),
+                  side: BorderSide(
+                    color: _selectedIndex == i
+                        ? GwpColors.actionPrimary.withValues(alpha: 0.4)
+                        : GwpColors.border,
+                    width: 0.5,
+                  ),
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                 ),
-                side: BorderSide(
-                  color: _selectedIndex == i
-                      ? GwpColors.actionPrimary.withValues(alpha: 0.4)
-                      : GwpColors.border,
-                  width: 0.5,
-                ),
-                showCheckmark: false,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
             ),
           ),
@@ -719,9 +722,11 @@ class _CurrencyExposureSection extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _buildGrid(matrix),
+              HorizontalGestureGuard(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: _buildGrid(matrix),
+                ),
               ),
               const SizedBox(height: GwpSpacing.sm),
               _HeatLegend(maxValue: matrix.maxValue),

@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/app_top_bar.dart';
 import '../../../core/ui/global_search_delegate.dart';
+import '../../../core/ui/horizontal_gesture_guard.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../account/presentation/account_list_page.dart';
@@ -30,8 +30,11 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
   late final TabController _tab;
   late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
-  bool _boundaryHandoffLocked = false;
   bool _syncingTabToRoute = false;
+  final Set<int> _guardedPointers = <int>{};
+  final Set<int> _blockedPointers = <int>{};
+  Offset? _dragStartPosition;
+  bool _swipeTriggered = false;
 
   @override
   void initState() {
@@ -100,44 +103,34 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     _syncingTabToRoute = false;
   }
 
+  bool _handleGuardNotification(HorizontalGestureGuardNotification notification) {
+    if (notification.active) {
+      _guardedPointers.add(notification.pointer);
+      _blockedPointers.add(notification.pointer);
+    } else {
+      _guardedPointers.remove(notification.pointer);
+    }
+    return notification.consumeAncestors;
+  }
+
   bool _handleBoundaryScroll(ScrollNotification notification) {
-    if (notification.metrics.axis != Axis.horizontal) return false;
-    if (notification is UserScrollNotification &&
-        notification.direction == ScrollDirection.idle) {
-      _boundaryHandoffLocked = false;
-      return false;
-    }
-    if (notification is ScrollEndNotification) {
-      _boundaryHandoffLocked = false;
-      return false;
-    }
-    if (notification is! OverscrollNotification || _boundaryHandoffLocked) {
-      return false;
-    }
+    return false;
+  }
 
-    final direction = switch (notification.overscroll.sign) {
-      < 0 => HorizontalSwipeDirection.backward,
-      > 0 => HorizontalSwipeDirection.forward,
-      _ => null,
-    };
-    if (direction == null) return false;
+  void _resetDrag() {
+    _dragStartPosition = null;
+    _swipeTriggered = false;
+  }
 
-    final isAtLeadingEdge = _tab.index == 0 &&
-        direction == HorizontalSwipeDirection.backward;
-    final isAtTrailingEdge = _tab.index == _tab.length - 1 &&
-        direction == HorizontalSwipeDirection.forward;
-    if (!isAtLeadingEdge && !isAtTrailingEdge) return false;
-
+  Future<void> _handleTabSwipe(HorizontalSwipeDirection direction) async {
+    if (_guardedPointers.isNotEmpty || _swipeTriggered) return;
+    _swipeTriggered = true;
+    final handled = await _handleHorizontalSwipe(direction);
+    if (handled) return;
     final binding = ref.read(mainNavigationSwipeActionProvider);
     final handler = binding?.handler;
-    if (handler == null) return false;
-    _boundaryHandoffLocked = true;
-    Future<void>.microtask(() async {
-      final handled = await handler(direction);
-      if (!mounted || handled) return;
-      _boundaryHandoffLocked = false;
-    });
-    return false;
+    if (handler == null) return;
+    await handler(direction);
   }
 
   void _syncTopSearch() {
@@ -164,16 +157,74 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
           ],
         ),
       ),
-      body: NotificationListener<ScrollNotification>(
-        onNotification: _handleBoundaryScroll,
-        child: TabBarView(
-          controller: _tab,
-          children: const [
-            AccountListBody(),
-            AssetListBody(),
-            TransferSimulateBody(),
-            PortfolioAnalysisBody(),
-          ],
+      body: NotificationListener<HorizontalGestureGuardNotification>(
+        onNotification: _handleGuardNotification,
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (event) {
+            _dragStartPosition = event.position;
+            _swipeTriggered = false;
+          },
+          onPointerMove: (event) {
+            final start = _dragStartPosition;
+            if (start == null ||
+                _swipeTriggered ||
+                _guardedPointers.isNotEmpty ||
+                _blockedPointers.contains(event.pointer)) {
+              return;
+            }
+            final delta = event.position - start;
+            final dx = delta.dx.abs();
+            final dy = delta.dy.abs();
+            if (dx < 56) return;
+            if (dx <= dy * 1.35) return;
+            unawaited(
+              _handleTabSwipe(
+                delta.dx > 0
+                    ? HorizontalSwipeDirection.backward
+                    : HorizontalSwipeDirection.forward,
+              ),
+            );
+          },
+          onPointerUp: (event) {
+            final start = _dragStartPosition;
+            if (start != null &&
+                !_swipeTriggered &&
+                _guardedPointers.isEmpty &&
+                !_blockedPointers.contains(event.pointer)) {
+              final delta = event.position - start;
+              final dx = delta.dx.abs();
+              final dy = delta.dy.abs();
+              if (dx >= 120 && dx > dy * 1.5) {
+                unawaited(
+                  _handleTabSwipe(
+                    delta.dx > 0
+                        ? HorizontalSwipeDirection.backward
+                        : HorizontalSwipeDirection.forward,
+                  ),
+                );
+              }
+            }
+            _blockedPointers.remove(event.pointer);
+            _resetDrag();
+          },
+          onPointerCancel: (event) {
+            _blockedPointers.remove(event.pointer);
+            _resetDrag();
+          },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleBoundaryScroll,
+            child: TabBarView(
+              controller: _tab,
+              physics: const NeverScrollableScrollPhysics(),
+              children: const [
+                AccountListBody(),
+                AssetListBody(),
+                TransferSimulateBody(),
+                PortfolioAnalysisBody(),
+              ],
+            ),
+          ),
         ),
       ),
     );

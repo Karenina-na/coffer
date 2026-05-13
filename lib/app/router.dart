@@ -11,6 +11,7 @@ import '../core/result.dart';
 import '../core/ui/design_tokens.dart';
 import '../core/ui/global_search_delegate.dart';
 import '../core/ui/gwp_empty_state.dart';
+import '../core/ui/horizontal_gesture_guard.dart';
 import '../core/ui/horizontal_swipe_action.dart';
 import '../core/ui/top_search_action.dart';
 import '../features/account/presentation/account_create_page.dart';
@@ -422,15 +423,25 @@ class _ShellBodySwipeSurface extends StatefulWidget {
 class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
   double? _dragStartX;
   bool _swipeTriggered = false;
+  final Set<int> _guardedPointers = <int>{};
 
   void _resetDrag() {
     _dragStartX = null;
     _swipeTriggered = false;
   }
 
+  bool _handleGuardNotification(HorizontalGestureGuardNotification notification) {
+    if (notification.active) {
+      _guardedPointers.add(notification.pointer);
+    } else {
+      _guardedPointers.remove(notification.pointer);
+    }
+    return false;
+  }
+
   void _handleHorizontalDragUpdate(DragUpdateDetails details) {
     final startX = _dragStartX;
-    if (startX == null || _swipeTriggered) return;
+    if (startX == null || _swipeTriggered || _guardedPointers.isNotEmpty) return;
     final delta = details.globalPosition.dx - startX;
     if (delta.abs() < _HomeShellState._shellSwipeDistanceThreshold) return;
     _swipeTriggered = true;
@@ -442,20 +453,23 @@ class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (event) {
-        _dragStartX = event.position.dx;
-        _swipeTriggered = false;
-      },
-      onPointerUp: (_) => _resetDrag(),
-      onPointerCancel: (_) => _resetDrag(),
-      child: GestureDetector(
+    return NotificationListener<HorizontalGestureGuardNotification>(
+      onNotification: _handleGuardNotification,
+      child: Listener(
         behavior: HitTestBehavior.translucent,
-        onHorizontalDragUpdate: _handleHorizontalDragUpdate,
-        onHorizontalDragEnd: (_) => _resetDrag(),
-        onHorizontalDragCancel: _resetDrag,
-        child: widget.child,
+        onPointerDown: (event) {
+          _dragStartX = event.position.dx;
+          _swipeTriggered = false;
+        },
+        onPointerUp: (_) => _resetDrag(),
+        onPointerCancel: (_) => _resetDrag(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragUpdate: _handleHorizontalDragUpdate,
+          onHorizontalDragEnd: (_) => _resetDrag(),
+          onHorizontalDragCancel: _resetDrag,
+          child: widget.child,
+        ),
       ),
     );
   }

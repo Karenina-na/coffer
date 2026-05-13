@@ -3,7 +3,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +15,7 @@ import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
 import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/horizontal_gesture_guard.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/domain_event.dart';
@@ -88,8 +88,11 @@ class _EventListPageState extends ConsumerState<EventListPage>
   late final TabController _tabController;
   late final HorizontalSwipeAction _horizontalSwipeAction;
   late final TopSearchOpener _topSearchOpener;
-  bool _boundaryHandoffLocked = false;
   bool _syncingTabToRoute = false;
+  final Set<int> _guardedPointers = <int>{};
+  final Set<int> _blockedPointers = <int>{};
+  Offset? _dragStartPosition;
+  bool _swipeTriggered = false;
 
   @override
   void initState() {
@@ -166,44 +169,34 @@ class _EventListPageState extends ConsumerState<EventListPage>
     _syncingTabToRoute = false;
   }
 
+  bool _handleGuardNotification(HorizontalGestureGuardNotification notification) {
+    if (notification.active) {
+      _guardedPointers.add(notification.pointer);
+      _blockedPointers.add(notification.pointer);
+    } else {
+      _guardedPointers.remove(notification.pointer);
+    }
+    return notification.consumeAncestors;
+  }
+
   bool _handleBoundaryScroll(ScrollNotification notification) {
-    if (notification.metrics.axis != Axis.horizontal) return false;
-    if (notification is UserScrollNotification &&
-        notification.direction == ScrollDirection.idle) {
-      _boundaryHandoffLocked = false;
-      return false;
-    }
-    if (notification is ScrollEndNotification) {
-      _boundaryHandoffLocked = false;
-      return false;
-    }
-    if (notification is! OverscrollNotification || _boundaryHandoffLocked) {
-      return false;
-    }
+    return false;
+  }
 
-    final direction = switch (notification.overscroll.sign) {
-      < 0 => HorizontalSwipeDirection.backward,
-      > 0 => HorizontalSwipeDirection.forward,
-      _ => null,
-    };
-    if (direction == null) return false;
+  void _resetDrag() {
+    _dragStartPosition = null;
+    _swipeTriggered = false;
+  }
 
-    final isAtLeadingEdge = _tabController.index == 0 &&
-        direction == HorizontalSwipeDirection.backward;
-    final isAtTrailingEdge = _tabController.index == _tabController.length - 1 &&
-        direction == HorizontalSwipeDirection.forward;
-    if (!isAtLeadingEdge && !isAtTrailingEdge) return false;
-
+  Future<void> _handleTabSwipe(HorizontalSwipeDirection direction) async {
+    if (_guardedPointers.isNotEmpty || _swipeTriggered) return;
+    _swipeTriggered = true;
+    final handled = await _handleHorizontalSwipe(direction);
+    if (handled) return;
     final binding = ref.read(mainNavigationSwipeActionProvider);
     final handler = binding?.handler;
-    if (handler == null) return false;
-    _boundaryHandoffLocked = true;
-    Future<void>.microtask(() async {
-      final handled = await handler(direction);
-      if (!mounted || handled) return;
-      _boundaryHandoffLocked = false;
-    });
-    return false;
+    if (handler == null) return;
+    await handler(direction);
   }
 
   void _openSearch() {
@@ -248,15 +241,73 @@ class _EventListPageState extends ConsumerState<EventListPage>
           ],
         ),
       ),
-      body: NotificationListener<ScrollNotification>(
-        onNotification: _handleBoundaryScroll,
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _CalendarTab(key: _calendarKey),
-            _PendingTab(pending: pending),
-            _FailedTab(failed: failed),
-          ],
+      body: NotificationListener<HorizontalGestureGuardNotification>(
+        onNotification: _handleGuardNotification,
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (event) {
+            _dragStartPosition = event.position;
+            _swipeTriggered = false;
+          },
+          onPointerMove: (event) {
+            final start = _dragStartPosition;
+            if (start == null ||
+                _swipeTriggered ||
+                _guardedPointers.isNotEmpty ||
+                _blockedPointers.contains(event.pointer)) {
+              return;
+            }
+            final delta = event.position - start;
+            final dx = delta.dx.abs();
+            final dy = delta.dy.abs();
+            if (dx < 56) return;
+            if (dx <= dy * 1.35) return;
+            unawaited(
+              _handleTabSwipe(
+                delta.dx > 0
+                    ? HorizontalSwipeDirection.backward
+                    : HorizontalSwipeDirection.forward,
+              ),
+            );
+          },
+          onPointerUp: (event) {
+            final start = _dragStartPosition;
+            if (start != null &&
+                !_swipeTriggered &&
+                _guardedPointers.isEmpty &&
+                !_blockedPointers.contains(event.pointer)) {
+              final delta = event.position - start;
+              final dx = delta.dx.abs();
+              final dy = delta.dy.abs();
+              if (dx >= 120 && dx > dy * 1.5) {
+                unawaited(
+                  _handleTabSwipe(
+                    delta.dx > 0
+                        ? HorizontalSwipeDirection.backward
+                        : HorizontalSwipeDirection.forward,
+                  ),
+                );
+              }
+            }
+            _blockedPointers.remove(event.pointer);
+            _resetDrag();
+          },
+          onPointerCancel: (event) {
+            _blockedPointers.remove(event.pointer);
+            _resetDrag();
+          },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleBoundaryScroll,
+            child: TabBarView(
+              controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _CalendarTab(key: _calendarKey),
+                _PendingTab(pending: pending),
+                _FailedTab(failed: failed),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -346,13 +397,24 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
               ),
             ),
             SliverToBoxAdapter(
-              child: _MonthGrid(
-                visibleMonth: _visibleMonth,
-                selectedDay: _selectedDay,
-                eventCountByDay: byDay.map(
-                  (k, v) => MapEntry(k, v.length),
+              child: HorizontalGestureGuard(
+                claimHorizontalDrag: true,
+                swipeThreshold: 72,
+                axisLockThreshold: 20,
+                horizontalDominanceRatio: 1.4,
+                onSwipe: (direction) {
+                  _goMonth(
+                    direction == HorizontalSwipeDirection.forward ? 1 : -1,
+                  );
+                },
+                child: _MonthGrid(
+                  visibleMonth: _visibleMonth,
+                  selectedDay: _selectedDay,
+                  eventCountByDay: byDay.map(
+                    (k, v) => MapEntry(k, v.length),
+                  ),
+                  onTapDay: _selectDay,
                 ),
-                onTapDay: _selectDay,
               ),
             ),
             const SliverToBoxAdapter(child: Divider()),
@@ -735,39 +797,41 @@ class _FilterChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 34,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.base),
-        itemCount: _EventFilter.values.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (_, i) {
-          final f = _EventFilter.values[i];
-          final selected = f == current;
-          return FilterChip(
-            label: Text(f.label),
-            avatar: Icon(
-              f.icon,
-              size: 14,
-              color: selected ? Colors.white : GwpColors.textSecondary,
-            ),
-            selected: selected,
-            showCheckmark: false,
-            onSelected: (_) => onChanged(f),
-            selectedColor: GwpColors.actionPrimary,
-            labelStyle: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: selected ? Colors.white : GwpColors.textSecondary,
-            ),
-            backgroundColor: GwpColors.surface2,
-            side: BorderSide(
-              color: selected ? GwpColors.actionPrimary : GwpColors.border,
-              width: 0.5,
-            ),
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          );
-        },
+      child: HorizontalGestureGuard(
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.base),
+          itemCount: _EventFilter.values.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 6),
+          itemBuilder: (_, i) {
+            final f = _EventFilter.values[i];
+            final selected = f == current;
+            return FilterChip(
+              label: Text(f.label),
+              avatar: Icon(
+                f.icon,
+                size: 14,
+                color: selected ? Colors.white : GwpColors.textSecondary,
+              ),
+              selected: selected,
+              showCheckmark: false,
+              onSelected: (_) => onChanged(f),
+              selectedColor: GwpColors.actionPrimary,
+              labelStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: selected ? Colors.white : GwpColors.textSecondary,
+              ),
+              backgroundColor: GwpColors.surface2,
+              side: BorderSide(
+                color: selected ? GwpColors.actionPrimary : GwpColors.border,
+                width: 0.5,
+              ),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            );
+          },
+        ),
       ),
     );
   }

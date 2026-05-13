@@ -32,12 +32,14 @@ class _UpcomingBillsSection extends ConsumerWidget {
         ),
         SizedBox(
           height: 92,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: list.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(width: GwpSpacing.sm),
-            itemBuilder: (_, i) => _BillCard(bill: list[i]),
+          child: HorizontalGestureGuard(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: list.length,
+              separatorBuilder: (_, _) =>
+                  const SizedBox(width: GwpSpacing.sm),
+              itemBuilder: (_, i) => _BillCard(bill: list[i]),
+            ),
           ),
         ),
         const SizedBox(height: GwpSpacing.xl),
