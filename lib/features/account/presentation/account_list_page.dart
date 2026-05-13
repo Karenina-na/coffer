@@ -111,6 +111,9 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
     final netWorth = <String, Decimal>{};
     final assetCount = <String, int>{};
     final assetsByAccountId = <String, List<ValuedAsset>>{};
+    var totalGain = Decimal.zero;
+    var totalCostBasis = Decimal.zero;
+    var gainableCount = 0;
     for (final valuedAsset in assets) {
       final accountId = valuedAsset.asset.accountId;
       assetsByAccountId.putIfAbsent(accountId, () => []).add(valuedAsset);
@@ -119,6 +122,13 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
         netWorth[accountId] = (netWorth[accountId] ?? Decimal.zero) + mv;
       }
       assetCount[accountId] = (assetCount[accountId] ?? 0) + 1;
+      if (mv != null &&
+          valuedAsset.valuedCostBasis != null &&
+          valuedAsset.valuedCostBasis! > Decimal.zero) {
+        totalGain += mv - valuedAsset.valuedCostBasis!;
+        totalCostBasis += valuedAsset.valuedCostBasis!;
+        gainableCount++;
+      }
     }
 
     final typeValue = <AccountType, double>{};
@@ -200,9 +210,6 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
       }
     }
 
-    final activeCount = accounts
-        .where((account) => account.status == AccountStatus.active)
-        .length;
     final totalD = totalNetWorth.toDouble();
 
     final regionSections = <Widget>[
@@ -270,9 +277,11 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
         _HeroCard(
           totalNetWorth: totalNetWorth,
           totalAccounts: accounts.length,
-          activeCount: activeCount,
           regionCount: grouped.length,
           totalAssets: assets.length,
+          totalGain: totalGain,
+          totalCostBasis: totalCostBasis,
+          hasGainData: gainableCount > 0,
           valuationCurrency: widget.valuationCurrency,
           missingCount: widget.missingAssetIds.length,
           typeValue: typeValue,
@@ -377,9 +386,11 @@ class _HeroCard extends StatelessWidget {
   const _HeroCard({
     required this.totalNetWorth,
     required this.totalAccounts,
-    required this.activeCount,
     required this.regionCount,
     required this.totalAssets,
+    required this.totalGain,
+    required this.totalCostBasis,
+    required this.hasGainData,
     required this.valuationCurrency,
     required this.missingCount,
     required this.typeValue,
@@ -389,9 +400,11 @@ class _HeroCard extends StatelessWidget {
 
   final Decimal totalNetWorth;
   final int totalAccounts;
-  final int activeCount;
   final int regionCount;
   final int totalAssets;
+  final Decimal totalGain;
+  final Decimal totalCostBasis;
+  final bool hasGainData;
   final String valuationCurrency;
   final int missingCount;
   final Map<AccountType, double> typeValue;
@@ -400,6 +413,10 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gainPct = totalCostBasis > Decimal.zero
+        ? (totalGain.toDouble() / totalCostBasis.toDouble() * 100)
+        : 0.0;
+    final isUp = totalGain >= Decimal.zero;
     return Container(
       margin: const EdgeInsets.fromLTRB(
         GwpSpacing.base,
@@ -441,6 +458,43 @@ class _HeroCard extends StatelessWidget {
               color: GwpColors.textPrimary,
             ),
           ),
+          // Gain / loss row
+          if (hasGainData) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                GwpNumberText(
+                  value:
+                      '${isUp ? '+' : ''}${Money.format(totalGain, currency: valuationCurrency)}',
+                  sign: totalGain > Decimal.zero
+                      ? ValueSign.positive
+                      : (totalGain < Decimal.zero
+                          ? ValueSign.negative
+                          : ValueSign.neutral),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  showIcon: true,
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${isUp ? '+' : ''}${gainPct.toStringAsFixed(2)}%',
+                    style: TextStyle(
+                      fontFamily: GwpTypo.monoFont,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: isUp ? GwpColors.positive : GwpColors.negative,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (missingCount > 0) ...[
             const SizedBox(height: 2),
             Text(
@@ -454,8 +508,6 @@ class _HeroCard extends StatelessWidget {
             children: [
               _MiniStat(value: '$totalAccounts', label: '账户'),
               _vertDiv(),
-              _MiniStat(value: '$activeCount', label: '活跃'),
-              _vertDiv(),
               _MiniStat(value: '$regionCount', label: '地区'),
               _vertDiv(),
               _MiniStat(value: '$totalAssets', label: '资产'),
@@ -463,8 +515,6 @@ class _HeroCard extends StatelessWidget {
           ),
           // Mini donut charts row
           if (typeValue.isNotEmpty || regionValue.isNotEmpty) ...[
-            const SizedBox(height: GwpSpacing.md),
-            const Divider(height: 1, color: GwpColors.border),
             const SizedBox(height: GwpSpacing.md),
             Row(
               children: [
@@ -477,8 +527,7 @@ class _HeroCard extends StatelessWidget {
                             (e) => _DonutSlice(
                               label: e.key.labelZh,
                               value: e.value,
-                              color:
-                                  _typeColors[e.key] ?? GwpColors.actionPrimary,
+                              color: _typeColors[e.key] ?? GwpColors.actionPrimary,
                             ),
                           )
                           .toList(),

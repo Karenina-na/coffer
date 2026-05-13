@@ -103,6 +103,7 @@ class _AssetListViewState extends ConsumerState<_AssetListView> {
   Widget build(BuildContext context) {
     var totalValue = Decimal.zero;
     var totalGain = Decimal.zero;
+    var totalCostBasis = Decimal.zero;
     var gainableCount = 0;
     for (final asset in assets) {
       if (asset.valuedAmount != null && asset.valuedAmount! > Decimal.zero) {
@@ -112,6 +113,7 @@ class _AssetListViewState extends ConsumerState<_AssetListView> {
           asset.valuedCostBasis != null &&
           asset.valuedCostBasis! > Decimal.zero) {
         totalGain += asset.valuedAmount! - asset.valuedCostBasis!;
+        totalCostBasis += asset.valuedCostBasis!;
         gainableCount++;
       }
     }
@@ -263,6 +265,7 @@ class _AssetListViewState extends ConsumerState<_AssetListView> {
         _PortfolioHero(
           totalValue: totalValue,
           totalGain: totalGain,
+          totalCostBasis: totalCostBasis,
           assetCount: assets.length,
           valuationCurrency: widget.valuationCurrency,
           missingCount: widget.missingAssetIds.length,
@@ -393,6 +396,7 @@ class _PortfolioHero extends StatelessWidget {
   const _PortfolioHero({
     required this.totalValue,
     required this.totalGain,
+    required this.totalCostBasis,
     required this.assetCount,
     required this.valuationCurrency,
     required this.missingCount,
@@ -403,6 +407,7 @@ class _PortfolioHero extends StatelessWidget {
 
   final Decimal totalValue;
   final Decimal totalGain;
+  final Decimal totalCostBasis;
   final int assetCount;
   final String valuationCurrency;
   final int missingCount;
@@ -413,8 +418,8 @@ class _PortfolioHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUp = totalGain >= Decimal.zero;
-    final gainPct = totalValue > Decimal.zero
-        ? (totalGain.toDouble() / totalValue.toDouble() * 100)
+    final gainPct = totalCostBasis > Decimal.zero
+        ? (totalGain.toDouble() / totalCostBasis.toDouble() * 100)
         : 0.0;
     return Container(
       margin: const EdgeInsets.fromLTRB(
@@ -465,11 +470,11 @@ class _PortfolioHero extends StatelessWidget {
                       Row(
                         children: [
                           GwpNumberText(
-                              value:
-                                  '${isUp ? '+' : ''}${Money.format(totalGain, currency: valuationCurrency)}',
-                              sign: totalGain > Decimal.zero
-                                  ? ValueSign.positive
-                                  : (totalGain < Decimal.zero
+                            value:
+                                '${isUp ? '+' : ''}${Money.format(totalGain, currency: valuationCurrency)}',
+                            sign: totalGain > Decimal.zero
+                                ? ValueSign.positive
+                                : (totalGain < Decimal.zero
                                     ? ValueSign.negative
                                     : ValueSign.neutral),
                             fontSize: 13,
@@ -500,6 +505,13 @@ class _PortfolioHero extends StatelessWidget {
                           ),
                         ],
                       ),
+                    if (hasGainData && totalCostBasis > Decimal.zero) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '成本 ${Money.format(totalCostBasis, currency: valuationCurrency)}',
+                        style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+                      ),
+                    ],
                     if (missingCount > 0)
                       Text(
                         '$missingCount 项缺失汇率，未计入统计',
@@ -520,8 +532,6 @@ class _PortfolioHero extends StatelessWidget {
           ),
           // Breakdown donuts
           if (typeBreakdown.isNotEmpty || currencyBreakdown.isNotEmpty) ...[
-            const SizedBox(height: GwpSpacing.md),
-            const Divider(height: 1, color: GwpColors.border),
             const SizedBox(height: GwpSpacing.md),
             Row(
               children: [
