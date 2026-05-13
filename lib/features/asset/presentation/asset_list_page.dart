@@ -68,7 +68,7 @@ class AssetListBody extends ConsumerWidget {
 // ──────────────────────────────────────────────────────────────
 
 /// Number of top groups expanded by default.
-const _kAutoExpandCount = 2;
+const _kAutoExpandCount = 0;
 
 class _AssetListView extends ConsumerStatefulWidget {
   const _AssetListView({

@@ -47,8 +47,8 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
       ..addListener(() {
         if (!mounted) return;
         setState(() {});
-        _syncTopSearch();
         if (!_tab.indexIsChanging) {
+          _syncTopSearch();
           unawaited(_syncRouteTab());
         }
       });
@@ -230,10 +230,10 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
               controller: _tab,
               physics: const NeverScrollableScrollPhysics(),
               children: const [
-                AccountListBody(),
-                AssetListBody(),
-                TransferSimulateBody(),
-                PortfolioAnalysisBody(),
+                RepaintBoundary(child: AccountListBody()),
+                RepaintBoundary(child: AssetListBody()),
+                RepaintBoundary(child: TransferSimulateBody()),
+                RepaintBoundary(child: PortfolioAnalysisBody()),
               ],
             ),
           ),

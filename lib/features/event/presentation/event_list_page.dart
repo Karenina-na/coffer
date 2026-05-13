@@ -314,9 +314,9 @@ class _EventListPageState extends ConsumerState<EventListPage>
               controller: _tabController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _CalendarTab(key: _calendarKey),
-                _PendingTab(pending: pending),
-                _FailedTab(failed: failed),
+                RepaintBoundary(child: _CalendarTab(key: _calendarKey)),
+                RepaintBoundary(child: _PendingTab(pending: pending)),
+                RepaintBoundary(child: _FailedTab(failed: failed)),
               ],
             ),
           ),
