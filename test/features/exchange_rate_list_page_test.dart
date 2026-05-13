@@ -29,7 +29,7 @@ void main() {
     expect(find.text('USD/CNY'), findsOneWidget);
     expect(find.text('汇率总览'), findsOneWidget);
     expect(find.text('1 个关注币对'), findsOneWidget);
-    expect(find.text('最近更新'), findsOneWidget);
+    expect(find.text('最近更新'), findsNothing);
     expect(find.text('暂无数据'), findsWidgets);
     expect(find.byType(FilledButton), findsNothing);
     expect(find.byType(RateSparkline), findsOneWidget);

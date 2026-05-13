@@ -10,7 +10,6 @@ import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/global_search_delegate.dart';
 import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_kpi_tile.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_number_text.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
@@ -155,21 +154,29 @@ class _RatesSummaryCard extends ConsumerWidget {
         .map((pair) => ref.watch(pairRateSeriesProvider(pair.pairKey)))
         .map(_pairSeriesSummaryFromAsync)
         .toList(growable: false);
-    final ready = summaries.whereType<_PairSeriesSummary>().toList(growable: false);
-    final upCount = ready.where((item) => item.changePct > 0).length;
-    final downCount = ready.where((item) => item.changePct < 0).length;
-    final neutralCount = pairs.length - upCount - downCount;
+
+    final ready = summaries.whereType<_PairSeriesSummary>().toList();
+    final withData = ready.where((s) => s.hasData).toList();
+    final noDataCount = ready.where((s) => !s.hasData).length;
+    final upCount = withData.where((s) => s.changePct > 0).length;
+    final downCount = withData.where((s) => s.changePct < 0).length;
+    final flatCount = withData.where((s) => s.changePct == 0).length;
+
     final latestUpdatedAt = ready
-        .map((item) => item.updatedAt)
+        .map((s) => s.updatedAt)
         .whereType<DateTime>()
         .fold<DateTime?>(null, (latest, current) {
           if (latest == null) return current;
           return current.isAfter(latest) ? current : latest;
         });
-    final maxSwing = ready.fold<double>(0, (current, item) {
+
+    final maxSwing = withData.fold<double>(0, (current, item) {
       final abs = item.changePct.abs();
       return abs > current ? abs : current;
     });
+
+    final total = pairs.length;
+    final hasAnySwing = withData.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
@@ -183,47 +190,8 @@ class _RatesSummaryCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _RatesOverviewHeader(
-            pairCount: pairs.length,
-            upCount: upCount,
-            downCount: downCount,
-            latestUpdatedAt: latestUpdatedAt,
-          ),
-          const SizedBox(height: GwpSpacing.base),
-          _RatesOverviewGrid(
-            pairCount: pairs.length,
-            upCount: upCount,
-            downCount: downCount,
-            neutralCount: neutralCount,
-            maxSwing: ready.isEmpty ? null : maxSwing,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RatesOverviewHeader extends StatelessWidget {
-  const _RatesOverviewHeader({
-    required this.pairCount,
-    required this.upCount,
-    required this.downCount,
-    required this.latestUpdatedAt,
-  });
-
-  final int pairCount;
-  final int upCount;
-  final int downCount;
-  final DateTime? latestUpdatedAt;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Header row: title + update time
+          Row(
             children: [
               const Text(
                 '汇率总览',
@@ -234,158 +202,146 @@ class _RatesOverviewHeader extends StatelessWidget {
                   letterSpacing: 0.3,
                 ),
               ),
-              const SizedBox(height: 6),
+              const Spacer(),
               Text(
-                '$pairCount 个关注币对',
-                style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: GwpColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '$upCount 涨 / $downCount 跌',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: GwpColors.textSecondary,
-                ),
+                latestUpdatedAt == null
+                    ? '暂无数据'
+                    : '更新于 ${_fmtRelativeTime(latestUpdatedAt)}',
+                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted),
               ),
             ],
           ),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: GwpColors.surface2,
-            borderRadius: BorderRadius.circular(10),
+          const SizedBox(height: 8),
+          Text(
+            '$total 个关注币对',
+            style: const TextStyle(
+              fontFamily: GwpTypo.monoFont,
+              fontFeatures: GwpTypo.tabularFigures,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: GwpColors.textPrimary,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: GwpSpacing.md),
+          // Breadth bar
+          if (total > 0)
+            _BreadthBar(
+              up: upCount,
+              down: downCount,
+              flat: flatCount,
+              noData: noDataCount,
+              total: total,
+            ),
+          const SizedBox(height: GwpSpacing.sm),
+          // Legend + max swing
+          Row(
             children: [
-              const Text(
-                '最近更新',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 4),
+              _legendLabel(GwpColors.positive, '$upCount 涨'),
+              const SizedBox(width: GwpSpacing.md),
+              _legendLabel(GwpColors.negative, '$downCount 跌'),
+              if (flatCount > 0) ...[
+                const SizedBox(width: GwpSpacing.md),
+                _legendLabel(GwpColors.textMuted, '$flatCount 持平'),
+              ],
+              if (noDataCount > 0) ...[
+                const SizedBox(width: GwpSpacing.md),
+                _legendLabel(GwpColors.borderStrong, '$noDataCount 无数据'),
+              ],
+              const Spacer(),
+              const Icon(Icons.show_chart, size: 14, color: GwpColors.textMuted),
+              const SizedBox(width: 4),
               Text(
-                latestUpdatedAt == null ? '暂无数据' : _fmtRelativeTime(latestUpdatedAt!),
-                style: const TextStyle(
+                hasAnySwing ? displayPercentDouble(maxSwing) : '—',
+                style: TextStyle(
                   fontFamily: GwpTypo.monoFont,
                   fontFeatures: GwpTypo.tabularFigures,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: GwpColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: hasAnySwing ? _swingColor(maxSwing) : GwpColors.textMuted,
                 ),
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _RatesOverviewGrid extends StatelessWidget {
-  const _RatesOverviewGrid({
-    required this.pairCount,
-    required this.upCount,
-    required this.downCount,
-    required this.neutralCount,
-    required this.maxSwing,
-  });
-
-  final int pairCount;
-  final int upCount;
-  final int downCount;
-  final int neutralCount;
-  final double? maxSwing;
-
-  @override
-  Widget build(BuildContext context) {
-    final swing = maxSwing;
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _RatesOverviewTile(
-                icon: Icons.swap_horiz,
-                label: '币对数',
-                value: '$pairCount',
-                iconColor: GwpColors.actionPrimary,
-              ),
-            ),
-            const SizedBox(width: GwpSpacing.sm),
-            Expanded(
-              child: _RatesOverviewTile(
-                icon: Icons.trending_up,
-                label: '上涨',
-                value: '$upCount',
-                iconColor: GwpColors.positive,
-              ),
-            ),
-          ],
+Widget _legendLabel(Color color, String text) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 4),
+      Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: GwpColors.textSecondary,
         ),
-        const SizedBox(height: GwpSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _RatesOverviewTile(
-                icon: Icons.trending_down,
-                label: '下跌',
-                value: '$downCount',
-                iconColor: GwpColors.negative,
-                subtitle: neutralCount > 0 ? '$neutralCount 个待同步' : null,
-              ),
-            ),
-            const SizedBox(width: GwpSpacing.sm),
-            Expanded(
-              child: _RatesOverviewTile(
-                icon: Icons.show_chart,
-                label: '最大波动',
-                value: swing == null ? '—' : displayPercentDouble(swing),
-                iconColor: GwpColors.info,
-                subtitle: swing == null ? '尚无足够数据' : null,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
 
-class _RatesOverviewTile extends StatelessWidget {
-  const _RatesOverviewTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.iconColor,
-    this.subtitle,
+Color _swingColor(double pct) {
+  if (pct > 1) return GwpColors.positive;
+  if (pct < -1) return GwpColors.negative;
+  return GwpColors.textSecondary;
+}
+
+class _BreadthBar extends StatelessWidget {
+  const _BreadthBar({
+    required this.up,
+    required this.down,
+    required this.flat,
+    required this.noData,
+    required this.total,
   });
 
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color iconColor;
-  final String? subtitle;
+  final int up;
+  final int down;
+  final int flat;
+  final int noData;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
-    return GwpKpiTile(
-      icon: icon,
-      label: label,
-      value: value,
-      subtitle: subtitle,
-      iconColor: iconColor,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: SizedBox(
+        height: 6,
+        child: Row(
+          children: [
+            if (up > 0)
+              Expanded(
+                flex: up,
+                child: Container(color: GwpColors.positive),
+              ),
+            if (down > 0)
+              Expanded(
+                flex: down,
+                child: Container(color: GwpColors.negative),
+              ),
+            if (flat > 0)
+              Expanded(
+                flex: flat,
+                child: Container(color: GwpColors.borderStrong),
+              ),
+            if (noData > 0)
+              Expanded(
+                flex: noData,
+                child: Container(color: GwpColors.surface2),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -394,22 +350,32 @@ class _PairSeriesSummary {
   const _PairSeriesSummary({
     required this.changePct,
     required this.updatedAt,
+    required this.hasData,
   });
 
   final double changePct;
   final DateTime? updatedAt;
+  final bool hasData;
 }
 
 _PairSeriesSummary? _pairSeriesSummaryFromAsync(AsyncValue<List<ExchangeRate>> async) {
   return async.maybeWhen(
     data: (series) {
-      if (series.length < 2) return null;
+      if (series.isEmpty) return null;
+      if (series.length < 2) {
+        return _PairSeriesSummary(
+          changePct: 0,
+          updatedAt: series.last.updatedAt,
+          hasData: false,
+        );
+      }
       final first = series.first.rate.toDouble();
       final last = series.last.rate.toDouble();
       final changePct = first == 0 ? 0.0 : (last - first) / first * 100;
       return _PairSeriesSummary(
         changePct: changePct,
         updatedAt: series.last.updatedAt,
+        hasData: true,
       );
     },
     orElse: () => null,
