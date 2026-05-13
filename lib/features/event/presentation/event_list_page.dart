@@ -93,6 +93,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
   final Set<int> _blockedPointers = <int>{};
   Offset? _dragStartPosition;
   bool _swipeTriggered = false;
+  bool _verticalLocked = false;
 
   @override
   void initState() {
@@ -186,6 +187,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
   void _resetDrag() {
     _dragStartPosition = null;
     _swipeTriggered = false;
+    _verticalLocked = false;
   }
 
   Future<void> _handleTabSwipe(HorizontalSwipeDirection direction) async {
@@ -248,6 +250,7 @@ class _EventListPageState extends ConsumerState<EventListPage>
           onPointerDown: (event) {
             _dragStartPosition = event.position;
             _swipeTriggered = false;
+            _verticalLocked = false;
           },
           onPointerMove: (event) {
             final start = _dragStartPosition;
@@ -260,6 +263,13 @@ class _EventListPageState extends ConsumerState<EventListPage>
             final delta = event.position - start;
             final dx = delta.dx.abs();
             final dy = delta.dy.abs();
+            // Once the gesture shows clear vertical intent, lock out
+            // horizontal swipe for the remainder of this gesture to
+            // prevent false triggers during vertical scrolling.
+            if (!_verticalLocked && dy > 24 && dy > dx * 0.8) {
+              _verticalLocked = true;
+            }
+            if (_verticalLocked) return;
             if (dx < 56) return;
             if (dx <= dy * 1.35) return;
             unawaited(
@@ -290,10 +300,12 @@ class _EventListPageState extends ConsumerState<EventListPage>
               }
             }
             _blockedPointers.remove(event.pointer);
+            _guardedPointers.remove(event.pointer);
             _resetDrag();
           },
           onPointerCancel: (event) {
             _blockedPointers.remove(event.pointer);
+            _guardedPointers.remove(event.pointer);
             _resetDrag();
           },
           child: NotificationListener<ScrollNotification>(

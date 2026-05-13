@@ -461,8 +461,14 @@ class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
           _dragStartX = event.position.dx;
           _swipeTriggered = false;
         },
-        onPointerUp: (_) => _resetDrag(),
-        onPointerCancel: (_) => _resetDrag(),
+        onPointerUp: (event) {
+          _guardedPointers.remove(event.pointer);
+          _resetDrag();
+        },
+        onPointerCancel: (event) {
+          _guardedPointers.remove(event.pointer);
+          _resetDrag();
+        },
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onHorizontalDragUpdate: _handleHorizontalDragUpdate,

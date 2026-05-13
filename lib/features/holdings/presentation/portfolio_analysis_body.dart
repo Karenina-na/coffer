@@ -17,28 +17,30 @@ class PortfolioAnalysisBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         GwpSpacing.base,
         GwpSpacing.md,
         GwpSpacing.base,
         FloatingNavLayout.totalFloatingHeight(context) + GwpSpacing.md,
       ),
-      children: const [
-        _SnapshotHero(),
-        SizedBox(height: GwpSpacing.base),
-        _AllocationTriptych(),
-        SizedBox(height: GwpSpacing.base),
-        _AssetRankingSection(),
-        SizedBox(height: GwpSpacing.base),
-        _DimensionExplorer(),
-        SizedBox(height: GwpSpacing.base),
-        _CurrencyExposureSection(),
-        SizedBox(height: GwpSpacing.base),
-        _RiskOverviewSection(),
-        SizedBox(height: GwpSpacing.base),
-        _HealthRadarSection(),
-      ],
+      child: const Column(
+        children: [
+          _SnapshotHero(),
+          SizedBox(height: GwpSpacing.base),
+          _AllocationTriptych(),
+          SizedBox(height: GwpSpacing.base),
+          _AssetRankingSection(),
+          SizedBox(height: GwpSpacing.base),
+          _DimensionExplorer(),
+          SizedBox(height: GwpSpacing.base),
+          _CurrencyExposureSection(),
+          SizedBox(height: GwpSpacing.base),
+          _RiskOverviewSection(),
+          SizedBox(height: GwpSpacing.base),
+          _HealthRadarSection(),
+        ],
+      ),
     );
   }
 }
