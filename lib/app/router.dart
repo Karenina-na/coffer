@@ -77,10 +77,7 @@ GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
             ),
             GoRoute(
               path: '/events',
-              builder: (_, state) {
-                final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '');
-                return EventListPage(initialTab: tab);
-              },
+              builder: (_, _) => const EventListPage(),
             ),
           ],
         ),

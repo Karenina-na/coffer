@@ -495,18 +495,19 @@ void main() {
     expect(find.text('资产 Top 10'), findsOneWidget);
   });
 
-  testWidgets('events deep link restores selected secondary tab', (tester) async {
-    final router = await _pumpShell(tester, initialLocation: '/events?tab=2');
+  testWidgets('events page loads calendar without tabs', (tester) async {
+    final router = await _pumpShell(
+      tester,
+      initialLocation: '/events',
+      seedEventCalendar: true,
+    );
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=2');
-    expect(find.text('日历'), findsWidgets);
-    expect(find.text('待办'), findsWidgets);
-    expect(find.text('失败'), findsWidgets);
-    expect(find.byIcon(Icons.calendar_month_outlined), findsNothing);
-    expect(find.byIcon(Icons.check_circle_outline), findsNothing);
-    expect(find.byIcon(Icons.error_outline), findsNothing);
-    expect(find.text('没有失败事件'), findsOneWidget);
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
+    // Tab bar is gone — the calendar fills the page.
+    expect(find.text('日历'), findsNothing);
+    expect(find.text('待办'), findsNothing);
+    expect(find.text('失败'), findsNothing);
   });
 
   testWidgets('analysis tab drag keeps nested tab state when returning', (tester) async {
@@ -526,26 +527,25 @@ void main() {
     expect(find.text('资产 Top 10'), findsOneWidget);
   });
 
-  testWidgets('leaving nested tabs does not break later shell fallback swipe', (
+  testWidgets('leaving events page does not break later shell fallback swipe', (
     tester,
   ) async {
     final router = await _pumpShell(
       tester,
-      initialLocation: '/events?tab=2',
+      initialLocation: '/events',
+      seedEventCalendar: true,
       seedRatesList: true,
     );
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=2');
-    expect(find.text('没有失败事件'), findsOneWidget);
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
 
     await _swipeLeft(tester, const Offset(180, 700));
     expect(router.routeInformationProvider.value.uri.toString(), '/rates');
     expect(find.text('USD/CNY'), findsWidgets);
 
     await _swipeRight(tester, const Offset(180, 700));
-    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=2');
-    expect(find.text('没有失败事件'), findsOneWidget);
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
   });
 
   testWidgets('rapid analysis drags do not freeze nested handoff', (tester) async {
@@ -588,28 +588,30 @@ void main() {
   testWidgets('event calendar swipe changes month without switching page', (tester) async {
     final router = await _pumpShell(
       tester,
-      initialLocation: '/events?tab=0',
+      initialLocation: '/events',
       seedEventCalendar: true,
     );
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=0');
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
+    // Calendar starts collapsed; expand to reveal month label.
+    await tester.tap(find.byTooltip('展开为月视图'));
+    await _settleNav(tester);
     expect(find.textContaining('年'), findsWidgets);
     final before = tester.widget<Text>(find.textContaining('年').first).data!;
 
+    // Month grid's guard is now the first (only) one that claims horizontal drag.
     await tester.drag(find.byType(HorizontalGestureGuard).first, const Offset(-220, 0));
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=0');
-    expect(find.text('待办'), findsWidgets);
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
     final after = tester.widget<Text>(find.textContaining('年').first).data!;
     expect(after, isNot(before));
 
     await tester.drag(find.byType(HorizontalGestureGuard).first, const Offset(220, 0));
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/events?tab=0');
-    expect(find.text('待办'), findsWidgets);
+    expect(router.routeInformationProvider.value.uri.toString(), '/events');
     final afterBack = tester.widget<Text>(find.textContaining('年').first).data!;
     expect(afterBack, isNot(after));
   });

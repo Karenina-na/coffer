@@ -144,6 +144,12 @@ void main() {
       regionIndex: regionIndex,
     );
 
+    // Regions start collapsed; expand to reveal sub-groups.
+    await tester.tap(find.text('英国 (2)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('美国 (1)'));
+    await tester.pumpAndSettle();
+
     expect(find.text('英国 (2)'), findsOneWidget);
     expect(find.text('美国 (1)'), findsOneWidget);
     expect(find.text('银行 (1)'), findsNWidgets(2));
@@ -188,6 +194,9 @@ void main() {
       regionIndex: regionIndex,
     );
 
+    await tester.tap(find.text('英国 (5)'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Bank A'), findsOneWidget);
     expect(find.text('Bank B'), findsOneWidget);
     expect(find.text('Bank C'), findsOneWidget);
@@ -217,6 +226,10 @@ void main() {
       valuedAssets: valuedAssets,
       regionIndex: regionIndex,
     );
+
+    // Expand the region first, then the collapse test works as before.
+    await tester.tap(find.text('英国 (2)'));
+    await tester.pumpAndSettle();
 
     expect(find.text('银行 (1)'), findsOneWidget);
     expect(find.text('券商 (1)'), findsOneWidget);
