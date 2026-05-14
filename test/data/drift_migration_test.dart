@@ -84,11 +84,16 @@ void main() {
           .toList(),
       [
         'ACH:美国自动清算所:Automated Clearing House:1',
+        'CHAPS:英国清算所自动支付系统:Clearing House Automated Payment System:1',
         'CHATS:港元即时支付结算系统:Clearing House Automated Transfer System:1',
+        'CIPS:人民币跨境支付系统:Cross-Border Interbank Payment System:1',
         'CNAPS:中国现代化支付系统:China National Advanced Payment System:1',
+        'FEDWIRE:美国联邦电子资金转账系统:Federal Reserve Wire Network:1',
         'FPS:快速支付系统:Faster Payment System:1',
+        'NPP:澳大利亚新支付平台:New Payments Platform:1',
         'SEPA:单一欧元支付区:Single Euro Payments Area:1',
         'SWIFT:环球银行金融电信协会:Society for Worldwide Interbank Financial Telecommunication:1',
+        'ZENGIN:日本全国银行数据通信系统:Zengin Data Telecommunication System:1',
       ],
     );
   });

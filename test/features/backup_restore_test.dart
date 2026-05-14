@@ -202,6 +202,7 @@ void main() {
           'sovereigntyRegion': 'CN',
           'institutionName': 'ICBC',
           'status': 'active',
+          'fxSpreadPercent': 0.0,
           'createdAt': '2024-01-01T00:00:00.000Z',
           'updatedAt': '2024-01-01T00:00:00.000Z',
           'isDeleted': false,
