@@ -30,6 +30,7 @@ class CreateAccountUseCase {
     DateTime? openedAt,
     Map<String, dynamic>? extInfo,
     AccountStatus status = AccountStatus.active,
+    double fxSpreadPercent = 0,
   }) {
     if (sovereigntyRegion.trim().isEmpty) {
       return Future.value(
@@ -51,6 +52,7 @@ class CreateAccountUseCase {
       status: status,
       openedAt: openedAt,
       extInfo: extInfo,
+      fxSpreadPercent: fxSpreadPercent,
       createdAt: now,
       updatedAt: now,
     );

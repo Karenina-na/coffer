@@ -116,6 +116,18 @@ class $AccountsTable extends Accounts
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _fxSpreadPercentMeta = const VerificationMeta(
+    'fxSpreadPercent',
+  );
+  @override
+  late final GeneratedColumn<double> fxSpreadPercent = GeneratedColumn<double>(
+    'fx_spread_percent',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
   static const VerificationMeta _isDeletedMeta = const VerificationMeta(
     'isDeleted',
   );
@@ -143,6 +155,7 @@ class $AccountsTable extends Accounts
     extInfo,
     createdAt,
     updatedAt,
+    fxSpreadPercent,
     isDeleted,
   ];
   @override
@@ -237,6 +250,15 @@ class $AccountsTable extends Accounts
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('fx_spread_percent')) {
+      context.handle(
+        _fxSpreadPercentMeta,
+        fxSpreadPercent.isAcceptableOrUnknown(
+          data['fx_spread_percent']!,
+          _fxSpreadPercentMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_deleted')) {
       context.handle(
         _isDeletedMeta,
@@ -292,6 +314,10 @@ class $AccountsTable extends Accounts
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      fxSpreadPercent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fx_spread_percent'],
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
@@ -316,6 +342,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
   final String? extInfo;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final double fxSpreadPercent;
   final bool isDeleted;
   const AccountRow({
     required this.id,
@@ -328,6 +355,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     this.extInfo,
     required this.createdAt,
     required this.updatedAt,
+    required this.fxSpreadPercent,
     required this.isDeleted,
   });
   @override
@@ -349,6 +377,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['fx_spread_percent'] = Variable<double>(fxSpreadPercent);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
   }
@@ -371,6 +400,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
           : Value(extInfo),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      fxSpreadPercent: Value(fxSpreadPercent),
       isDeleted: Value(isDeleted),
     );
   }
@@ -391,6 +421,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       extInfo: serializer.fromJson<String?>(json['extInfo']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      fxSpreadPercent: serializer.fromJson<double>(json['fxSpreadPercent']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
   }
@@ -408,6 +439,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       'extInfo': serializer.toJson<String?>(extInfo),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'fxSpreadPercent': serializer.toJson<double>(fxSpreadPercent),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
   }
@@ -423,6 +455,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     Value<String?> extInfo = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? fxSpreadPercent,
     bool? isDeleted,
   }) => AccountRow(
     id: id ?? this.id,
@@ -435,6 +468,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     extInfo: extInfo.present ? extInfo.value : this.extInfo,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    fxSpreadPercent: fxSpreadPercent ?? this.fxSpreadPercent,
     isDeleted: isDeleted ?? this.isDeleted,
   );
   AccountRow copyWithCompanion(AccountsCompanion data) {
@@ -455,6 +489,9 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       extInfo: data.extInfo.present ? data.extInfo.value : this.extInfo,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      fxSpreadPercent: data.fxSpreadPercent.present
+          ? data.fxSpreadPercent.value
+          : this.fxSpreadPercent,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
   }
@@ -472,6 +509,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
           ..write('extInfo: $extInfo, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('fxSpreadPercent: $fxSpreadPercent, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
         .toString();
@@ -489,6 +527,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     extInfo,
     createdAt,
     updatedAt,
+    fxSpreadPercent,
     isDeleted,
   );
   @override
@@ -505,6 +544,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
           other.extInfo == this.extInfo &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
+          other.fxSpreadPercent == this.fxSpreadPercent &&
           other.isDeleted == this.isDeleted);
 }
 
@@ -519,6 +559,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
   final Value<String?> extInfo;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<double> fxSpreadPercent;
   final Value<bool> isDeleted;
   final Value<int> rowid;
   const AccountsCompanion({
@@ -532,6 +573,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     this.extInfo = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.fxSpreadPercent = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -546,6 +588,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     this.extInfo = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.fxSpreadPercent = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -566,6 +609,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     Expression<String>? extInfo,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<double>? fxSpreadPercent,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
   }) {
@@ -580,6 +624,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
       if (extInfo != null) 'ext_info': extInfo,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (fxSpreadPercent != null) 'fx_spread_percent': fxSpreadPercent,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
     });
@@ -596,6 +641,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     Value<String?>? extInfo,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<double>? fxSpreadPercent,
     Value<bool>? isDeleted,
     Value<int>? rowid,
   }) {
@@ -610,6 +656,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
       extInfo: extInfo ?? this.extInfo,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      fxSpreadPercent: fxSpreadPercent ?? this.fxSpreadPercent,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
     );
@@ -648,6 +695,9 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (fxSpreadPercent.present) {
+      map['fx_spread_percent'] = Variable<double>(fxSpreadPercent.value);
+    }
     if (isDeleted.present) {
       map['is_deleted'] = Variable<bool>(isDeleted.value);
     }
@@ -670,6 +720,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
           ..write('extInfo: $extInfo, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('fxSpreadPercent: $fxSpreadPercent, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9868,6 +9919,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<String?> extInfo,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<double> fxSpreadPercent,
       Value<bool> isDeleted,
       Value<int> rowid,
     });
@@ -9883,6 +9935,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String?> extInfo,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<double> fxSpreadPercent,
       Value<bool> isDeleted,
       Value<int> rowid,
     });
@@ -10009,6 +10062,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fxSpreadPercent => $composableBuilder(
+    column: $table.fxSpreadPercent,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10152,6 +10210,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get fxSpreadPercent => $composableBuilder(
+    column: $table.fxSpreadPercent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isDeleted => $composableBuilder(
     column: $table.isDeleted,
     builder: (column) => ColumnOrderings(column),
@@ -10202,6 +10265,11 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<double> get fxSpreadPercent => $composableBuilder(
+    column: $table.fxSpreadPercent,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isDeleted =>
       $composableBuilder(column: $table.isDeleted, builder: (column) => column);
@@ -10324,6 +10392,7 @@ class $$AccountsTableTableManager
                 Value<String?> extInfo = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<double> fxSpreadPercent = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
@@ -10337,6 +10406,7 @@ class $$AccountsTableTableManager
                 extInfo: extInfo,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                fxSpreadPercent: fxSpreadPercent,
                 isDeleted: isDeleted,
                 rowid: rowid,
               ),
@@ -10352,6 +10422,7 @@ class $$AccountsTableTableManager
                 Value<String?> extInfo = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<double> fxSpreadPercent = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
@@ -10365,6 +10436,7 @@ class $$AccountsTableTableManager
                 extInfo: extInfo,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                fxSpreadPercent: fxSpreadPercent,
                 isDeleted: isDeleted,
                 rowid: rowid,
               ),

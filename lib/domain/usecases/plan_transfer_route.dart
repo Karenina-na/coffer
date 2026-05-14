@@ -5,24 +5,14 @@ import '../../core/result.dart';
 import '../entities/account.dart';
 import '../entities/account_channel.dart';
 import '../entities/channel.dart';
+import '../entities/channel_enums.dart';
 import '../repositories/account_channel_repository.dart';
 import '../repositories/account_repository.dart';
 import '../repositories/channel_repository.dart';
 import 'channel_rule.dart';
 
-/// 多跳转账路径规划的优化目标。
-enum RouteObjective {
-  /// 总手续费最低。
-  minFee,
+enum RouteObjective { minFee, minHops }
 
-  /// 经过的 Channel 最少（跳数最少，合规友好）。
-  minHops,
-}
-
-/// 一条路径上的单段 Channel 跳。
-///
-/// 节点是具体账户（非账户类型）：两端账户都必须已在该 channel 上登记，
-/// 才能成为一条可用边。
 class RouteLeg {
   const RouteLeg({
     required this.channel,
@@ -30,25 +20,27 @@ class RouteLeg {
     required this.toAccount,
     required this.amount,
     required this.fee,
+    required this.fromCurrency,
+    required this.toCurrency,
+    this.fxRate,
   });
 
   final Channel channel;
   final Account fromAccount;
   final Account toAccount;
-
-  /// 进入本段的金额（当前模型下金额沿路径不变）。
   final Decimal amount;
-
-  /// 本段收取的手续费 = amount * feeRate + fixedFee。
   final Decimal fee;
+  final String fromCurrency;
+  final String toCurrency;
+  final Decimal? fxRate;
 }
 
-/// 规划出的转账路径（可能多跳），替代单跳 [TransferQuote] 的位置。
 class TransferRoute {
   const TransferRoute({
     required this.legs,
     required this.amount,
     required this.currency,
+    this.targetCurrency,
     required this.totalFee,
     required this.totalDebit,
     required this.netCredit,
@@ -59,31 +51,30 @@ class TransferRoute {
   final List<RouteLeg> legs;
   final Decimal amount;
   final String currency;
+  final String? targetCurrency;
   final Decimal totalFee;
   final Decimal totalDebit;
   final Decimal netCredit;
   final RouteObjective objective;
-
-  /// 若为空即可执行；否则为仅报价。
   final List<RuleFailure> violations;
 
   bool get isExecutable => violations.isEmpty && legs.isNotEmpty;
 }
 
-/// 基于 Channel 拓扑的多跳路径规划器（Dijkstra）。
+/// Multi-currency path planner (Dijkstra on expanded state space).
 ///
-/// 数据模型假设（v2）：
-/// - `Channel` 只描述协议/网络本身（SWIFT、微信、支付宝…），不再绑定账户类型；
-/// - 账户通过 `AccountChannel` 多对多关联声明自己接入了哪些通道；
-/// - 同一通道上任意两个已接入账户都可互转，方向取决于 Dijkstra。
+/// **States**: `(accountId, currency)` — keyed as `"$accountId:$currency"`.
 ///
-/// 算法：把 **账户 id** 当作节点。对每个通道，把登记到它上的所有账户两两构成
-/// 有向边（i→j，i≠j），通过 [ChannelRuleEngine] 以 **双端账户 region** 为上下文
-/// 逐边评估是否合规；合规边用 [RouteObjective] 选定的权重参与 Dijkstra。
+/// **Two edge types:**
+/// 1. **Channel edges**: `(A, C) → (B, C)` — same-currency transfer via shared channel.
+/// 2. **FX edges**: `(A, C1) → (A, C2)` — internal account exchange.
+///    Only created if `Account.fxSpreadPercent > 0` and a valid FX rate exists
+///    for `C1→C2` in [fxRates].
 ///
-/// 简化：
-/// - 金额沿路径不变（Channel 模型尚无 FX 转换语义）。
-/// - 不允许"零跳"——必须经过至少一个 channel。
+/// **Channel edge weight** = fee in source currency.
+/// **FX edge weight** = `amount × (fxSpreadPercent / 100)` × `fxRate`.
+/// (converted to source currency for minFee comparison).
+///
 class PlanTransferRouteUseCase {
   PlanTransferRouteUseCase(
     this._accounts,
@@ -100,11 +91,36 @@ class PlanTransferRouteUseCase {
   final ChannelRuleEngine _engine;
   final DateTime Function() _now;
 
+  /// Build the set of currencies reachable from [startCcy] via FX edges.
+  Set<String> _reachableCurrencies(Account acc, String startCcy,
+      Map<String, double> fxRates) {
+    final reachable = <String>{startCcy};
+    if (acc.fxSpreadPercent <= 0) return reachable;
+    for (final entry in fxRates.entries) {
+      final parts = entry.key.split('/');
+      if (parts.length != 2) continue;
+      final from = parts[0];
+      final to = parts[1];
+      if (from == startCcy) reachable.add(to);
+      if (to == startCcy) reachable.add(from);
+    }
+    return reachable;
+  }
+
+  /// FX rate for converting [fromCcy] to [toCcy]. Returns null if unavailable.
+  double? _fxRateFor(String fromCcy, String toCcy,
+      Map<String, double> fxRates) {
+    if (fromCcy == toCcy) return 1.0;
+    return fxRates['$fromCcy/$toCcy'];
+  }
+
   Future<Result<TransferRoute, AppError>> call({
     required String sourceAccountId,
     required String targetAccountId,
     required Decimal amount,
     required String currency,
+    String? targetCurrency,
+    Map<String, double> fxRates = const {},
     RouteObjective objective = RouteObjective.minFee,
     Decimal? todaysCumulativeAmount,
   }) async {
@@ -123,7 +139,8 @@ class PlanTransferRouteUseCase {
     final src = srcR.valueOrNull!;
     final tgt = tgtR.valueOrNull!;
 
-    // 仓储 watchAll() 首帧即全量。
+    final tgtCcy = targetCurrency ?? currency;
+
     final List<Account> allAcc;
     final List<Channel> allCh;
     final List<AccountChannel> allLinks;
@@ -137,7 +154,6 @@ class PlanTransferRouteUseCase {
 
     final accById = <String, Account>{
       for (final a in allAcc) a.id: a,
-      // 端点账户可能因软删除未出现在 watchAll 中；仍保留以便输出失败原因。
       src.id: src,
       tgt.id: tgt,
     };
@@ -147,7 +163,6 @@ class PlanTransferRouteUseCase {
       for (final link in allLinks) (link.accountId, link.channelId): link,
     };
 
-    // 按 channel 收集成员账户；忽略孤儿关联。
     final byChan = <String, List<String>>{};
     for (final l in allLinks) {
       if (!chanById.containsKey(l.channelId)) continue;
@@ -160,7 +175,9 @@ class PlanTransferRouteUseCase {
     _Edge? firstRejectEdge;
     List<RuleFailure>? firstReject;
     ValidationError? firstFeeError;
+    bool firstRejectHasFx = false;
 
+    // Build edges
     for (final entry in byChan.entries) {
       final c = chanById[entry.key]!;
       final members = entry.value;
@@ -185,11 +202,36 @@ class PlanTransferRouteUseCase {
             continue;
           }
           final v = _engine.evaluate(c, ctx);
-          final edge = _Edge(from: from, to: to, channel: c, link: link);
+          final edge = _Edge(
+            from: from,
+            to: to,
+            channel: c,
+            link: link,
+            fromCurrency: currency,
+            toCurrency: currency,
+            isFx: false,
+          );
           if (v.isEmpty) {
-            (adj[from.id] ??= []).add(edge);
+            // Add edge for every currency state of this account
+            final fromCurrencies =
+                _reachableCurrencies(from, currency, fxRates);
+            final toCurrencies = _reachableCurrencies(to, currency, fxRates);
+            for (final fc in fromCurrencies) {
+              for (final tc in toCurrencies) {
+                if (fc != tc) continue; // channel edges require same currency
+                final key = '${from.id}:$fc';
+                (adj[key] ??= []).add(_Edge(
+                  from: from,
+                  to: to,
+                  channel: c,
+                  link: link,
+                  fromCurrency: fc,
+                  toCurrency: tc,
+                  isFx: false,
+                ));
+              }
+            }
           } else {
-            // 优先记录从源账户出发的违规边，UI 展示更相关的拒绝原因。
             if (firstRejectEdge == null || from.id == src.id) {
               firstRejectEdge = edge;
               firstReject = v;
@@ -197,21 +239,60 @@ class PlanTransferRouteUseCase {
           }
         }
       }
+
+      // Add FX edges for accounts on this channel
+      for (final memberId in members) {
+        final acc = accById[memberId]!;
+        if (acc.fxSpreadPercent <= 0) continue;
+        for (final entry in fxRates.entries) {
+          final parts = entry.key.split('/');
+          if (parts.length != 2) continue;
+          final fromCcy = parts[0];
+          final toCcy = parts[1];
+          final rate = entry.value;
+          // Forward
+          final fwdKey = '${acc.id}:$fromCcy';
+          (adj[fwdKey] ??= []).add(_Edge(
+            from: acc,
+            to: acc,
+            channel: null,
+            link: null,
+            fromCurrency: fromCcy,
+            toCurrency: toCcy,
+            isFx: true,
+            fxRate: rate,
+          ));
+          // Reverse (approximate: 1/rate)
+          final revKey = '${acc.id}:$toCcy';
+          (adj[revKey] ??= []).add(_Edge(
+            from: acc,
+            to: acc,
+            channel: null,
+            link: null,
+            fromCurrency: toCcy,
+            toCurrency: fromCcy,
+            isFx: true,
+            fxRate: 1.0 / rate,
+          ));
+        }
+      }
     }
 
-    final path = adj.containsKey(src.id)
+    final startKey = '${src.id}:$currency';
+    final goalKey = '${tgt.id}:$tgtCcy';
+
+    final path = adj.containsKey(startKey)
         ? _dijkstra(
             adj: adj,
-            start: src.id,
-            goal: tgt.id,
+            start: startKey,
+            goal: goalKey,
             amount: amount,
             objective: objective,
           )
         : null;
 
     if (path == null) {
-      if (firstRejectEdge != null &&
-          firstReject != null &&
+      if (firstRejectEdge != null && firstReject != null &&
           firstRejectEdge.from.id == sourceAccountId &&
           firstRejectEdge.to.id == targetAccountId) {
         final leg = _legOf(firstRejectEdge, amount);
@@ -219,6 +300,7 @@ class PlanTransferRouteUseCase {
           legs: [leg],
           amount: amount,
           currency: currency,
+          targetCurrency: tgtCcy,
           totalFee: leg.fee,
           totalDebit: amount + leg.fee,
           netCredit: amount,
@@ -226,43 +308,69 @@ class PlanTransferRouteUseCase {
           violations: firstReject,
         ));
       }
-      if (firstFeeError != null) {
-        return Err(firstFeeError);
-      }
+      if (firstFeeError != null) return Err(firstFeeError);
       return const Err(NotFoundError('no route between accounts'));
     }
 
     final legs = <RouteLeg>[];
     Decimal totalFee = Decimal.zero;
+    Decimal runningAmount = amount;
     for (final e in path) {
-      final leg = _legOf(e, amount);
+      final leg = _legOf(e, runningAmount);
       legs.add(leg);
       totalFee += leg.fee;
+      // Update running amount for FX hops
+      if (e.isFx && e.fxRate != null) {
+        runningAmount = runningAmount *
+            Decimal.parse((e.fxRate!).toStringAsFixed(6)) *
+            (Decimal.one -
+                Decimal.parse(
+                    ((e.from.fxSpreadPercent) / 100).toStringAsFixed(6)));
+      }
     }
+
+    final effectiveTargetCcy =
+        legs.isNotEmpty ? legs.last.toCurrency : tgtCcy;
+
     return Ok(TransferRoute(
       legs: legs,
       amount: amount,
       currency: currency,
+      targetCurrency: effectiveTargetCcy,
       totalFee: totalFee,
       totalDebit: amount + totalFee,
-      netCredit: amount,
+      netCredit: runningAmount,
       objective: objective,
       violations: const [],
     ));
   }
 
   RouteLeg _legOf(_Edge e, Decimal amount) {
-    final fee = _feeOf(e.channel, e.link, amount);
+    final fee = e.isFx
+        ? (amount *
+            Decimal.parse((e.from.fxSpreadPercent / 100).toStringAsFixed(6)))
+        : _feeOf(e.channel!, e.link!, amount);
     return RouteLeg(
-      channel: e.channel,
+      channel: e.isFx
+          ? Channel(
+                id: 'fx',
+                name: '内部换汇',
+                transferProtocol: 'FX',
+                status: ChannelStatus.enabled,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              )
+          : e.channel!,
       fromAccount: e.from,
       toAccount: e.to,
       amount: amount,
       fee: fee,
+      fromCurrency: e.fromCurrency,
+      toCurrency: e.toCurrency,
+      fxRate: e.fxRate != null ? Decimal.parse(e.fxRate!.toStringAsFixed(6)) : null,
     );
   }
 
-  /// Dijkstra on Account-id nodes; 线性选最小（N 通常不大）。
   List<_Edge>? _dijkstra({
     required Map<String, List<_Edge>> adj,
     required String start,
@@ -291,21 +399,41 @@ class PlanTransferRouteUseCase {
       final u = pickNext();
       if (u == null) break;
       visited.add(u);
-      if (u == goal) break;
+      // Accept any currency reaching the target account
+      if (u == goal) {
+        return _reconstruct(prev, u, start);
+      }
 
       for (final e in adj[u] ?? const <_Edge>[]) {
-        final v = e.to.id;
-        if (visited.contains(v)) continue;
+        final vKey = '${e.to.id}:${e.toCurrency}';
+        if (visited.contains(vKey)) continue;
         final w = _weight(e, amount, objective);
         final nd = dist[u]! + w;
-        final cur = dist[v];
+        final cur = dist[vKey];
         if (cur == null || nd < cur) {
-          dist[v] = nd;
-          prev[v] = e;
+          dist[vKey] = nd;
+          prev[vKey] = e;
         }
       }
     }
 
+    // Find the best path to any currency state of the goal account
+    String? bestGoal;
+    Decimal? bestDist;
+    for (final entry in dist.entries) {
+      final goalPrefix = '${goal.split(':').first}:';
+      if (!entry.key.startsWith(goalPrefix)) continue;
+      if (bestDist == null || entry.value < bestDist) {
+        bestDist = entry.value;
+        bestGoal = entry.key;
+      }
+    }
+    if (bestGoal == null) return null;
+    return _reconstruct(prev, bestGoal!, start);
+  }
+
+  List<_Edge>? _reconstruct(
+      Map<String, _Edge> prev, String goal, String start) {
     if (!prev.containsKey(goal)) return null;
     final out = <_Edge>[];
     String node = goal;
@@ -314,19 +442,32 @@ class PlanTransferRouteUseCase {
       final p = prev[node];
       if (p == null) break;
       out.insert(0, p);
-      if (p.from.id == start) break;
-      if (!guard.add(p.from.id)) break;
-      node = p.from.id;
+      final prevKey = '${p.from.id}:${p.fromCurrency}';
+      if (prevKey == start) break;
+      if (!guard.add(prevKey)) break;
+      node = prevKey;
     }
-    // 路径重建完整性检查：首跳必须从 start 出发，否则路径不完整。
-    if (out.isEmpty || out.first.from.id != start) return null;
+    if (out.isEmpty ||
+        '${out.first.from.id}:${out.first.fromCurrency}' != start) {
+      return null;
+    }
     return out;
   }
 
   Decimal _weight(_Edge e, Decimal amount, RouteObjective objective) {
+    if (e.isFx) {
+      switch (objective) {
+        case RouteObjective.minFee:
+          return amount *
+              Decimal.parse(
+                  (e.from.fxSpreadPercent / 100).toStringAsFixed(6));
+        case RouteObjective.minHops:
+          return Decimal.one; // FX counts as a hop
+      }
+    }
     switch (objective) {
       case RouteObjective.minFee:
-        return _feeOf(e.channel, e.link, amount);
+        return _feeOf(e.channel!, e.link!, amount);
       case RouteObjective.minHops:
         return Decimal.one;
     }
@@ -354,11 +495,19 @@ class _Edge {
   const _Edge({
     required this.from,
     required this.to,
-    required this.channel,
-    required this.link,
+    this.channel,
+    this.link,
+    required this.fromCurrency,
+    required this.toCurrency,
+    this.isFx = false,
+    this.fxRate,
   });
   final Account from;
   final Account to;
-  final Channel channel;
-  final AccountChannel link;
+  final Channel? channel;
+  final AccountChannel? link;
+  final String fromCurrency;
+  final String toCurrency;
+  final bool isFx;
+  final double? fxRate;
 }

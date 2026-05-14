@@ -15,6 +15,8 @@ class Accounts extends Table {
   TextColumn get extInfo => text().named('ext_info').nullable()();
   DateTimeColumn get createdAt => dateTime().named('created_at')();
   DateTimeColumn get updatedAt => dateTime().named('updated_at')();
+  RealColumn get fxSpreadPercent =>
+      real().named('fx_spread_percent').withDefault(const Constant(0.0))();
   BoolColumn get isDeleted =>
       boolean().named('is_deleted').withDefault(const Constant(false))();
 

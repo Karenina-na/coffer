@@ -25,6 +25,7 @@ class AccountMapper {
         extInfo: row.extInfo == null
             ? null
             : (jsonDecode(row.extInfo!) as Map<String, dynamic>),
+        fxSpreadPercent: row.fxSpreadPercent,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         isDeleted: row.isDeleted,
@@ -39,6 +40,7 @@ class AccountMapper {
         status: a.status.code,
         openedAt: _val(a.openedAt),
         extInfo: _val(a.extInfo == null ? null : jsonEncode(a.extInfo)),
+        fxSpreadPercent: Value(a.fxSpreadPercent),
         createdAt: a.createdAt,
         updatedAt: a.updatedAt,
         isDeleted: Value(a.isDeleted),

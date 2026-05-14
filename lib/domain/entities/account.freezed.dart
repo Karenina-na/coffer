@@ -14,7 +14,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Account {
 
- String get id; String? get accountNo; AccountType get accountType; String get sovereigntyRegion; String get institutionName; AccountStatus get status; DateTime? get openedAt; Map<String, dynamic>? get extInfo; DateTime get createdAt; DateTime get updatedAt; bool get isDeleted;
+ String get id; String? get accountNo; AccountType get accountType; String get sovereigntyRegion; String get institutionName; AccountStatus get status; DateTime? get openedAt; Map<String, dynamic>? get extInfo;/// FX spread percentage (0–100, e.g. 0.3 = 0.3% loss per conversion).
+/// 0 means this account does not support internal currency exchange.
+ double get fxSpreadPercent; DateTime get createdAt; DateTime get updatedAt; bool get isDeleted;
 /// Create a copy of Account
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +27,16 @@ $AccountCopyWith<Account> get copyWith => _$AccountCopyWithImpl<Account>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Account&&(identical(other.id, id) || other.id == id)&&(identical(other.accountNo, accountNo) || other.accountNo == accountNo)&&(identical(other.accountType, accountType) || other.accountType == accountType)&&(identical(other.sovereigntyRegion, sovereigntyRegion) || other.sovereigntyRegion == sovereigntyRegion)&&(identical(other.institutionName, institutionName) || other.institutionName == institutionName)&&(identical(other.status, status) || other.status == status)&&(identical(other.openedAt, openedAt) || other.openedAt == openedAt)&&const DeepCollectionEquality().equals(other.extInfo, extInfo)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.isDeleted, isDeleted) || other.isDeleted == isDeleted));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Account&&(identical(other.id, id) || other.id == id)&&(identical(other.accountNo, accountNo) || other.accountNo == accountNo)&&(identical(other.accountType, accountType) || other.accountType == accountType)&&(identical(other.sovereigntyRegion, sovereigntyRegion) || other.sovereigntyRegion == sovereigntyRegion)&&(identical(other.institutionName, institutionName) || other.institutionName == institutionName)&&(identical(other.status, status) || other.status == status)&&(identical(other.openedAt, openedAt) || other.openedAt == openedAt)&&const DeepCollectionEquality().equals(other.extInfo, extInfo)&&(identical(other.fxSpreadPercent, fxSpreadPercent) || other.fxSpreadPercent == fxSpreadPercent)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.isDeleted, isDeleted) || other.isDeleted == isDeleted));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,accountNo,accountType,sovereigntyRegion,institutionName,status,openedAt,const DeepCollectionEquality().hash(extInfo),createdAt,updatedAt,isDeleted);
+int get hashCode => Object.hash(runtimeType,id,accountNo,accountType,sovereigntyRegion,institutionName,status,openedAt,const DeepCollectionEquality().hash(extInfo),fxSpreadPercent,createdAt,updatedAt,isDeleted);
 
 @override
 String toString() {
-  return 'Account(id: $id, accountNo: $accountNo, accountType: $accountType, sovereigntyRegion: $sovereigntyRegion, institutionName: $institutionName, status: $status, openedAt: $openedAt, extInfo: $extInfo, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted)';
+  return 'Account(id: $id, accountNo: $accountNo, accountType: $accountType, sovereigntyRegion: $sovereigntyRegion, institutionName: $institutionName, status: $status, openedAt: $openedAt, extInfo: $extInfo, fxSpreadPercent: $fxSpreadPercent, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted)';
 }
 
 
@@ -45,7 +47,7 @@ abstract mixin class $AccountCopyWith<$Res>  {
   factory $AccountCopyWith(Account value, $Res Function(Account) _then) = _$AccountCopyWithImpl;
 @useResult
 $Res call({
- String id, String? accountNo, AccountType accountType, String sovereigntyRegion, String institutionName, AccountStatus status, DateTime? openedAt, Map<String, dynamic>? extInfo, DateTime createdAt, DateTime updatedAt, bool isDeleted
+ String id, String? accountNo, AccountType accountType, String sovereigntyRegion, String institutionName, AccountStatus status, DateTime? openedAt, Map<String, dynamic>? extInfo, double fxSpreadPercent, DateTime createdAt, DateTime updatedAt, bool isDeleted
 });
 
 
@@ -62,7 +64,7 @@ class _$AccountCopyWithImpl<$Res>
 
 /// Create a copy of Account
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? accountNo = freezed,Object? accountType = null,Object? sovereigntyRegion = null,Object? institutionName = null,Object? status = null,Object? openedAt = freezed,Object? extInfo = freezed,Object? createdAt = null,Object? updatedAt = null,Object? isDeleted = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? accountNo = freezed,Object? accountType = null,Object? sovereigntyRegion = null,Object? institutionName = null,Object? status = null,Object? openedAt = freezed,Object? extInfo = freezed,Object? fxSpreadPercent = null,Object? createdAt = null,Object? updatedAt = null,Object? isDeleted = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,accountNo: freezed == accountNo ? _self.accountNo : accountNo // ignore: cast_nullable_to_non_nullable
@@ -72,7 +74,8 @@ as String,institutionName: null == institutionName ? _self.institutionName : ins
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as AccountStatus,openedAt: freezed == openedAt ? _self.openedAt : openedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,extInfo: freezed == extInfo ? _self.extInfo : extInfo // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,fxSpreadPercent: null == fxSpreadPercent ? _self.fxSpreadPercent : fxSpreadPercent // ignore: cast_nullable_to_non_nullable
+as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
 as bool,
@@ -160,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? accountNo,  AccountType accountType,  String sovereigntyRegion,  String institutionName,  AccountStatus status,  DateTime? openedAt,  Map<String, dynamic>? extInfo,  DateTime createdAt,  DateTime updatedAt,  bool isDeleted)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? accountNo,  AccountType accountType,  String sovereigntyRegion,  String institutionName,  AccountStatus status,  DateTime? openedAt,  Map<String, dynamic>? extInfo,  double fxSpreadPercent,  DateTime createdAt,  DateTime updatedAt,  bool isDeleted)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Account() when $default != null:
-return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegion,_that.institutionName,_that.status,_that.openedAt,_that.extInfo,_that.createdAt,_that.updatedAt,_that.isDeleted);case _:
+return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegion,_that.institutionName,_that.status,_that.openedAt,_that.extInfo,_that.fxSpreadPercent,_that.createdAt,_that.updatedAt,_that.isDeleted);case _:
   return orElse();
 
 }
@@ -181,10 +184,10 @@ return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? accountNo,  AccountType accountType,  String sovereigntyRegion,  String institutionName,  AccountStatus status,  DateTime? openedAt,  Map<String, dynamic>? extInfo,  DateTime createdAt,  DateTime updatedAt,  bool isDeleted)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? accountNo,  AccountType accountType,  String sovereigntyRegion,  String institutionName,  AccountStatus status,  DateTime? openedAt,  Map<String, dynamic>? extInfo,  double fxSpreadPercent,  DateTime createdAt,  DateTime updatedAt,  bool isDeleted)  $default,) {final _that = this;
 switch (_that) {
 case _Account():
-return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegion,_that.institutionName,_that.status,_that.openedAt,_that.extInfo,_that.createdAt,_that.updatedAt,_that.isDeleted);case _:
+return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegion,_that.institutionName,_that.status,_that.openedAt,_that.extInfo,_that.fxSpreadPercent,_that.createdAt,_that.updatedAt,_that.isDeleted);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +204,10 @@ return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? accountNo,  AccountType accountType,  String sovereigntyRegion,  String institutionName,  AccountStatus status,  DateTime? openedAt,  Map<String, dynamic>? extInfo,  DateTime createdAt,  DateTime updatedAt,  bool isDeleted)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? accountNo,  AccountType accountType,  String sovereigntyRegion,  String institutionName,  AccountStatus status,  DateTime? openedAt,  Map<String, dynamic>? extInfo,  double fxSpreadPercent,  DateTime createdAt,  DateTime updatedAt,  bool isDeleted)?  $default,) {final _that = this;
 switch (_that) {
 case _Account() when $default != null:
-return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegion,_that.institutionName,_that.status,_that.openedAt,_that.extInfo,_that.createdAt,_that.updatedAt,_that.isDeleted);case _:
+return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegion,_that.institutionName,_that.status,_that.openedAt,_that.extInfo,_that.fxSpreadPercent,_that.createdAt,_that.updatedAt,_that.isDeleted);case _:
   return null;
 
 }
@@ -216,7 +219,7 @@ return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegi
 
 
 class _Account implements Account {
-  const _Account({required this.id, this.accountNo, required this.accountType, required this.sovereigntyRegion, required this.institutionName, required this.status, this.openedAt, final  Map<String, dynamic>? extInfo, required this.createdAt, required this.updatedAt, this.isDeleted = false}): _extInfo = extInfo;
+  const _Account({required this.id, this.accountNo, required this.accountType, required this.sovereigntyRegion, required this.institutionName, required this.status, this.openedAt, final  Map<String, dynamic>? extInfo, this.fxSpreadPercent = 0, required this.createdAt, required this.updatedAt, this.isDeleted = false}): _extInfo = extInfo;
   
 
 @override final  String id;
@@ -235,6 +238,9 @@ class _Account implements Account {
   return EqualUnmodifiableMapView(value);
 }
 
+/// FX spread percentage (0–100, e.g. 0.3 = 0.3% loss per conversion).
+/// 0 means this account does not support internal currency exchange.
+@override@JsonKey() final  double fxSpreadPercent;
 @override final  DateTime createdAt;
 @override final  DateTime updatedAt;
 @override@JsonKey() final  bool isDeleted;
@@ -249,16 +255,16 @@ _$AccountCopyWith<_Account> get copyWith => __$AccountCopyWithImpl<_Account>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Account&&(identical(other.id, id) || other.id == id)&&(identical(other.accountNo, accountNo) || other.accountNo == accountNo)&&(identical(other.accountType, accountType) || other.accountType == accountType)&&(identical(other.sovereigntyRegion, sovereigntyRegion) || other.sovereigntyRegion == sovereigntyRegion)&&(identical(other.institutionName, institutionName) || other.institutionName == institutionName)&&(identical(other.status, status) || other.status == status)&&(identical(other.openedAt, openedAt) || other.openedAt == openedAt)&&const DeepCollectionEquality().equals(other._extInfo, _extInfo)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.isDeleted, isDeleted) || other.isDeleted == isDeleted));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Account&&(identical(other.id, id) || other.id == id)&&(identical(other.accountNo, accountNo) || other.accountNo == accountNo)&&(identical(other.accountType, accountType) || other.accountType == accountType)&&(identical(other.sovereigntyRegion, sovereigntyRegion) || other.sovereigntyRegion == sovereigntyRegion)&&(identical(other.institutionName, institutionName) || other.institutionName == institutionName)&&(identical(other.status, status) || other.status == status)&&(identical(other.openedAt, openedAt) || other.openedAt == openedAt)&&const DeepCollectionEquality().equals(other._extInfo, _extInfo)&&(identical(other.fxSpreadPercent, fxSpreadPercent) || other.fxSpreadPercent == fxSpreadPercent)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.isDeleted, isDeleted) || other.isDeleted == isDeleted));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,accountNo,accountType,sovereigntyRegion,institutionName,status,openedAt,const DeepCollectionEquality().hash(_extInfo),createdAt,updatedAt,isDeleted);
+int get hashCode => Object.hash(runtimeType,id,accountNo,accountType,sovereigntyRegion,institutionName,status,openedAt,const DeepCollectionEquality().hash(_extInfo),fxSpreadPercent,createdAt,updatedAt,isDeleted);
 
 @override
 String toString() {
-  return 'Account(id: $id, accountNo: $accountNo, accountType: $accountType, sovereigntyRegion: $sovereigntyRegion, institutionName: $institutionName, status: $status, openedAt: $openedAt, extInfo: $extInfo, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted)';
+  return 'Account(id: $id, accountNo: $accountNo, accountType: $accountType, sovereigntyRegion: $sovereigntyRegion, institutionName: $institutionName, status: $status, openedAt: $openedAt, extInfo: $extInfo, fxSpreadPercent: $fxSpreadPercent, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted)';
 }
 
 
@@ -269,7 +275,7 @@ abstract mixin class _$AccountCopyWith<$Res> implements $AccountCopyWith<$Res> {
   factory _$AccountCopyWith(_Account value, $Res Function(_Account) _then) = __$AccountCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String? accountNo, AccountType accountType, String sovereigntyRegion, String institutionName, AccountStatus status, DateTime? openedAt, Map<String, dynamic>? extInfo, DateTime createdAt, DateTime updatedAt, bool isDeleted
+ String id, String? accountNo, AccountType accountType, String sovereigntyRegion, String institutionName, AccountStatus status, DateTime? openedAt, Map<String, dynamic>? extInfo, double fxSpreadPercent, DateTime createdAt, DateTime updatedAt, bool isDeleted
 });
 
 
@@ -286,7 +292,7 @@ class __$AccountCopyWithImpl<$Res>
 
 /// Create a copy of Account
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? accountNo = freezed,Object? accountType = null,Object? sovereigntyRegion = null,Object? institutionName = null,Object? status = null,Object? openedAt = freezed,Object? extInfo = freezed,Object? createdAt = null,Object? updatedAt = null,Object? isDeleted = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? accountNo = freezed,Object? accountType = null,Object? sovereigntyRegion = null,Object? institutionName = null,Object? status = null,Object? openedAt = freezed,Object? extInfo = freezed,Object? fxSpreadPercent = null,Object? createdAt = null,Object? updatedAt = null,Object? isDeleted = null,}) {
   return _then(_Account(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,accountNo: freezed == accountNo ? _self.accountNo : accountNo // ignore: cast_nullable_to_non_nullable
@@ -296,7 +302,8 @@ as String,institutionName: null == institutionName ? _self.institutionName : ins
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as AccountStatus,openedAt: freezed == openedAt ? _self.openedAt : openedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,extInfo: freezed == extInfo ? _self._extInfo : extInfo // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,fxSpreadPercent: null == fxSpreadPercent ? _self.fxSpreadPercent : fxSpreadPercent // ignore: cast_nullable_to_non_nullable
+as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,isDeleted: null == isDeleted ? _self.isDeleted : isDeleted // ignore: cast_nullable_to_non_nullable
 as bool,
