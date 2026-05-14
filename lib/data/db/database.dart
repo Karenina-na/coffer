@@ -76,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -560,6 +560,41 @@ class AppDatabase extends _$AppDatabase {
             );
           }
         }
+        if (from < 27) {
+          await customStatement(
+            'ALTER TABLE accounts ADD COLUMN fx_spread_percent REAL NOT NULL DEFAULT 0.0',
+          );
+          final now27 = (DateTime.now()).toIso8601String();
+          // New transfer protocols
+          await customStatement(
+            "INSERT OR IGNORE INTO dict_entries "
+            "(id, type, code, name, name_en, sort_order, is_builtin, is_deleted, created_at, updated_at) "
+            "VALUES "
+            "('builtin_tp_cips', 'TRANSFER_PROTOCOL', 'CIPS', '人民币跨境支付系统', "
+            "'Cross-Border Interbank Payment System', 155, 1, 0, '$now27', '$now27'), "
+            "('builtin_tp_fedwire', 'TRANSFER_PROTOCOL', 'FEDWIRE', '美国联邦电子资金转账系统', "
+            "'Federal Reserve Wire Network', 125, 1, 0, '$now27', '$now27'), "
+            "('builtin_tp_chaps', 'TRANSFER_PROTOCOL', 'CHAPS', '英国清算所自动支付系统', "
+            "'Clearing House Automated Payment System', 135, 1, 0, '$now27', '$now27'), "
+            "('builtin_tp_zengin', 'TRANSFER_PROTOCOL', 'ZENGIN', '日本全国银行数据通信系统', "
+            "'Zengin Data Telecommunication System', 145, 1, 0, '$now27', '$now27'), "
+            "('builtin_tp_npp', 'TRANSFER_PROTOCOL', 'NPP', '澳大利亚新支付平台', "
+            "'New Payments Platform', 185, 1, 0, '$now27', '$now27')",
+          );
+          // New currencies
+          await customStatement(
+            "INSERT OR IGNORE INTO dict_entries "
+            "(id, type, code, name, name_en, sort_order, is_builtin, is_deleted, created_at, updated_at) "
+            "VALUES "
+            "('builtin_ccy_jpy', 'CURRENCY', 'JPY', '日元', 'Japanese Yen', 60, 1, 0, '$now27', '$now27'), "
+            "('builtin_ccy_krw', 'CURRENCY', 'KRW', '韩元', 'South Korean Won', 70, 1, 0, '$now27', '$now27'), "
+            "('builtin_ccy_twd', 'CURRENCY', 'TWD', '新台币', 'New Taiwan Dollar', 80, 1, 0, '$now27', '$now27'), "
+            "('builtin_ccy_sgd', 'CURRENCY', 'SGD', '新加坡元', 'Singapore Dollar', 90, 1, 0, '$now27', '$now27'), "
+            "('builtin_ccy_myr', 'CURRENCY', 'MYR', '马来西亚林吉特', 'Malaysian Ringgit', 100, 1, 0, '$now27', '$now27'), "
+            "('builtin_ccy_cad', 'CURRENCY', 'CAD', '加拿大元', 'Canadian Dollar', 110, 1, 0, '$now27', '$now27'), "
+            "('builtin_ccy_aud', 'CURRENCY', 'AUD', '澳大利亚元', 'Australian Dollar', 120, 1, 0, '$now27', '$now27')",
+          );
+        }
       }); // end transaction
     },
     beforeOpen: (details) async {
@@ -599,6 +634,11 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
     ['CNAPS', '中国现代化支付系统', 'China National Advanced Payment System'],
     ['SEPA', '单一欧元支付区', 'Single Euro Payments Area'],
     ['CHATS', '港元即时支付结算系统', 'Clearing House Automated Transfer System'],
+    ['CIPS', '人民币跨境支付系统', 'Cross-Border Interbank Payment System'],
+    ['FEDWIRE', '美国联邦电子资金转账系统', 'Federal Reserve Wire Network'],
+    ['CHAPS', '英国清算所自动支付系统', 'Clearing House Automated Payment System'],
+    ['ZENGIN', '日本全国银行数据通信系统', 'Zengin Data Telecommunication System'],
+    ['NPP', '澳大利亚新支付平台', 'New Payments Platform'],
   ]);
 
   // 主权地区：覆盖主要金融国家 / 地区；ISO 3166-1 alpha-2 + 区域/虚拟代码。
@@ -632,6 +672,13 @@ Future<void> _seedBuiltinDictEntries(AppDatabase db) async {
     ['GBP', '英镑', 'British Pound'],
     ['EUR', '欧元', 'Euro'],
     ['HKD', '港币', 'Hong Kong Dollar'],
+    ['JPY', '日元', 'Japanese Yen'],
+    ['KRW', '韩元', 'South Korean Won'],
+    ['TWD', '新台币', 'New Taiwan Dollar'],
+    ['SGD', '新加坡元', 'Singapore Dollar'],
+    ['MYR', '马来西亚林吉特', 'Malaysian Ringgit'],
+    ['CAD', '加拿大元', 'Canadian Dollar'],
+    ['AUD', '澳大利亚元', 'Australian Dollar'],
   ]);
 }
 
