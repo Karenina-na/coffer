@@ -16,9 +16,11 @@ import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/channel.dart';
+import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/usecases/plan_transfer_route.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
+import '../../exchange_rate/presentation/exchange_rate_providers.dart';
 import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/dict_type.dart';
 import 'channel_providers.dart';
@@ -71,6 +73,7 @@ class TransferSimulateBody extends ConsumerStatefulWidget {
 class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
   final _amountCtrl = TextEditingController();
   String _currency = 'CNY';
+  String _targetCurrency = 'CNY';
 
   String? _sourceId;
   String? _targetId;
@@ -112,6 +115,14 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     });
     final uc = ref.read(planTransferRouteUseCaseProvider);
     final ccy = _currency.toUpperCase();
+    final tgtCcy = _targetCurrency.toUpperCase();
+    // Build FX rates from exchange rate data
+    final fxRates = <String, double>{};
+    final rateAsync = ref.read(exchangeRateListProvider);
+    final rateList = rateAsync.maybeWhen(data: (d) => d, orElse: () => <ExchangeRate>[]);
+    for (final r in rateList) {
+      fxRates['${r.baseCurrency}/${r.quoteCurrency}'] = r.rate.toDouble();
+    }
     if (_planMode == _PlanMode.compare) {
       final results = await Future.wait([
         uc(
@@ -119,6 +130,8 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
           targetAccountId: tgt,
           amount: amt,
           currency: ccy,
+          targetCurrency: tgtCcy,
+          fxRates: fxRates,
           objective: RouteObjective.minFee,
         ),
         uc(
@@ -126,6 +139,8 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
           targetAccountId: tgt,
           amount: amt,
           currency: ccy,
+          targetCurrency: tgtCcy,
+          fxRates: fxRates,
           objective: RouteObjective.minHops,
         ),
       ]);
@@ -148,6 +163,8 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
       targetAccountId: tgt,
       amount: amt,
       currency: ccy,
+      targetCurrency: tgtCcy,
+      fxRates: fxRates,
       objective: _planMode == _PlanMode.minHops
           ? RouteObjective.minHops
           : RouteObjective.minFee,
@@ -165,6 +182,136 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
       _sourceId = _targetId;
       _targetId = tmp;
     });
+  }
+
+  static String _fmtAmountText(Decimal v) {
+    final d = v.toDouble();
+    if (d.abs() >= 1e6) return '${(d / 1e6).toStringAsFixed(1)}M';
+    if (d.abs() >= 1e3) return '${(d / 1e3).toStringAsFixed(1)}K';
+    return d.toStringAsFixed(1);
+  }
+
+  Future<void> _openAmountSheet() async {
+    final currencies = ref
+        .read(dictEntriesProvider(DictType.currency))
+        .maybeWhen(data: (d) => d, orElse: () => const []);
+    final srcCtrl = TextEditingController(text: _amountCtrl.text);
+    var srcCcy = _currency;
+    var tgtCcy = _targetCurrency;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: GwpSpacing.base,
+            right: GwpSpacing.base,
+            top: GwpSpacing.base,
+            bottom: MediaQuery.viewInsetsOf(ctx).bottom + GwpSpacing.base,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('转账金额', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: GwpSpacing.md),
+              // Source currency + amount
+              Row(
+                children: [
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, 48),
+                    padding: EdgeInsets.zero,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: GwpColors.surface2,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: GwpColors.border, width: 0.5),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(srcCcy, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_drop_down, size: 16, color: GwpColors.textMuted),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (_) => currencies
+                        .map((c) => PopupMenuItem<String>(value: c.code, child: Text('${c.code} · ${c.name}', style: const TextStyle(fontSize: 13))))
+                        .toList(),
+                    onSelected: (v) => srcCcy = v,
+                  ),
+                  const SizedBox(width: GwpSpacing.sm),
+                  Expanded(
+                    child: TextField(
+                      controller: srcCtrl,
+                      autofocus: true,
+                      decoration: const InputDecoration(hintText: '金额', isDense: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: GwpSpacing.md),
+              // Target currency
+              Row(
+                children: [
+                  const Icon(Icons.arrow_forward_rounded, size: 16, color: GwpColors.textMuted),
+                  const SizedBox(width: 8),
+                  const Text('目标币种', style: TextStyle(fontSize: 13, color: GwpColors.textMuted)),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, 48),
+                    padding: EdgeInsets.zero,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: tgtCcy != srcCcy ? GwpColors.warning.withValues(alpha: 0.08) : GwpColors.surface2,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: GwpColors.border, width: 0.5),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(tgtCcy, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                              color: tgtCcy != srcCcy ? GwpColors.warning : GwpColors.textPrimary)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_drop_down, size: 16, color: GwpColors.textMuted),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (_) {
+                      final opts = {srcCcy, tgtCcy, 'CNY', 'USD', 'HKD', 'EUR', 'GBP', 'JPY'};
+                      return opts.map((c) => PopupMenuItem<String>(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList();
+                    },
+                    onSelected: (v) => tgtCcy = v,
+                  ),
+                ],
+              ),
+              const SizedBox(height: GwpSpacing.lg),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('确认'),
+              ),
+              const SizedBox(height: GwpSpacing.sm),
+            ],
+          ),
+        ),
+      ),
+    );
+    final text = srcCtrl.text;
+    srcCtrl.dispose();
+    if (ok == true && mounted) {
+      setState(() {
+        _amountCtrl.text = text;
+        _currency = srcCcy;
+        _targetCurrency = tgtCcy;
+      });
+    }
   }
 
   @override
@@ -294,64 +441,71 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
             ),
             const SizedBox(height: GwpSpacing.md),
 
-            // ── §2 Transfer config row ──
+            // ── §2 Transfer amount & config ──
             Row(
               children: [
                 Expanded(
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final currencies =
-                          ref
-                              .watch(dictEntriesProvider(DictType.currency))
-                              .asData
-                              ?.value ??
-                          const [];
-                      return TextField(
-                        controller: _amountCtrl,
-                        decoration: InputDecoration(
-                          hintText: '1k',
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 8),
-                          prefixIcon: PopupMenuButton<String>(
-                            offset: const Offset(0, 48),
-                            padding: EdgeInsets.zero,
-                            icon: Container(
-                              width: 36,
-                              padding: const EdgeInsets.only(right: 2),
-                              alignment: Alignment.center,
-                              child: Text(
-                                _currency,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: GwpColors.actionPrimary,
-                                  fontFamily: GwpTypo.monoFont,
-                                ),
-                              ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _openAmountSheet(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: GwpColors.surface1,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: GwpColors.border, width: 0.5),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.attach_money, size: 16,
+                              color: GwpColors.textMuted),
+                          const SizedBox(width: 6),
+                          Text(
+                            _amountCtrl.text.isEmpty
+                                ? '1k'
+                                : _fmtAmountText(_parseAmount()),
+                            style: const TextStyle(
+                              fontFamily: GwpTypo.monoFont,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: GwpColors.textPrimary,
                             ),
-                            itemBuilder: (_) => currencies
-                                .map((c) => PopupMenuItem(
-                                      value: c.code,
-                                      child: Text(
-                                        '${c.code} · ${c.name}',
-                                        style: const TextStyle(
-                                            fontSize: 13),
-                                      ),
-                                    ))
-                                .toList(),
-                            onSelected: (v) =>
-                                setState(() => _currency = v),
                           ),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.]')),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: GwpColors.actionPrimary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(_currency,
+                                style: const TextStyle(
+                                    fontSize: 10, fontWeight: FontWeight.w700,
+                                    color: GwpColors.actionPrimary,
+                                    fontFamily: GwpTypo.monoFont)),
+                          ),
+                          if (_targetCurrency != _currency) ...[
+                            const Icon(Icons.arrow_forward_rounded,
+                                size: 12, color: GwpColors.textMuted),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: GwpColors.warning.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(_targetCurrency,
+                                  style: const TextStyle(
+                                      fontSize: 10, fontWeight: FontWeight.w700,
+                                      color: GwpColors.warning,
+                                      fontFamily: GwpTypo.monoFont)),
+                            ),
+                          ],
+                          const Spacer(),
+                          const Icon(Icons.edit_outlined,
+                              size: 14, color: GwpColors.textMuted),
                         ],
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: GwpSpacing.sm),
@@ -1091,7 +1245,8 @@ class _RouteFlow extends StatelessWidget {
                       color: statusColor),
                 ),
                 const Spacer(),
-                Text('¥${route.totalFee} · ${legs.length}跳',
+                Text(
+                  '${route.currency}${route.targetCurrency != null && route.targetCurrency != route.currency ? "→${route.targetCurrency}" : ""} · ¥${route.totalFee} · ${legs.length}跳',
                     style: const TextStyle(
                         fontSize: 11, color: GwpColors.textSecondary)),
                 const SizedBox(width: 4),
@@ -1216,12 +1371,15 @@ class _RouteFlow extends StatelessWidget {
   }
 
   Widget _flowChannelRow(RouteLeg leg) {
-    final protoColor = _protocolColors[leg.channel.transferProtocol] ??
-        GwpColors.actionPrimary;
+    final isFx = leg.channel.transferProtocol == 'FX';
+    final protoColor = isFx
+        ? GwpColors.warning
+        : (_protocolColors[leg.channel.transferProtocol] ?? GwpColors.actionPrimary);
+    final changed = leg.fromCurrency != leg.toCurrency;
     return Padding(
       padding: const EdgeInsets.only(left: 5),
       child: SizedBox(
-        height: 32,
+        height: isFx ? 36 : 32,
         child: Row(
           children: [
             Container(width: 1.5, color: protoColor.withValues(alpha: 0.3)),
@@ -1236,17 +1394,39 @@ class _RouteFlow extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(leg.channel.transferProtocol,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: protoColor)),
-                  if (leg.channel.isBuiltin) ...[
-                    const SizedBox(width: 4),
-                    const BuiltinBadge(),
+                  if (isFx) ...[
+                    Text('${leg.fromCurrency} → ${leg.toCurrency}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: protoColor)),
+                    if (leg.fxRate != null) ...[
+                      const SizedBox(width: 6),
+                      Text('@${leg.fxRate!.toStringAsFixed(4)}',
+                          style: const TextStyle(
+                              fontFamily: GwpTypo.monoFont,
+                              fontSize: 9,
+                              color: GwpColors.textMuted)),
+                    ],
+                  ] else ...[
+                    Text(leg.channel.transferProtocol,
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: protoColor)),
+                    if (leg.channel.isBuiltin) ...[
+                      const SizedBox(width: 4),
+                      const BuiltinBadge(),
+                    ],
+                    if (changed) ...[
+                      const SizedBox(width: 4),
+                      Text('${leg.fromCurrency}→${leg.toCurrency}',
+                          style: const TextStyle(
+                              fontSize: 9, color: GwpColors.textMuted)),
+                    ],
                   ],
                   const SizedBox(width: 8),
-                  Text('费用 ${leg.fee}',
+                  Text(isFx ? '损耗 ${leg.fee}' : '费用 ${leg.fee}',
                       style: const TextStyle(
                           fontFamily: GwpTypo.monoFont,
                           fontSize: 10,

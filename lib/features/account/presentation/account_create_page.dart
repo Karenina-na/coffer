@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,6 +28,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _institutionCtrl;
   late final TextEditingController _accountNoCtrl;
+  late final TextEditingController _fxSpreadCtrl;
 
   late String _region;
   late AccountType _type;
@@ -41,6 +43,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
     _institutionCtrl = TextEditingController(text: a?.institutionName ?? '');
     _region = a?.sovereigntyRegion ?? 'CN';
     _accountNoCtrl = TextEditingController(text: a?.accountNo ?? '');
+    _fxSpreadCtrl = TextEditingController(
+        text: (a?.fxSpreadPercent ?? 0).toStringAsFixed(2));
     _type = a?.accountType ?? AccountType.bank;
   }
 
@@ -48,6 +52,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
   void dispose() {
     _institutionCtrl.dispose();
     _accountNoCtrl.dispose();
+    _fxSpreadCtrl.dispose();
     super.dispose();
   }
 
@@ -63,6 +68,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         sovereigntyRegion: _region,
         institutionName: _institutionCtrl.text.trim(),
         accountNo: accountNo,
+        fxSpreadPercent: double.tryParse(_fxSpreadCtrl.text) ?? 0,
         updatedAt: now,
       );
       final result =
@@ -82,6 +88,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         sovereigntyRegion: _region,
         institutionName: _institutionCtrl.text,
         accountNo: accountNo,
+        fxSpreadPercent: double.tryParse(_fxSpreadCtrl.text) ?? 0,
       );
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -135,6 +142,18 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
             TextFormField(
               controller: _accountNoCtrl,
               decoration: const InputDecoration(labelText: '账户编号（可选）'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _fxSpreadCtrl,
+              decoration: const InputDecoration(
+                labelText: '换汇损耗 (%)',
+                helperText: '0 = 不支持换汇；例如 0.3 表示内部换汇损耗 0.3%',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
             ),
             const SizedBox(height: 16),
             Container(
