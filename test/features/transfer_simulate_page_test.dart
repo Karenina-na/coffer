@@ -140,8 +140,6 @@ void main() {
   testWidgets('转账页顶部展示通道摘要并可进入通道管理', (tester) async {
     await _pumpTransfer(tester);
 
-    expect(find.text('转账通道概览'), findsOneWidget);
-    expect(find.text('2 条通道 · 2 种协议'), findsOneWidget);
     expect(find.text('通道管理'), findsOneWidget);
 
     await tester.tap(find.text('通道管理'));
@@ -155,10 +153,10 @@ void main() {
   testWidgets('源账户选择改为底部弹窗并默认过滤未接入通道账户', (tester) async {
     await _pumpTransfer(tester);
 
-    await tester.tap(find.text('请选择账户').first);
+    await tester.tap(find.text('选择源账户'));
     await tester.pumpAndSettle();
 
-    expect(find.text('选择源账户'), findsNWidgets(2));
+    expect(find.text('选择源账户'), findsWidgets);
     expect(find.text('已接入通道'), findsOneWidget);
     expect(find.text('ICBC'), findsOneWidget);
     expect(find.text('Fidelity'), findsOneWidget);

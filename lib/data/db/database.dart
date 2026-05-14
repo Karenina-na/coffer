@@ -484,6 +484,7 @@ class AppDatabase extends _$AppDatabase {
             "'builtin_ch_gb_fps',"
             "'builtin_ch_hk_chats',"
             "'builtin_ch_cn_cny',"
+            "'builtin_ch_cn_cips',"
             "'builtin_ch_us_ach'"
             ")",
           );
@@ -677,6 +678,13 @@ Future<void> seedBuiltinChannels(AppDatabase db) async {
       protocol: 'CNAPS',
       limitCurrency: 'CNY',
       regionRule: '{"allowedRegions":["CN"]}',
+    ),
+    (
+      id: 'builtin_ch_cn_cips',
+      name: '人民币跨境支付系统通道',
+      protocol: 'CIPS',
+      limitCurrency: 'CNY',
+      regionRule: '{"allowedRegions":["CN","HK"]}',
     ),
     (
       id: 'builtin_ch_us_ach',

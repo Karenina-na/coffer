@@ -409,6 +409,11 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     accountKeys: const ['cn_bank', 'cn_payment'],
   );
   await linkBuiltinChannel(
+    key: 'CIPS',
+    channelId: 'builtin_ch_cn_cips',
+    accountKeys: const ['cn_bank', 'hk_bank_dormant', 'cn_payment'],
+  );
+  await linkBuiltinChannel(
     key: 'ACH',
     channelId: 'builtin_ch_us_ach',
     accountKeys: const ['us_broker', 'us_custody'],

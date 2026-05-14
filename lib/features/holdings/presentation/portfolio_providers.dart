@@ -80,6 +80,9 @@ class PortfolioSnapshot {
     required this.regionCount,
     required this.institutionCount,
     required this.missingRateCount,
+    required this.totalGain,
+    required this.totalCostBasis,
+    required this.hasGainData,
   });
 
   final Decimal netWorth;
@@ -90,6 +93,9 @@ class PortfolioSnapshot {
   final int regionCount;
   final int institutionCount;
   final int missingRateCount;
+  final Decimal totalGain;
+  final Decimal totalCostBasis;
+  final bool hasGainData;
 }
 
 final portfolioSnapshotProvider =
@@ -97,10 +103,24 @@ final portfolioSnapshotProvider =
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
   final assets = inputs.assets;
+  final valued = inputs.valuedAssets;
 
   final currencies = assets.map((a) => a.currency).toSet();
   final regions = accounts.map((a) => a.sovereigntyRegion).toSet();
   final institutions = accounts.map((a) => a.institutionName).toSet();
+
+  var totalGain = Decimal.zero;
+  var totalCostBasis = Decimal.zero;
+  var gainable = false;
+  for (final a in valued) {
+    if (a.valuedAmount != null &&
+        a.valuedCostBasis != null &&
+        a.valuedCostBasis! > Decimal.zero) {
+      totalGain += a.valuedAmount! - a.valuedCostBasis!;
+      totalCostBasis += a.valuedCostBasis!;
+      gainable = true;
+    }
+  }
 
   return PortfolioSnapshot(
     netWorth: inputs.netWorth,
@@ -111,6 +131,9 @@ final portfolioSnapshotProvider =
     regionCount: regions.length,
     institutionCount: institutions.length,
     missingRateCount: inputs.missingRateCount,
+    totalGain: totalGain,
+    totalCostBasis: totalCostBasis,
+    hasGainData: gainable,
   );
 });
 

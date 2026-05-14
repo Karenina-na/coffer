@@ -222,6 +222,7 @@ void main() {
           'supportsAllCurrencies': false,
           'isVirtual': false,
           'status': 'active',
+          'sortOrder': 1000,
           'createdAt': '2024-01-01T00:00:00.000Z',
           'updatedAt': '2024-01-01T00:00:00.000Z',
           'cardNoBackup': '4111111111111234',

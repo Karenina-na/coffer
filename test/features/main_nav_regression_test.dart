@@ -187,6 +187,9 @@ Future<GoRouter> _pumpShell(
             regionCount: 0,
             institutionCount: 0,
             missingRateCount: 0,
+            totalGain: Decimal.zero,
+            totalCostBasis: Decimal.zero,
+            hasGainData: false,
           ),
         ),
         dashboardKpiProvider.overrideWith(
@@ -621,7 +624,7 @@ void main() {
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
-    expect(find.text('维度探索'), findsOneWidget);
+    expect(find.text('配置分布'), findsOneWidget);
 
     await tester.drag(find.byType(TabBarView).last, const Offset(0, -500));
     await _settleNav(tester);

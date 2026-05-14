@@ -1,12 +1,15 @@
 import 'dart:math';
 
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/money/money.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/gwp_bar_rank.dart';
+import '../../../core/ui/gwp_number_text.dart';
 import '../../../core/ui/gwp_radar_chart.dart';
 import '../../../core/ui/horizontal_gesture_guard.dart';
 import 'portfolio_providers.dart';
@@ -28,11 +31,9 @@ class PortfolioAnalysisBody extends ConsumerWidget {
         children: [
           _SnapshotHero(),
           SizedBox(height: GwpSpacing.base),
-          _AllocationTriptych(),
+          _AllocationExplorer(),
           SizedBox(height: GwpSpacing.base),
           _AssetRankingSection(),
-          SizedBox(height: GwpSpacing.base),
-          _DimensionExplorer(),
           SizedBox(height: GwpSpacing.base),
           _CurrencyExposureSection(),
           SizedBox(height: GwpSpacing.base),
@@ -87,83 +88,127 @@ class _SnapshotHero extends ConsumerWidget {
         title: '投资组合概览',
         child: _Error(e),
       ),
-      data: (snap) => Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [GwpColors.surface3, GwpColors.surface1],
+      data: (snap) {
+        final gainPct = snap.totalCostBasis > Decimal.zero
+            ? (snap.totalGain.toDouble() / snap.totalCostBasis.toDouble() * 100)
+            : 0.0;
+        final isUp = snap.totalGain >= Decimal.zero;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [GwpColors.surface3, GwpColors.surface1],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: GwpColors.borderStrong, width: 0.5),
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: GwpColors.borderStrong, width: 0.5),
-        ),
-        padding: const EdgeInsets.all(GwpSpacing.lg),
-        child: Column(
-          children: [
-            // Total net worth
-            Text(
-              heroFormat(snap.netWorth),
-              style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: GwpColors.textPrimary,
+          padding: const EdgeInsets.all(GwpSpacing.lg),
+          child: Column(
+            children: [
+              // Total net worth
+              Text(
+                heroFormat(snap.netWorth),
+                style: const TextStyle(
+                  fontFamily: GwpTypo.monoFont,
+                  fontFeatures: GwpTypo.tabularFigures,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: GwpColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '总净值 · ${snap.baseCurrency}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: GwpColors.textMuted,
-              ),
-            ),
-            if (snap.missingRateCount > 0) ...[
               const SizedBox(height: 4),
               Text(
-                '${snap.missingRateCount} 项缺少汇率',
+                '总净值 · ${snap.baseCurrency}',
                 style: const TextStyle(
-                  fontSize: 10,
-                  color: GwpColors.warning,
+                  fontSize: 12,
+                  color: GwpColors.textMuted,
                 ),
               ),
-            ],
-            const SizedBox(height: GwpSpacing.lg),
-            // Stat chips row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StatChip(
-                  value: '${snap.accountCount}',
-                  label: '账户',
-                  icon: Icons.account_balance_outlined,
-                ),
-                _StatChip(
-                  value: '${snap.assetCount}',
-                  label: '资产',
-                  icon: Icons.pie_chart_outline,
-                ),
-                _StatChip(
-                  value: '${snap.currencyCount}',
-                  label: '币种',
-                  icon: Icons.currency_exchange,
-                ),
-                _StatChip(
-                  value: '${snap.regionCount}',
-                  label: '地区',
-                  icon: Icons.public_outlined,
-                ),
-                _StatChip(
-                  value: '${snap.institutionCount}',
-                  label: '机构',
-                  icon: Icons.business_outlined,
+              // Unrealized P&L
+              if (snap.hasGainData) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GwpNumberText(
+                      value:
+                          '${isUp ? '+' : ''}${Money.format(snap.totalGain, currency: snap.baseCurrency)}',
+                      sign: snap.totalGain > Decimal.zero
+                          ? ValueSign.positive
+                          : (snap.totalGain < Decimal.zero
+                              ? ValueSign.negative
+                              : ValueSign.neutral),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      showIcon: true,
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${isUp ? '+' : ''}${gainPct.toStringAsFixed(2)}%',
+                        style: TextStyle(
+                          fontFamily: GwpTypo.monoFont,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isUp ? GwpColors.positive : GwpColors.negative,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
+              if (snap.missingRateCount > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '${snap.missingRateCount} 项缺少汇率',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: GwpColors.warning,
+                  ),
+                ),
+              ],
+              const SizedBox(height: GwpSpacing.lg),
+              // Stat chips row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _StatChip(
+                    value: '${snap.accountCount}',
+                    label: '账户',
+                    icon: Icons.account_balance_outlined,
+                  ),
+                  _StatChip(
+                    value: '${snap.assetCount}',
+                    label: '资产',
+                    icon: Icons.pie_chart_outline,
+                  ),
+                  _StatChip(
+                    value: '${snap.currencyCount}',
+                    label: '币种',
+                    icon: Icons.currency_exchange,
+                  ),
+                  _StatChip(
+                    value: '${snap.regionCount}',
+                    label: '地区',
+                    icon: Icons.public_outlined,
+                  ),
+                  _StatChip(
+                    value: '${snap.institutionCount}',
+                    label: '机构',
+                    icon: Icons.business_outlined,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -240,135 +285,161 @@ class _StatChip extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────
-// §2  Allocation Triptych (3 mini donuts)
+// §2  Allocation Explorer (choice chips → donut + bars)
 // ──────────────────────────────────────────────────────────────
 
-class _AllocationTriptych extends ConsumerWidget {
-  const _AllocationTriptych();
+class _AllocationExplorer extends ConsumerStatefulWidget {
+  const _AllocationExplorer();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _AllocationCard(
-            title: '资产类型',
-            async: ref.watch(portfolioByTypeProvider),
-          ),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Expanded(
-          child: _AllocationCard(
-            title: '币种分布',
-            async: ref.watch(portfolioByCurrencyProvider),
-          ),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Expanded(
-          child: _AllocationCard(
-            title: '地区分布',
-            async: ref.watch(portfolioByRegionProvider),
-          ),
-        ),
-      ],
-    );
-  }
+  ConsumerState<_AllocationExplorer> createState() => _AllocationExplorerState();
 }
 
-class _AllocationCard extends StatelessWidget {
-  const _AllocationCard({
-    required this.title,
-    required this.async,
-  });
+class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
+  int _selectedIndex = 0;
 
-  final String title;
-  final AsyncValue<List<AllocationSlice>> async;
+  static const _labels = ['按类型', '按币种', '按地区', '按机构'];
+  static const _icons = [
+    Icons.category_outlined,
+    Icons.currency_exchange,
+    Icons.public_outlined,
+    Icons.business_outlined,
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
-      ),
-      padding: const EdgeInsets.all(GwpSpacing.sm),
+    final providers = [
+      portfolioByTypeProvider,
+      portfolioByCurrencyProvider,
+      portfolioByRegionProvider,
+      portfolioByInstitutionProvider,
+    ];
+    final async = ref.watch(providers[_selectedIndex]);
+
+    return _SectionCard(
+      icon: Icons.pie_chart_outline,
+      iconColor: GwpColors.info,
+      title: '配置分布',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: GwpColors.textMuted,
+          // Chip row
+          SizedBox(
+            height: 36,
+            child: HorizontalGestureGuard(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _labels.length,
+                separatorBuilder: (_, _) => const SizedBox(width: GwpSpacing.sm),
+                itemBuilder: (_, i) => ChoiceChip(
+                  avatar: Icon(_icons[i], size: 14),
+                  label: Text(_labels[i]),
+                  selected: _selectedIndex == i,
+                  onSelected: (_) => setState(() => _selectedIndex = i),
+                  selectedColor:
+                      GwpColors.actionPrimary.withValues(alpha: 0.15),
+                  backgroundColor: GwpColors.surface2,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: _selectedIndex == i
+                        ? GwpColors.actionPrimary
+                        : GwpColors.textSecondary,
+                  ),
+                  side: BorderSide(
+                    color: _selectedIndex == i
+                        ? GwpColors.actionPrimary.withValues(alpha: 0.4)
+                        : GwpColors.border,
+                    width: 0.5,
+                  ),
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: GwpSpacing.md),
+          // Content
           async.when(
-            loading: () => const SizedBox(
-              height: 80,
-              child: Center(
-                child: CircularProgressIndicator(strokeWidth: 1.5),
-              ),
-            ),
-            error: (_, _) => const SizedBox(
-              height: 80,
-              child: Center(
-                child: Icon(Icons.error_outline, color: GwpColors.negative, size: 20),
-              ),
-            ),
+            loading: () => const _Loading(),
+            error: (e, _) => _Error(e),
             data: (slices) {
-              if (slices.isEmpty) {
-                return const SizedBox(
-                  height: 80,
-                  child: Center(
-                    child: Text(
-                      '—',
-                      style: TextStyle(color: GwpColors.textMuted, fontSize: 16),
-                    ),
-                  ),
-                );
-              }
+              if (slices.isEmpty) return const _Empty();
               return Column(
                 children: [
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: CustomPaint(
-                      painter: _MiniDonutPainter(slices: slices),
-                      child: Center(
-                        child: Text(
-                          displayPercentDouble(slices.first.percentage),
-                          style: const TextStyle(
-                            fontFamily: GwpTypo.monoFont,
-                            fontFeatures: GwpTypo.tabularFigures,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: GwpColors.textPrimary,
+                  // Donut + legend
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: CustomPaint(
+                          painter: _MiniDonutPainter(slices: slices),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  displayPercentDouble(slices.first.percentage),
+                                  style: const TextStyle(
+                                    fontFamily: GwpTypo.monoFont,
+                                    fontFeatures: GwpTypo.tabularFigures,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: GwpColors.textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  slices.first.label,
+                                  style: const TextStyle(
+                                    fontSize: 8,
+                                    color: GwpColors.textMuted,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: GwpSpacing.sm),
-                  for (var i = 0; i < slices.length && i < 3; i++)
-                    _LegendRow(
-                      color: _sliceColor(i),
-                      label: slices[i].label,
-                      pct: slices[i].percentage,
-                    ),
-                  if (slices.length > 3)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        '+${slices.length - 3} 项',
-                        style: const TextStyle(
-                          fontSize: 9,
-                          color: GwpColors.textMuted,
+                      const SizedBox(width: GwpSpacing.md),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < slices.length && i < 4; i++)
+                              _LegendRow(
+                                color: _sliceColor(i),
+                                label: slices[i].label,
+                                pct: slices[i].percentage,
+                              ),
+                            if (slices.length > 4)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '+${slices.length - 4} 项',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: GwpColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: GwpSpacing.md),
+                  // Proportion bars
+                  for (var i = 0; i < slices.length; i++) ...[
+                    _ProportionRow(
+                      slice: slices[i],
+                      index: i,
+                      maxPct: slices.first.percentage,
                     ),
+                    if (i < slices.length - 1)
+                      const SizedBox(height: GwpSpacing.sm),
+                  ],
                 ],
               );
             },
@@ -462,168 +533,6 @@ class _LegendRow extends StatelessWidget {
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// §3  Asset Ranking (Top 10)
-// ──────────────────────────────────────────────────────────────
-
-class _AssetRankingSection extends ConsumerWidget {
-  const _AssetRankingSection();
-
-  // Muted institutional palette: actionPrimary + surface tones.
-  static const _rankColors = [
-    Color(0xFF6B7280),
-    Color(0xFF5B6470),
-    Color(0xFF4B5560),
-    Color(0xFF3B4650),
-    Color(0xFF374151),
-    Color(0xFF334155),
-    Color(0xFF2F3D4F),
-    Color(0xFF2B3949),
-    Color(0xFF273543),
-    Color(0xFF23313D),
-  ];
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(assetTop10Provider);
-    return _SectionCard(
-      icon: Icons.emoji_events_outlined,
-      iconColor: GwpColors.warning,
-      title: '资产 Top 10',
-      child: async.when(
-        loading: () => const _Loading(),
-        error: (e, _) => _Error(e),
-        data: (items) {
-          if (items.isEmpty) return const _Empty();
-          final total = items.fold<double>(0, (s, i) => s + i.value);
-          final ranked = items.map((item) {
-            final idx = items.indexOf(item);
-            return RankItem(
-              label: '${idx + 1}. ${item.label}',
-              value: item.value,
-              color: _rankColors[idx.clamp(0, _rankColors.length - 1)],
-            );
-          }).toList();
-          return Column(
-            children: [
-              SizedBox(
-                height: (ranked.length * 24.0).clamp(120, 240),
-                child: GwpBarRank(
-                  items: ranked,
-                  formatValue: (v) => '${total > 0 ? displayPercentDouble(v / total * 100) : '0.00%'}  ${compactValueCJK(v)}',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '合计 ${compactValueCJK(total)}',
-                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _DimensionExplorer extends ConsumerStatefulWidget {
-  const _DimensionExplorer();
-
-  @override
-  ConsumerState<_DimensionExplorer> createState() => _DimensionExplorerState();
-}
-
-class _DimensionExplorerState extends ConsumerState<_DimensionExplorer> {
-  int _selectedIndex = 0;
-
-  static const _labels = ['按类型', '按币种', '按地区', '按机构'];
-  static const _icons = [
-    Icons.category_outlined,
-    Icons.currency_exchange,
-    Icons.public_outlined,
-    Icons.business_outlined,
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final providers = [
-      portfolioByTypeProvider,
-      portfolioByCurrencyProvider,
-      portfolioByRegionProvider,
-      portfolioByInstitutionProvider,
-    ];
-    final async = ref.watch(providers[_selectedIndex]);
-
-    return _SectionCard(
-      icon: Icons.dashboard_outlined,
-      iconColor: GwpColors.info,
-      title: '维度探索',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Chip row
-          SizedBox(
-            height: 36,
-            child: HorizontalGestureGuard(
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _labels.length,
-                separatorBuilder: (_, _) => const SizedBox(width: GwpSpacing.sm),
-                itemBuilder: (_, i) => ChoiceChip(
-                  avatar: Icon(_icons[i], size: 14),
-                  label: Text(_labels[i]),
-                  selected: _selectedIndex == i,
-                  onSelected: (_) => setState(() => _selectedIndex = i),
-                  selectedColor:
-                      GwpColors.actionPrimary.withValues(alpha: 0.15),
-                  backgroundColor: GwpColors.surface2,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: _selectedIndex == i
-                        ? GwpColors.actionPrimary
-                        : GwpColors.textSecondary,
-                  ),
-                  side: BorderSide(
-                    color: _selectedIndex == i
-                        ? GwpColors.actionPrimary.withValues(alpha: 0.4)
-                        : GwpColors.border,
-                    width: 0.5,
-                  ),
-                  showCheckmark: false,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: GwpSpacing.md),
-          // Proportion bars
-          async.when(
-            loading: () => const _Loading(),
-            error: (e, _) => _Error(e),
-            data: (slices) {
-              if (slices.isEmpty) return const _Empty();
-              final maxPct = slices.first.percentage;
-              return Column(
-                children: [
-                  for (var i = 0; i < slices.length; i++) ...[
-                    _ProportionRow(
-                      slice: slices[i],
-                      index: i,
-                      maxPct: maxPct,
-                    ),
-                    if (i < slices.length - 1)
-                      const SizedBox(height: GwpSpacing.sm),
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ProportionRow extends StatelessWidget {
   const _ProportionRow({
     required this.slice,
@@ -701,7 +610,71 @@ class _ProportionRow extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────
-// §5  Currency Exposure Heat Matrix
+// §3  Asset Ranking (Top 10)
+// ──────────────────────────────────────────────────────────────
+
+class _AssetRankingSection extends ConsumerWidget {
+  const _AssetRankingSection();
+
+  // Muted institutional palette: actionPrimary + surface tones.
+  static const _rankColors = [
+    Color(0xFF6B7280),
+    Color(0xFF5B6470),
+    Color(0xFF4B5560),
+    Color(0xFF3B4650),
+    Color(0xFF374151),
+    Color(0xFF334155),
+    Color(0xFF2F3D4F),
+    Color(0xFF2B3949),
+    Color(0xFF273543),
+    Color(0xFF23313D),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(assetTop10Provider);
+    return _SectionCard(
+      icon: Icons.emoji_events_outlined,
+      iconColor: GwpColors.warning,
+      title: '资产 Top 10',
+      child: async.when(
+        loading: () => const _Loading(),
+        error: (e, _) => _Error(e),
+        data: (items) {
+          if (items.isEmpty) return const _Empty();
+          final total = items.fold<double>(0, (s, i) => s + i.value);
+          final ranked = items.map((item) {
+            final idx = items.indexOf(item);
+            return RankItem(
+              label: '${idx + 1}. ${item.label}',
+              value: item.value,
+              color: _rankColors[idx.clamp(0, _rankColors.length - 1)],
+            );
+          }).toList();
+          return Column(
+            children: [
+              SizedBox(
+                height: (ranked.length * 24.0).clamp(120, 240),
+                child: GwpBarRank(
+                  items: ranked,
+                  formatValue: (v) => '${total > 0 ? displayPercentDouble(v / total * 100) : '0.00%'}  ${compactValueCJK(v)}',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '合计 ${compactValueCJK(total)}',
+                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// §4  Currency Exposure Heat Matrix
 // ──────────────────────────────────────────────────────────────
 
 class _CurrencyExposureSection extends ConsumerWidget {
@@ -754,7 +727,6 @@ class _CurrencyExposureSection extends ConsumerWidget {
       color: GwpColors.textPrimary,
     );
 
-    // Institution palette: dark steel → muted accent gradient.
     Color heatColor(double intensity) {
       if (intensity <= 0) return GwpColors.surface2;
       final t = intensity.clamp(0.0, 1.0);
@@ -765,7 +737,6 @@ class _CurrencyExposureSection extends ConsumerWidget {
       )!;
     }
 
-    // Calculate totals
     final rowTotal = <String, double>{};
     final colTotal = <String, double>{};
     for (final acct in m.accounts) {
@@ -779,7 +750,6 @@ class _CurrencyExposureSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header row
         Row(
           children: [
             const SizedBox(width: labelW),
@@ -796,7 +766,6 @@ class _CurrencyExposureSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 4),
-        // Data rows
         for (final acct in m.accounts) ...[
           Row(
             children: [
@@ -855,7 +824,6 @@ class _CurrencyExposureSection extends ConsumerWidget {
           ),
           const SizedBox(height: 1),
         ],
-        // Column totals row
         const SizedBox(height: 4),
         Row(
           children: [
@@ -922,7 +890,7 @@ class _HeatLegend extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────
-// §6  Risk Overview (Concentration + Liquidity)
+// §5  Risk Overview (Concentration + Liquidity)
 // ──────────────────────────────────────────────────────────────
 
 class _RiskOverviewSection extends ConsumerWidget {
@@ -940,7 +908,6 @@ class _RiskOverviewSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Concentration sub-section ──
           const _SubTitle('集中度分析 (HHI)'),
           concAsync.when(
             loading: () => const _Loading(),
@@ -972,7 +939,6 @@ class _RiskOverviewSection extends ConsumerWidget {
             padding: EdgeInsets.symmetric(vertical: GwpSpacing.md),
             child: Divider(height: 1, color: GwpColors.border),
           ),
-          // ── Liquidity sub-section ──
           const _SubTitle('流动性分层'),
           liqAsync.when(
             loading: () => const _Loading(),
@@ -1025,7 +991,6 @@ class _HhiGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = (value * 100).round();
-    // HHI < 0.15 = diversified, 0.15–0.25 = moderate, > 0.25 = concentrated
     final color = value < 0.15
         ? GwpColors.positive
         : value < 0.25
@@ -1166,7 +1131,7 @@ class _LiquidityLegend extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────
-// §7  Health Radar (enhanced with score bars)
+// §6  Health Radar
 // ──────────────────────────────────────────────────────────────
 
 class _HealthRadarSection extends ConsumerWidget {
@@ -1188,7 +1153,6 @@ class _HealthRadarSection extends ConsumerWidget {
               dims.fold<double>(0, (s, d) => s + d.value) / dims.length;
           return Column(
             children: [
-              // Radar + overall score
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1200,7 +1164,6 @@ class _HealthRadarSection extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: GwpSpacing.lg),
-              // Per-dimension bars
               for (var i = 0; i < dims.length; i++) ...[
                 _DimensionBar(label: dims[i].label, value: dims[i].value),
                 if (i < dims.length - 1)

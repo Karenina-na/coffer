@@ -1,43 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:graphview/GraphView.dart';
 
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
+import '../../../core/ui/horizontal_gesture_guard.dart';
+import '../../../core/ui/protocol_display.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/account.dart';
+import '../../../domain/entities/channel.dart';
+import '../../../domain/entities/dict_type.dart';
 import '../../account/presentation/account_providers.dart';
 import 'channel_providers.dart';
 
 // ──────────────────────────────────────────────────────────────
-// Topology data provider
+// Topology data
 // ──────────────────────────────────────────────────────────────
 
-class _TopoEdge {
-  const _TopoEdge({
-    required this.sourceId,
-    required this.targetId,
-    required this.channelName,
-  });
-  final String sourceId;
-  final String targetId;
-  final String channelName;
-}
-
-class _TopologyData {
-  const _TopologyData({
-    required this.accounts,
-    required this.edges,
+class _ChannelGroup {
+  const _ChannelGroup({
+    required this.channel,
+    required this.accountIds,
     required this.accountMap,
   });
-  final List<Account> accounts;
-  final List<_TopoEdge> edges;
+  final Channel channel;
+  final List<String> accountIds;
   final Map<String, Account> accountMap;
 }
 
 final _topologyGraphProvider =
-    FutureProvider.autoDispose<_TopologyData>((ref) async {
+    FutureProvider.autoDispose<List<_ChannelGroup>>((ref) async {
   final accounts = await ref.watch(accountListProvider.future);
   final channels = await ref.watch(channelListProvider.future);
   final acLinks = await ref.watch(accountChannelListProvider.future);
@@ -50,41 +42,42 @@ final _topologyGraphProvider =
   final channelMap = {for (final c in channels) c.id: c};
   final accountMap = {for (final a in accounts) a.id: a};
 
-  final edges = <_TopoEdge>[];
-  final seenPairs = <(String, String)>{};
+  final groups = <_ChannelGroup>[];
   for (final entry in channelAccounts.entries) {
-    final acctIds = entry.value.toList();
     final channel = channelMap[entry.key];
-    if (channel == null || acctIds.length < 2) continue;
-    for (var i = 0; i < acctIds.length; i++) {
-      for (var j = i + 1; j < acctIds.length; j++) {
-        final a = acctIds[i];
-        final b = acctIds[j];
-        final pair = a.compareTo(b) < 0 ? (a, b) : (b, a);
-        if (seenPairs.add(pair)) {
-          edges.add(_TopoEdge(
-            sourceId: a,
-            targetId: b,
-            channelName: channel.name,
-          ));
-        }
-      }
-    }
+    if (channel == null || entry.value.length < 2) continue;
+    final sortedIds = entry.value.toList()
+      ..sort((a, b) {
+        final aName = accountMap[a]?.institutionName ?? a;
+        final bName = accountMap[b]?.institutionName ?? b;
+        return aName.compareTo(bName);
+      });
+    groups.add(_ChannelGroup(
+      channel: channel,
+      accountIds: sortedIds,
+      accountMap: accountMap,
+    ));
   }
 
-  return _TopologyData(
-    accounts: accounts,
-    edges: edges,
-    accountMap: accountMap,
-  );
+  // Sort by number of connected accounts (desc), then channel name
+  groups.sort((a, b) {
+    final c = b.accountIds.length.compareTo(a.accountIds.length);
+    if (c != 0) return c;
+    return a.channel.name.compareTo(b.channel.name);
+  });
+
+  return groups;
 });
 
 // ──────────────────────────────────────────────────────────────
-// Collapsible topology section widget
+// Collapsible topology section
 // ──────────────────────────────────────────────────────────────
 
 class ChannelTopologySection extends ConsumerStatefulWidget {
-  const ChannelTopologySection({super.key});
+  const ChannelTopologySection({super.key, this.sourceId, this.targetId});
+
+  final String? sourceId;
+  final String? targetId;
 
   @override
   ConsumerState<ChannelTopologySection> createState() =>
@@ -94,6 +87,18 @@ class ChannelTopologySection extends ConsumerStatefulWidget {
 class _ChannelTopologySectionState
     extends ConsumerState<ChannelTopologySection> {
   bool _expanded = false;
+  bool _didAutoExpand = false;
+
+  @override
+  void didUpdateWidget(covariant ChannelTopologySection old) {
+    super.didUpdateWidget(old);
+    if (!_didAutoExpand &&
+        widget.sourceId != null &&
+        widget.targetId != null) {
+      _didAutoExpand = true;
+      _expanded = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +137,10 @@ class _ChannelTopologySectionState
         ),
         if (_expanded) ...[
           const SizedBox(height: GwpSpacing.sm),
-          const _TopologyGraph(),
+          _TopologyGraph(
+            sourceId: widget.sourceId,
+            targetId: widget.targetId,
+          ),
         ],
       ],
     );
@@ -140,23 +148,37 @@ class _ChannelTopologySectionState
 }
 
 class _TopologyGraph extends ConsumerWidget {
-  const _TopologyGraph();
+  const _TopologyGraph({this.sourceId, this.targetId});
+
+  final String? sourceId;
+  final String? targetId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_topologyGraphProvider);
     return async.when(
-      loading: () => const SizedBox(
-        height: 200,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      loading: () => Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: GwpColors.surface1,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: GwpColors.border, width: 0.5),
+        ),
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.all(GwpSpacing.base),
+      error: (e, _) => Container(
+        height: 120,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: GwpColors.surface1,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: GwpColors.border, width: 0.5),
+        ),
         child: Text('加载失败: ${errorToMessage(e)}',
             style: const TextStyle(color: GwpColors.negative, fontSize: 12)),
       ),
-      data: (data) {
-        if (data.accounts.length < 2 || data.edges.isEmpty) {
+      data: (groups) {
+        if (groups.isEmpty) {
           return Container(
             height: 120,
             alignment: Alignment.center,
@@ -172,111 +194,262 @@ class _TopologyGraph extends ConsumerWidget {
           );
         }
         final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
-        return _GraphContainer(data: data, regionIndex: regionIndex);
+        final protocolEntries =
+            ref.watch(dictEntriesProvider(DictType.transferProtocol)).value ??
+            const [];
+        final ProtocolIndex protocolIndex = {
+          for (final entry in protocolEntries) entry.code: entry,
+        };
+        return _TopologyCardList(
+          groups: groups,
+          regionIndex: regionIndex,
+          protocolIndex: protocolIndex,
+          sourceId: sourceId,
+          targetId: targetId,
+        );
       },
     );
   }
 }
 
-class _GraphContainer extends StatelessWidget {
-  const _GraphContainer({required this.data, required this.regionIndex});
-  final _TopologyData data;
+// ──────────────────────────────────────────────────────────────
+// Channel-centric card layout
+// ──────────────────────────────────────────────────────────────
+
+class _TopologyCardList extends StatelessWidget {
+  const _TopologyCardList({
+    required this.groups,
+    required this.regionIndex,
+    required this.protocolIndex,
+    this.sourceId,
+    this.targetId,
+  });
+
+  final List<_ChannelGroup> groups;
   final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
+  final String? sourceId;
+  final String? targetId;
 
   @override
   Widget build(BuildContext context) {
-    final graph = Graph();
-    final nodeMap = <String, Node>{};
-
-    for (final acct in data.accounts) {
-      final node = Node.Id(acct.id);
-      nodeMap[acct.id] = node;
-      graph.addNode(node);
-    }
-
-    final edgePaint = Paint()
-      ..color = GwpColors.actionPrimary.withValues(alpha: 0.4)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    for (final edge in data.edges) {
-      final src = nodeMap[edge.sourceId];
-      final tgt = nodeMap[edge.targetId];
-      if (src != null && tgt != null) {
-        graph.addEdge(src, tgt, paint: edgePaint);
-      }
-    }
-
-    final config = FruchtermanReingoldConfiguration(
-      iterations: 300,
-      repulsionRate: 0.6,
-    );
-    final algorithm = FruchtermanReingoldAlgorithm(config);
-
-    return Container(
-      height: 280,
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: GraphView(
-        graph: graph,
-        algorithm: algorithm,
-        animated: false,
-        builder: (Node node) {
-          final id = (node.key as ValueKey).value as String;
-          final acct = data.accountMap[id];
-          return _NodeChip(
-            label: acct?.institutionName ?? id.substring(0, 6),
-            region: acct == null
-                ? ''
-                : regionLabel(regionIndex, acct.sovereigntyRegion),
-          );
-        },
+    return HorizontalGestureGuard(
+      child: Column(
+        children: [
+          for (var i = 0; i < groups.length; i++) ...[
+            _ChannelCard(
+              group: groups[i],
+              regionIndex: regionIndex,
+              protocolIndex: protocolIndex,
+              sourceId: sourceId,
+              targetId: targetId,
+            ),
+            if (i < groups.length - 1) const SizedBox(height: GwpSpacing.sm),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _NodeChip extends StatelessWidget {
-  const _NodeChip({required this.label, required this.region});
-  final String label;
-  final String region;
+const _protocolColors = <String, Color>{
+  'SWIFT': Color(0xFF64748B),
+  'ACH': Color(0xFF22C55E),
+  'SEPA': Color(0xFF38BDF8),
+  'CNAPS': Color(0xFFEF4444),
+  'FPS': Color(0xFFF59E0B),
+  'CHATS': Color(0xFF14B8A6),
+  'CIPS': Color(0xFFEF4444),
+};
+
+class _ChannelCard extends StatelessWidget {
+  const _ChannelCard({
+    required this.group,
+    required this.regionIndex,
+    required this.protocolIndex,
+    this.sourceId,
+    this.targetId,
+  });
+
+  final _ChannelGroup group;
+  final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
+  final String? sourceId;
+  final String? targetId;
 
   @override
   Widget build(BuildContext context) {
+    final ch = group.channel;
+    final protoColor =
+        _protocolColors[ch.transferProtocol] ?? GwpColors.actionPrimary;
+    final protoName = protocolDisplayName(protocolIndex, ch.transferProtocol);
+    final hasBoth = sourceId != null &&
+        targetId != null &&
+        group.accountIds.contains(sourceId) &&
+        group.accountIds.contains(targetId);
+
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.sm,
-        vertical: GwpSpacing.xs,
-      ),
       decoration: BoxDecoration(
-        color: GwpColors.surface2,
-        borderRadius: BorderRadius.circular(6),
-        border:
-            Border.all(color: GwpColors.actionPrimary.withValues(alpha: 0.5)),
+        color: GwpColors.surface1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasBoth
+              ? GwpColors.positive.withValues(alpha: 0.4)
+              : GwpColors.border,
+          width: hasBoth ? 1 : 0.5,
+        ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
+          // Channel header
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: GwpSpacing.md,
+              vertical: GwpSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: hasBoth
+                  ? GwpColors.positiveBg
+                  : protoColor.withValues(alpha: 0.06),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: hasBoth ? GwpColors.positive : protoColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: GwpSpacing.sm),
+                Expanded(
+                  child: Text(
+                    ch.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: hasBoth ? GwpColors.positive : GwpColors.textPrimary,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: protoColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$protoName · ${group.accountIds.length} 账户',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: protoColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          if (region.isNotEmpty)
+          // Account chips row
+          Padding(
+            padding: const EdgeInsets.all(GwpSpacing.sm),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final id in group.accountIds)
+                  _AccountChip(
+                    account: group.accountMap[id],
+                    regionIndex: regionIndex,
+                    highlighted: id == sourceId || id == targetId,
+                    role: id == sourceId
+                        ? '源'
+                        : (id == targetId ? '目标' : null),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({
+    required this.account,
+    required this.regionIndex,
+    this.highlighted = false,
+    this.role,
+  });
+
+  final Account? account;
+  final RegionIndex regionIndex;
+  final bool highlighted;
+  final String? role;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = account?.institutionName ?? '未知';
+    final region = account != null
+        ? regionLabel(regionIndex, account!.sovereigntyRegion)
+        : '';
+    final borderColor = highlighted
+        ? role == '源'
+            ? GwpColors.negative
+            : GwpColors.positive
+        : GwpColors.border;
+    final bgColor = highlighted
+        ? (role == '源' ? GwpColors.negativeBg : GwpColors.positiveBg)
+        : GwpColors.surface2;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.sm, vertical: GwpSpacing.xs),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor, width: highlighted ? 1 : 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (role != null) ...[
             Text(
-              region,
-              style: const TextStyle(
+              role!,
+              style: TextStyle(
                 fontSize: 8,
-                color: GwpColors.textMuted,
+                fontWeight: FontWeight.w700,
+                color: highlighted
+                    ? (role == '源' ? GwpColors.negative : GwpColors.positive)
+                    : GwpColors.textMuted,
               ),
             ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
+              color: highlighted ? borderColor : GwpColors.textPrimary,
+            ),
+          ),
+          if (region.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Text(
+              region,
+              style: TextStyle(
+                fontSize: 8,
+                color: highlighted ? borderColor : GwpColors.textMuted,
+              ),
+            ),
+          ],
         ],
       ),
     );

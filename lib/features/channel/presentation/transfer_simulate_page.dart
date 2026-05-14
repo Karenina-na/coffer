@@ -1,11 +1,9 @@
 import 'package:decimal/decimal.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/money/money.dart';
 import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
@@ -18,14 +16,14 @@ import '../../../domain/entities/account_channel.dart';
 import '../../../domain/entities/account_enums.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/channel.dart';
-import '../../../domain/usecases/channel_rule.dart';
 import '../../../domain/usecases/plan_transfer_route.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
 import '../../../data/providers/dict_providers.dart';
 import '../../../domain/entities/dict_type.dart';
 import 'channel_providers.dart';
-import 'channel_topology_view.dart';
+
+enum _PlanMode { minFee, minHops, compare }
 
 // ──────────────────────────────────────────────────────────────
 // Color / icon maps
@@ -58,15 +56,7 @@ const _protocolColors = <String, Color>{
   'CNAPS': Color(0xFFEF4444),
   'FPS': Color(0xFFF59E0B),
   'CHATS': Color(0xFF14B8A6),
-};
-
-const _protocolIcons = <String, IconData>{
-  'SWIFT': Icons.public_outlined,
-  'ACH': Icons.account_balance_outlined,
-  'SEPA': Icons.euro_outlined,
-  'CNAPS': Icons.currency_yuan_outlined,
-  'FPS': Icons.bolt_outlined,
-  'CHATS': Icons.account_balance_wallet_outlined,
+  'CIPS': Color(0xFFEF4444),
 };
 
 /// Body-only widget for embedding inside a parent Scaffold (e.g. HoldingsPage).
@@ -84,8 +74,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
 
   String? _sourceId;
   String? _targetId;
-  RouteObjective _objective = RouteObjective.minFee;
-  bool _compareMode = false;
+  _PlanMode _planMode = _PlanMode.minFee;
   bool _loading = false;
 
   TransferRoute? _route;
@@ -99,19 +88,21 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     super.dispose();
   }
 
+  Decimal _parseAmount() {
+    var raw = _amountCtrl.text.trim();
+    if (raw.isEmpty) return _defaultAmount;
+    if (raw.endsWith('.')) raw = raw.substring(0, raw.length - 1);
+    if (raw.startsWith('.')) raw = '0$raw';
+    return Decimal.tryParse(raw) ?? _defaultAmount;
+  }
+
+  static final _defaultAmount = Decimal.fromInt(1000);
+
   Future<void> _plan() async {
     final src = _sourceId;
     final tgt = _targetId;
-    final amt = Decimal.tryParse(_amountCtrl.text.trim());
-    if (src == null || tgt == null || amt == null) {
-      setState(() {
-        _errorMsg = '请完整填写源/目标账户及金额';
-        _route = null;
-        _feeRoute = null;
-        _hopsRoute = null;
-      });
-      return;
-    }
+    final amt = _parseAmount();
+    if (src == null || tgt == null) return;
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -121,7 +112,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     });
     final uc = ref.read(planTransferRouteUseCaseProvider);
     final ccy = _currency.toUpperCase();
-    if (_compareMode) {
+    if (_planMode == _PlanMode.compare) {
       final results = await Future.wait([
         uc(
           sourceAccountId: src,
@@ -157,7 +148,9 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
       targetAccountId: tgt,
       amount: amt,
       currency: ccy,
-      objective: _objective,
+      objective: _planMode == _PlanMode.minHops
+          ? RouteObjective.minHops
+          : RouteObjective.minFee,
     );
     if (!mounted) return;
     setState(() {
@@ -217,7 +210,6 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               orElse: () => const <Channel>[],
             );
 
-        // Pre-compute per-account net worth
         final netWorth = <String, Decimal>{};
         final assetCount = <String, int>{};
         for (final a in assets) {
@@ -229,101 +221,82 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
           assetCount[a.accountId] = (assetCount[a.accountId] ?? 0) + 1;
         }
 
-        // Per-account connected channel count
         final channelCount = <String, int>{};
         for (final l in links) {
           channelCount[l.accountId] = (channelCount[l.accountId] ?? 0) + 1;
         }
 
-        // Source and target accounts
         final srcAccount = _sourceId != null
             ? accounts.cast<Account?>().firstWhere(
-                (a) => a!.id == _sourceId,
-                orElse: () => null,
-              )
+                (a) => a!.id == _sourceId, orElse: () => null)
             : null;
         final tgtAccount = _targetId != null
             ? accounts.cast<Account?>().firstWhere(
-                (a) => a!.id == _targetId,
-                orElse: () => null,
-              )
+                (a) => a!.id == _targetId, orElse: () => null)
             : null;
 
+        final srcChannelIds = links
+            .where((l) => l.accountId == _sourceId)
+            .map((l) => l.channelId)
+            .toSet();
+        final tgtChannelIds = links
+            .where((l) => l.accountId == _targetId)
+            .map((l) => l.channelId)
+            .toSet();
+        final sharedChannelIds = srcChannelIds.intersection(tgtChannelIds);
+        final sharedChannels = channels
+            .where((c) => sharedChannelIds.contains(c.id))
+            .toList();
+
+        final amountDecimal = _amountCtrl.text.trim().isEmpty
+            ? null
+            : _parseAmount();
+        final srcNetWorth =
+            srcAccount != null ? netWorth[srcAccount.id] : null;
+        final exceedsBalance = amountDecimal != null &&
+            srcNetWorth != null &&
+            amountDecimal > srcNetWorth;
+
+        final canPlan = _sourceId != null &&
+            _targetId != null &&
+            !_loading;
+
+        final hasResult = _planMode != _PlanMode.compare
+            ? _route != null
+            : (_feeRoute != null || _hopsRoute != null);
+
         return ListView(
-          padding: const EdgeInsets.all(GwpSpacing.base),
+          padding: const EdgeInsets.fromLTRB(
+            GwpSpacing.base,
+            GwpSpacing.md,
+            GwpSpacing.base,
+            112,
+          ),
           children: [
-            // ── Transfer flow hero ──
-            _TransferFlowHero(
+            // ── §1 Account selector bar ──
+            _AccountSelectorBar(
               source: srcAccount,
               target: tgtAccount,
-              sourceNetWorth: srcAccount != null
-                  ? netWorth[srcAccount.id]
-                  : null,
-              targetNetWorth: tgtAccount != null
-                  ? netWorth[tgtAccount.id]
-                  : null,
-              amount: _amountCtrl.text.isNotEmpty
-                  ? Decimal.tryParse(_amountCtrl.text.trim())
-                  : null,
+              sharedChannels: sharedChannels,
+              exceedsBalance: exceedsBalance,
+              amount: amountDecimal,
               currency: _currency.toUpperCase(),
               regionIndex: regionIndex,
+              accounts: accounts,
+              assetCount: assetCount,
+              channelCount: channelCount,
+              netWorth: netWorth,
+              sourceId: _sourceId,
+              targetId: _targetId,
               onSwap: _swapAccounts,
+              onSourceChanged: (v) => setState(() => _sourceId = v),
+              onTargetChanged: (v) => setState(() => _targetId = v),
             ),
             const SizedBox(height: GwpSpacing.md),
 
-            _ChannelSummaryHeader(channels: channels),
-            const SizedBox(height: GwpSpacing.md),
-
-            // ── Account pickers (rich cards) ──
-            _RichAccountPicker(
-              label: '源账户',
-              icon: Icons.arrow_upward_rounded,
-              iconColor: GwpColors.negative,
-              selectedId: _sourceId,
-              excludedId: _targetId,
-              accounts: accounts,
-              netWorth: netWorth,
-              assetCount: assetCount,
-              channelCount: channelCount,
-              regionIndex: regionIndex,
-              onChanged: (v) => setState(() => _sourceId = v),
-            ),
-            const SizedBox(height: GwpSpacing.sm),
-            _RichAccountPicker(
-              label: '目标账户',
-              icon: Icons.arrow_downward_rounded,
-              iconColor: GwpColors.positive,
-              selectedId: _targetId,
-              excludedId: _sourceId,
-              accounts: accounts,
-              netWorth: netWorth,
-              assetCount: assetCount,
-              channelCount: channelCount,
-              regionIndex: regionIndex,
-              onChanged: (v) => setState(() => _targetId = v),
-            ),
-            const SizedBox(height: GwpSpacing.md),
-
-            // ── Amount + Currency ──
+            // ── §2 Transfer config row ──
             Row(
               children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _amountCtrl,
-                    decoration: const InputDecoration(
-                      labelText: '金额',
-                      prefixIcon: Icon(Icons.attach_money, size: 18),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: GwpSpacing.md),
                 Expanded(
                   child: Consumer(
                     builder: (context, ref, _) {
@@ -333,163 +306,195 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                               .asData
                               ?.value ??
                           const [];
-                      return DropdownButtonFormField<String>(
-                        initialValue: currencies.any((c) => c.code == _currency)
-                            ? _currency
-                            : null,
-                        decoration: const InputDecoration(
-                          labelText: '币种',
-                          prefixIcon: Icon(Icons.currency_exchange, size: 18),
-                        ),
-                        dropdownColor: GwpColors.surface2,
-                        isExpanded: true,
-                        items: currencies
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: c.code,
-                                child: Text('${c.code} · ${c.name}'),
+                      return TextField(
+                        controller: _amountCtrl,
+                        decoration: InputDecoration(
+                          hintText: '1k',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 8),
+                          prefixIcon: PopupMenuButton<String>(
+                            offset: const Offset(0, 48),
+                            padding: EdgeInsets.zero,
+                            icon: Container(
+                              width: 36,
+                              padding: const EdgeInsets.only(right: 2),
+                              alignment: Alignment.center,
+                              child: Text(
+                                _currency,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: GwpColors.actionPrimary,
+                                  fontFamily: GwpTypo.monoFont,
+                                ),
                               ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) setState(() => _currency = v);
-                        },
+                            ),
+                            itemBuilder: (_) => currencies
+                                .map((c) => PopupMenuItem(
+                                      value: c.code,
+                                      child: Text(
+                                        '${c.code} · ${c.name}',
+                                        style: const TextStyle(
+                                            fontSize: 13),
+                                      ),
+                                    ))
+                                .toList(),
+                            onSelected: (v) =>
+                                setState(() => _currency = v),
+                          ),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9.]')),
+                        ],
                       );
                     },
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: GwpSpacing.md),
-
-            // ── Objective controls ──
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: GwpSpacing.base,
-                vertical: GwpSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: GwpColors.surface1,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: GwpColors.border, width: 0.5),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: GwpSpacing.sm),
+                PopupMenuButton<_PlanMode>(
+                  offset: const Offset(0, 48),
+                  padding: EdgeInsets.zero,
+                  icon: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: GwpSpacing.sm, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: GwpColors.surface2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: GwpColors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          '对比模式',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                        Icon(
+                          _planMode == _PlanMode.compare
+                              ? Icons.compare_arrows
+                              : _planMode == _PlanMode.minHops
+                                  ? Icons.linear_scale
+                                  : Icons.trending_down,
+                          size: 14,
+                          color: GwpColors.actionPrimary,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          _planMode == _PlanMode.compare
+                              ? '对比'
+                              : _planMode == _PlanMode.minHops
+                                  ? '跳数'
+                                  : '费用',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                             color: GwpColors.textPrimary,
                           ),
                         ),
-                        const Text(
-                          '同时计算费用最低 & 跳数最少',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: GwpColors.textMuted,
-                          ),
-                        ),
+                        const Icon(Icons.arrow_drop_down,
+                            size: 14, color: GwpColors.textMuted),
                       ],
                     ),
                   ),
-                  Switch.adaptive(
-                    value: _compareMode,
-                    onChanged: (v) => setState(() => _compareMode = v),
-                  ),
-                ],
-              ),
-            ),
-            if (!_compareMode) ...[
-              const SizedBox(height: GwpSpacing.md),
-              SegmentedButton<RouteObjective>(
-                segments: const [
-                  ButtonSegment(
-                    value: RouteObjective.minFee,
-                    icon: Icon(Icons.trending_down, size: 18),
-                    label: Text('费用最低'),
-                  ),
-                  ButtonSegment(
-                    value: RouteObjective.minHops,
-                    icon: Icon(Icons.linear_scale, size: 18),
-                    label: Text('跳数最少'),
-                  ),
-                ],
-                selected: {_objective},
-                onSelectionChanged: (s) => setState(() => _objective = s.first),
-              ),
-            ],
-            const SizedBox(height: GwpSpacing.md),
-
-            // ── Topology ──
-            const ChannelTopologySection(),
-            const SizedBox(height: GwpSpacing.base),
-
-            // ── Plan button ──
-            FilledButton.icon(
-              onPressed: _loading ? null : _plan,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: _PlanMode.minFee,
+                      child: ListTile(
+                        leading: Icon(Icons.trending_down, size: 18),
+                        title: Text('费用最低'),
+                        dense: true,
                       ),
-                    )
-                  : const Icon(Icons.route_outlined, size: 18),
-              label: Text(_compareMode ? '对比规划' : '规划路径'),
+                    ),
+                    const PopupMenuItem(
+                      value: _PlanMode.minHops,
+                      child: ListTile(
+                        leading: Icon(Icons.linear_scale, size: 18),
+                        title: Text('跳数最少'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: _PlanMode.compare,
+                      child: ListTile(
+                        leading: Icon(Icons.compare_arrows, size: 18),
+                        title: Text('对比'),
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                  onSelected: (v) => setState(() => _planMode = v),
+                ),
+                const SizedBox(width: GwpSpacing.sm),
+                FilledButton.icon(
+                  onPressed: canPlan ? _plan : null,
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.route_outlined, size: 18),
+                  label: const Text('规划'),
+                ),
+              ],
             ),
-            const SizedBox(height: GwpSpacing.xl),
 
             // ── Error ──
-            if (_errorMsg != null)
+            if (_errorMsg != null) ...[
+              const SizedBox(height: GwpSpacing.md),
               Container(
                 padding: const EdgeInsets.all(GwpSpacing.md),
                 decoration: BoxDecoration(
                   color: GwpColors.negativeBg,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: GwpColors.negative.withValues(alpha: 0.3),
-                  ),
+                      color: GwpColors.negative.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 18,
-                      color: GwpColors.negative,
-                    ),
+                    const Icon(Icons.error_outline,
+                        size: 18, color: GwpColors.negative),
                     const SizedBox(width: GwpSpacing.sm),
                     Expanded(
-                      child: Text(
-                        _errorMsg!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: GwpColors.negative,
-                        ),
-                      ),
+                      child: Text(_errorMsg!,
+                          style: const TextStyle(
+                              fontSize: 13, color: GwpColors.negative)),
                     ),
                   ],
                 ),
               ),
+            ],
 
-            // ── Route results ──
-            if (!_compareMode && _route != null)
-              _RouteCard(route: _route!, regionIndex: regionIndex, protocolIndex: protocolIndex),
-            if (_compareMode)
-              _CompareResult(
-                feeRoute: _feeRoute,
-                hopsRoute: _hopsRoute,
-                regionIndex: regionIndex,
-                protocolIndex: protocolIndex,
-              ),
+            // ── §3 Route result ──
+            if (hasResult) ...[
+              const SizedBox(height: GwpSpacing.lg),
+              if (_planMode != _PlanMode.compare && _route != null)
+                _RouteFlow(
+                  route: _route!,
+                  regionIndex: regionIndex,
+                  protocolIndex: protocolIndex,
+                )
+              else if (_planMode == _PlanMode.compare)
+                _CompareFlow(
+                  feeRoute: _feeRoute,
+                  hopsRoute: _hopsRoute,
+                  regionIndex: regionIndex,
+                  protocolIndex: protocolIndex,
+                ),
+            ],
 
-            const SizedBox(height: 80),
+            const SizedBox(height: GwpSpacing.lg),
+
+            // ── Channel management link ──
+            TextButton.icon(
+              onPressed: () => context.push('/channels'),
+              icon: const Icon(Icons.tune_outlined, size: 16),
+              label: const Text('通道管理'),
+            ),
+
+            const SizedBox(height: 40),
           ],
         );
       },
@@ -497,86 +502,51 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
   }
 }
 
-class _ChannelSummaryHeader extends StatelessWidget {
-  const _ChannelSummaryHeader({required this.channels});
-
-  final List<Channel> channels;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = channels.length;
-    final protocols = channels.map((c) => c.transferProtocol).toSet().length;
-
-    return Container(
-      padding: const EdgeInsets.all(GwpSpacing.base),
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '转账通道概览',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$total 条通道 · $protocols 种协议',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: GwpColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton.icon(
-            onPressed: () => context.push('/channels'),
-            icon: const Icon(Icons.swap_horiz_outlined, size: 16),
-            label: const Text('通道管理'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ──────────────────────────────────────────────────────────────
-// Transfer flow hero — visual source→target summary
+// §1  Account selector bar
 // ──────────────────────────────────────────────────────────────
 
-class _TransferFlowHero extends StatelessWidget {
-  const _TransferFlowHero({
+class _AccountSelectorBar extends StatelessWidget {
+  const _AccountSelectorBar({
     required this.source,
     required this.target,
-    required this.sourceNetWorth,
-    required this.targetNetWorth,
+    required this.sharedChannels,
+    required this.exceedsBalance,
     required this.amount,
     required this.currency,
     required this.regionIndex,
+    required this.accounts,
+    required this.assetCount,
+    required this.channelCount,
+    required this.netWorth,
+    required this.sourceId,
+    required this.targetId,
     required this.onSwap,
+    required this.onSourceChanged,
+    required this.onTargetChanged,
   });
 
   final Account? source;
   final Account? target;
-  final Decimal? sourceNetWorth;
-  final Decimal? targetNetWorth;
+  final List<Channel> sharedChannels;
+  final bool exceedsBalance;
   final Decimal? amount;
   final String currency;
   final RegionIndex regionIndex;
+  final List<Account> accounts;
+  final Map<String, int> assetCount;
+  final Map<String, int> channelCount;
+  final Map<String, Decimal> netWorth;
+  final String? sourceId;
+  final String? targetId;
   final VoidCallback onSwap;
+  final ValueChanged<String?> onSourceChanged;
+  final ValueChanged<String?> onTargetChanged;
 
   @override
   Widget build(BuildContext context) {
+    final connected = sharedChannels.isNotEmpty;
+    final bothSelected = source != null && target != null;
     return Container(
       padding: const EdgeInsets.all(GwpSpacing.base),
       decoration: BoxDecoration(
@@ -595,25 +565,25 @@ class _TransferFlowHero extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: _endpointChip(source, '源', GwpColors.negative)),
+              Expanded(
+                child: _endpointCard(context, source, '源', GwpColors.negative),
+              ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.sm),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: GwpSpacing.sm),
                 child: Column(
                   children: [
-                    if (amount != null && amount! > Decimal.zero)
+                    if (amount != null && amount! > Decimal.zero) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: GwpColors.actionPrimary.withValues(
-                            alpha: 0.12,
-                          ),
+                          color: GwpColors.actionPrimary
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '${Money.format(amount!, currency: currency)} $currency',
+                          '${_fmtAmount(amount!)} $currency',
                           style: const TextStyle(
                             fontFamily: GwpTypo.monoFont,
                             fontFeatures: GwpTypo.tabularFigures,
@@ -623,52 +593,153 @@ class _TransferFlowHero extends StatelessWidget {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 4),
+                      if (exceedsBalance) ...[
+                        const SizedBox(height: 3),
+                        const Text('余额不足',
+                            style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: GwpColors.negative)),
+                      ],
+                    ],
+                    const SizedBox(height: 6),
                     GestureDetector(
                       onTap: onSwap,
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
                           color: GwpColors.surface1,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: GwpColors.border,
-                            width: 0.5,
-                          ),
+                              color: GwpColors.border, width: 0.5),
                         ),
-                        child: const Icon(
-                          Icons.swap_horiz_rounded,
-                          size: 18,
-                          color: GwpColors.actionPrimary,
-                        ),
+                        child: const Icon(Icons.swap_horiz_rounded,
+                            size: 20, color: GwpColors.actionPrimary),
                       ),
                     ),
                   ],
                 ),
               ),
-              Expanded(child: _endpointChip(target, '目标', GwpColors.positive)),
+              Expanded(
+                child: _endpointCard(context, target, '目标', GwpColors.positive),
+              ),
             ],
           ),
-          // Net worth comparison bar
-          if (source != null &&
-              target != null &&
-              sourceNetWorth != null &&
-              targetNetWorth != null &&
-              (sourceNetWorth! > Decimal.zero ||
-                  targetNetWorth! > Decimal.zero)) ...[
+          // Connectivity
+          if (bothSelected) ...[
             const SizedBox(height: GwpSpacing.md),
-            _netWorthBar(),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: GwpSpacing.md, vertical: GwpSpacing.sm),
+              decoration: BoxDecoration(
+                color: connected ? GwpColors.positiveBg : GwpColors.warningBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (connected
+                          ? GwpColors.positive
+                          : GwpColors.warning)
+                      .withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    connected
+                        ? Icons.link_rounded
+                        : Icons.link_off_rounded,
+                    size: 14,
+                    color:
+                        connected ? GwpColors.positive : GwpColors.warning,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    connected
+                        ? '${sharedChannels.length} 条共享通道'
+                        : '无共享通道 — 需中间账户中转',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          connected ? GwpColors.positive : GwpColors.warning,
+                    ),
+                  ),
+                  if (connected) ...[
+                    const SizedBox(width: 6),
+                    ...sharedChannels.take(3).map((c) {
+                      final protoColor =
+                          _protocolColors[c.transferProtocol] ??
+                              GwpColors.actionPrimary;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 3),
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: protoColor, shape: BoxShape.circle),
+                        ),
+                      );
+                    }),
+                    if (sharedChannels.length > 3)
+                      Text('+${sharedChannels.length - 3}',
+                          style: const TextStyle(
+                              fontSize: 9, color: GwpColors.textMuted)),
+                  ],
+                ],
+              ),
+            ),
           ],
         ],
       ),
     );
   }
 
-  Widget _endpointChip(Account? account, String role, Color accent) {
-    if (account == null) {
-      return Container(
-        padding: const EdgeInsets.all(GwpSpacing.md),
+  static String _fmtAmount(Decimal v) {
+    final d = v.toDouble();
+    if (d.abs() >= 1e6) return '${(d / 1e6).toStringAsFixed(1)}M';
+    if (d.abs() >= 1e3) return '${(d / 1e3).toStringAsFixed(1)}K';
+    return d.toStringAsFixed(1);
+  }
+
+  Future<void> _openPicker(
+      BuildContext ctx, String label, String? selectedId, String? excludedId,
+      ValueChanged<String?> onChanged) async {
+    final picked = await showModalBottomSheet<String>(
+      context: ctx,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetCtx) => _AccountPickerSheet(
+        label: label,
+        accounts: accounts,
+        selectedId: selectedId,
+        excludedId: excludedId,
+        assetCount: assetCount,
+        channelCount: channelCount,
+        regionIndex: regionIndex,
+      ),
+    );
+    if (picked != null) onChanged(picked);
+  }
+
+  Widget _endpointCard(BuildContext ctx, Account? account, String role, Color accent) {
+    final typeColor =
+        account != null ? (_typeColors[account.accountType] ?? GwpColors.actionPrimary) : accent;
+    final typeIcon =
+        account != null ? (_typeIcons[account.accountType] ?? Icons.account_balance) : Icons.add_circle_outline;
+    final regionName = account != null ? regionLabel(regionIndex, account.sovereigntyRegion) : '';
+
+    return GestureDetector(
+      onTap: () => _openPicker(
+        ctx,
+        role == '源' ? '源账户' : '目标账户',
+        role == '源' ? sourceId : targetId,
+        role == '源' ? targetId : sourceId,
+        role == '源' ? onSourceChanged : onTargetChanged,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(GwpSpacing.sm),
         decoration: BoxDecoration(
           color: GwpColors.surface1,
           borderRadius: BorderRadius.circular(10),
@@ -676,264 +747,64 @@ class _TransferFlowHero extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(Icons.add_circle_outline, size: 24, color: accent),
-            const SizedBox(height: 4),
-            Text('选择$role账户', style: TextStyle(fontSize: 11, color: accent)),
-          ],
-        ),
-      );
-    }
-    final typeColor =
-        _typeColors[account.accountType] ?? GwpColors.actionPrimary;
-    final typeIcon = _typeIcons[account.accountType] ?? Icons.account_balance;
-    final regionName = regionLabel(regionIndex, account.sovereigntyRegion);
-    return Container(
-      padding: const EdgeInsets.all(GwpSpacing.sm),
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: 0.3), width: 0.5),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: typeColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            alignment: Alignment.center,
-            child: Icon(typeIcon, size: 16, color: typeColor),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            account.institutionName,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+            if (account == null)
+              Icon(Icons.add_circle_outline, size: 24, color: accent)
+            else ...[
               Container(
-                width: 6,
-                height: 6,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: regionColor(regionIndex, account.sovereigntyRegion),
-                  shape: BoxShape.circle,
+                  color: typeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                alignment: Alignment.center,
+                child: Icon(typeIcon, size: 18, color: typeColor),
               ),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  regionName,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: GwpColors.textMuted,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 6),
+              Text(
+                account.institutionName,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: GwpColors.textPrimary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _netWorthBar() {
-    final sVal = sourceNetWorth?.toDouble() ?? 0;
-    final tVal = targetNetWorth?.toDouble() ?? 0;
-    final total = sVal + tVal;
-    if (total <= 0) return const SizedBox.shrink();
-    final sFrac = (sVal / total).clamp(0.0, 1.0);
-    final tFrac = (tVal / total).clamp(0.0, 1.0);
-    return Column(
-      children: [
-        Row(
-          children: [
-            Text(
-              '资产对比',
-              style: const TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: GwpColors.textMuted,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              _compact(sVal),
-              style: TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
-                color: GwpColors.negative.withValues(alpha: 0.8),
-              ),
-            ),
-            const Text(
-              ' vs ',
-              style: TextStyle(fontSize: 9, color: GwpColors.textMuted),
-            ),
-            Text(
-              _compact(tVal),
-              style: TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
-                color: GwpColors.positive.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: SizedBox(
-            height: 4,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: (sFrac * 1000).round().clamp(1, 1000),
-                  child: Container(
-                    color: GwpColors.negative.withValues(alpha: 0.5),
-                  ),
-                ),
-                const SizedBox(width: 1),
-                Expanded(
-                  flex: (tFrac * 1000).round().clamp(1, 1000),
-                  child: Container(
-                    color: GwpColors.positive.withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _compact(double val) {
-    if (val >= 1e6) return '${(val / 1e6).toStringAsFixed(1)}M';
-    if (val >= 1e3) return '${(val / 1e3).toStringAsFixed(0)}K';
-    return val.toStringAsFixed(0);
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
-// Rich account picker — visual dropdown with account details
-// ──────────────────────────────────────────────────────────────
-
-class _RichAccountPicker extends StatelessWidget {
-  const _RichAccountPicker({
-    required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.selectedId,
-    required this.excludedId,
-    required this.accounts,
-    required this.netWorth,
-    required this.assetCount,
-    required this.channelCount,
-    required this.regionIndex,
-    required this.onChanged,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color iconColor;
-  final String? selectedId;
-  final String? excludedId;
-  final List<Account> accounts;
-  final Map<String, Decimal> netWorth;
-  final Map<String, int> assetCount;
-  final Map<String, int> channelCount;
-  final RegionIndex regionIndex;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = selectedId == null
-        ? null
-        : accounts.cast<Account?>().firstWhere(
-            (a) => a?.id == selectedId,
-            orElse: () => null,
-          );
-    final selectedAssetCount = selected == null ? 0 : (assetCount[selected.id] ?? 0);
-    final selectedChannelCount =
-        selected == null ? 0 : (channelCount[selected.id] ?? 0);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () async {
-        final picked = await showModalBottomSheet<String>(
-          context: context,
-          useRootNavigator: true,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (ctx) => _AccountPickerSheet(
-            label: label,
-            accounts: accounts,
-            selectedId: selectedId,
-            excludedId: excludedId,
-            assetCount: assetCount,
-            channelCount: channelCount,
-            regionIndex: regionIndex,
-          ),
-        );
-        if (picked != null) onChanged(picked);
-      },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, size: 18, color: iconColor),
-          suffixIcon: const Icon(Icons.expand_more),
-        ),
-        child: selected == null
-            ? const Text(
-                '请选择账户',
-                style: TextStyle(color: GwpColors.textMuted),
-              )
-            : Row(
+              const SizedBox(height: 3),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          selected.institutionName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: GwpColors.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${selected.accountType.labelZh} · ${regionLabel(regionIndex, selected.sovereigntyRegion)} · $selectedAssetCount资产 · $selectedChannelCount通道',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: GwpColors.textMuted,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: regionColor(regionIndex, account.sovereigntyRegion),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      '${account.accountType.labelZh} · $regionName',
+                      style: const TextStyle(
+                          fontSize: 9, color: GwpColors.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
+            ],
+            if (account == null) ...[
+              const SizedBox(height: 4),
+              Text('选择$role账户',
+                  style: TextStyle(fontSize: 11, color: accent)),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -978,15 +849,24 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final typeChoices = widget.accounts.map((a) => a.accountType).toSet().toList()
+    final typeChoices = widget.accounts
+        .map((a) => a.accountType)
+        .toSet()
+        .toList()
       ..sort((a, b) => a.code.compareTo(b.code));
-    final regionChoices = widget.accounts.map((a) => a.sovereigntyRegion).toSet().toList()
+    final regionChoices = widget.accounts
+        .map((a) => a.sovereigntyRegion)
+        .toSet()
+        .toList()
       ..sort();
 
     final filtered = widget.accounts.where((a) {
-      if (widget.excludedId != null && a.id == widget.excludedId) return false;
-      if (_onlyConnected && (widget.channelCount[a.id] ?? 0) <= 0) return false;
-      if (_onlyWithAssets && (widget.assetCount[a.id] ?? 0) <= 0) return false;
+      if (widget.excludedId != null && a.id == widget.excludedId)
+        return false;
+      if (_onlyConnected && (widget.channelCount[a.id] ?? 0) <= 0)
+        return false;
+      if (_onlyWithAssets && (widget.assetCount[a.id] ?? 0) <= 0)
+        return false;
       if (_type != null && a.accountType != _type) return false;
       if (_region != null && a.sovereigntyRegion != _region) return false;
 
@@ -1010,19 +890,16 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
           left: GwpSpacing.base,
           right: GwpSpacing.base,
           top: GwpSpacing.base,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + GwpSpacing.base,
+          bottom:
+              MediaQuery.viewInsetsOf(context).bottom + GwpSpacing.base,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '选择${widget.label}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text('选择${widget.label}',
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: GwpSpacing.sm),
             TextField(
               controller: _queryCtrl,
@@ -1051,10 +928,9 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
             ),
             const SizedBox(height: GwpSpacing.sm),
             if (typeChoices.isNotEmpty) ...[
-              const Text(
-                '账户类型',
-                style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
-              ),
+              const Text('账户类型',
+                  style:
+                      TextStyle(fontSize: 11, color: GwpColors.textMuted)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -1076,10 +952,9 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
               const SizedBox(height: GwpSpacing.sm),
             ],
             if (regionChoices.isNotEmpty) ...[
-              const Text(
-                '主权地区',
-                style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
-              ),
+              const Text('主权地区',
+                  style:
+                      TextStyle(fontSize: 11, color: GwpColors.textMuted)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -1105,43 +980,54 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                   ? const Center(
                       child: Padding(
                         padding: EdgeInsets.all(GwpSpacing.lg),
-                        child: Text(
-                          '没有匹配的账户',
-                          style: TextStyle(color: GwpColors.textMuted),
-                        ),
+                        child: Text('没有匹配的账户',
+                            style: TextStyle(color: GwpColors.textMuted)),
                       ),
                     )
                   : ListView.separated(
                       shrinkWrap: true,
                       itemCount: filtered.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      separatorBuilder: (_, _) =>
+                          const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final a = filtered[index];
-                        final typeColor = _typeColors[a.accountType] ?? GwpColors.actionPrimary;
-                        final typeIcon = _typeIcons[a.accountType] ?? Icons.account_balance;
-                        final ac = widget.assetCount[a.id] ?? 0;
-                        final cc = widget.channelCount[a.id] ?? 0;
-                        final isSelected = widget.selectedId == a.id;
+                        final typeColor =
+                            _typeColors[a.accountType] ??
+                                GwpColors.actionPrimary;
+                        final typeIcon =
+                            _typeIcons[a.accountType] ??
+                                Icons.account_balance;
+                        final ac =
+                            widget.assetCount[a.id] ?? 0;
+                        final cc =
+                            widget.channelCount[a.id] ?? 0;
+                        final isSelected =
+                            widget.selectedId == a.id;
                         return ListTile(
                           selected: isSelected,
                           leading: Container(
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: typeColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
+                              color:
+                                  typeColor.withValues(alpha: 0.12),
+                              borderRadius:
+                                  BorderRadius.circular(8),
                             ),
                             alignment: Alignment.center,
-                            child: Icon(typeIcon, size: 16, color: typeColor),
+                            child: Icon(typeIcon,
+                                size: 16, color: typeColor),
                           ),
                           title: Text(a.institutionName),
                           subtitle: Text(
                             '${a.accountType.labelZh} · ${regionLabel(widget.regionIndex, a.sovereigntyRegion)} · $ac资产 · $cc通道',
                           ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle, color: GwpColors.actionPrimary)
+                              ? const Icon(Icons.check_circle,
+                                  color: GwpColors.actionPrimary)
                               : null,
-                          onTap: () => Navigator.of(context).pop(a.id),
+                          onTap: () =>
+                              Navigator.of(context).pop(a.id),
                         );
                       },
                     ),
@@ -1154,7 +1040,262 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Compare result (enhanced)
+// §3  Route flow — vertical source→…→target pipeline card
+// ──────────────────────────────────────────────────────────────
+
+class _RouteFlow extends StatelessWidget {
+  const _RouteFlow({
+    required this.route,
+    required this.regionIndex,
+    required this.protocolIndex,
+    this.badge,
+  });
+
+  final TransferRoute route;
+  final RegionIndex regionIndex;
+  final ProtocolIndex protocolIndex;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final legs = route.legs;
+    if (legs.isEmpty) return const SizedBox.shrink();
+    final ok = route.isExecutable;
+    final statusColor = ok ? GwpColors.positive : GwpColors.negative;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: GwpColors.surface1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: GwpSpacing.base, vertical: GwpSpacing.sm),
+            color: ok ? GwpColors.positiveBg : GwpColors.negativeBg,
+            child: Row(
+              children: [
+                Icon(ok ? Icons.check_circle_outline : Icons.error_outline,
+                    size: 16, color: statusColor),
+                const SizedBox(width: 6),
+                Text(
+                  badge ?? (route.objective == RouteObjective.minFee ? '费用最低' : '跳数最少'),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor),
+                ),
+                const Spacer(),
+                Text('¥${route.totalFee} · ${legs.length}跳',
+                    style: const TextStyle(
+                        fontSize: 11, color: GwpColors.textSecondary)),
+                const SizedBox(width: 4),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      color: statusColor, shape: BoxShape.circle),
+                ),
+              ],
+            ),
+          ),
+          // Flow body
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                GwpSpacing.base, GwpSpacing.md, GwpSpacing.base, GwpSpacing.md),
+            child: Column(
+              children: [
+                for (var i = 0; i < legs.length; i++) ...[
+                  _flowAccountRow(legs[i].fromAccount,
+                      role: i == 0 ? '源' : '中转',
+                      color: i == 0 ? GwpColors.negative : GwpColors.actionPrimary),
+                  _flowChannelRow(legs[i]),
+                  if (i == legs.length - 1)
+                    _flowAccountRow(legs[i].toAccount,
+                        role: '目标', color: GwpColors.positive),
+                ],
+                const SizedBox(height: GwpSpacing.md),
+                // Summary
+                Row(
+                  children: [
+                    _kvChip('扣款', '${route.totalDebit}'),
+                    const SizedBox(width: 6),
+                    _kvChip('到账', '${route.netCredit}'),
+                    if (route.amount > Decimal.zero) ...[
+                      const SizedBox(width: 6),
+                      _kvChip(
+                        '费率',
+                        '${(route.totalFee.toDouble() / route.amount.toDouble() * 100).toStringAsFixed(2)}%',
+                      ),
+                    ],
+                  ],
+                ),
+                // Violations
+                if (route.violations.isNotEmpty) ...[
+                  const SizedBox(height: GwpSpacing.md),
+                  for (final v in route.violations)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('• ${v.code.name} — ${v.message}',
+                          style: const TextStyle(
+                              fontSize: 11, color: GwpColors.negative)),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _flowAccountRow(Account account,
+      {required String role, required Color color}) {
+    final typeColor =
+        _typeColors[account.accountType] ?? GwpColors.actionPrimary;
+    final typeIcon =
+        _typeIcons[account.accountType] ?? Icons.account_balance;
+    final regionName = regionLabel(regionIndex, account.sovereigntyRegion);
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 1.5),
+          ),
+        ),
+        const SizedBox(width: GwpSpacing.sm),
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: typeColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: Icon(typeIcon, size: 14, color: typeColor),
+        ),
+        const SizedBox(width: GwpSpacing.sm),
+        Expanded(
+          child: Text(
+            account.institutionName,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: GwpColors.textPrimary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Text('$regionName · ${account.accountType.labelZh}',
+            style:
+                const TextStyle(fontSize: 10, color: GwpColors.textMuted)),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(role,
+              style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: color)),
+        ),
+      ],
+    );
+  }
+
+  Widget _flowChannelRow(RouteLeg leg) {
+    final protoColor = _protocolColors[leg.channel.transferProtocol] ??
+        GwpColors.actionPrimary;
+    return Padding(
+      padding: const EdgeInsets.only(left: 5),
+      child: SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            Container(width: 1.5, color: protoColor.withValues(alpha: 0.3)),
+            const SizedBox(width: GwpSpacing.sm + 26 + GwpSpacing.sm - 5),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: protoColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(leg.channel.transferProtocol,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: protoColor)),
+                  if (leg.channel.isBuiltin) ...[
+                    const SizedBox(width: 4),
+                    const BuiltinBadge(),
+                  ],
+                  const SizedBox(width: 8),
+                  Text('费用 ${leg.fee}',
+                      style: const TextStyle(
+                          fontFamily: GwpTypo.monoFont,
+                          fontSize: 10,
+                          color: GwpColors.textSecondary)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_rounded,
+                      size: 12, color: protoColor),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _kvChip(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: GwpColors.surface2,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Column(
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 9, color: GwpColors.textMuted)),
+            const SizedBox(height: 1),
+            Text(value,
+                style: const TextStyle(
+                  fontFamily: GwpTypo.monoFont,
+                  fontFeatures: GwpTypo.tabularFigures,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: GwpColors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// §4  Compare flow
 // ──────────────────────────────────────────────────────────────
 
 bool _routesEqual(TransferRoute a, TransferRoute b) {
@@ -1167,8 +1308,8 @@ bool _routesEqual(TransferRoute a, TransferRoute b) {
   return true;
 }
 
-class _CompareResult extends StatelessWidget {
-  const _CompareResult({
+class _CompareFlow extends StatelessWidget {
+  const _CompareFlow({
     required this.feeRoute,
     required this.hopsRoute,
     required this.regionIndex,
@@ -1182,704 +1323,70 @@ class _CompareResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (feeRoute == null && hopsRoute == null) {
-      return const SizedBox.shrink();
-    }
-    final same =
-        feeRoute != null &&
+    if (feeRoute == null && hopsRoute == null) return const SizedBox.shrink();
+    final same = feeRoute != null &&
         hopsRoute != null &&
         _routesEqual(feeRoute!, hopsRoute!);
+
+    if (same) {
+      return _RouteFlow(
+        route: feeRoute!,
+        regionIndex: regionIndex,
+        protocolIndex: protocolIndex,
+        badge: '两种策略一致',
+      );
+    }
+
+    final feeDelta = feeRoute != null && hopsRoute != null
+        ? (feeRoute!.totalFee - hopsRoute!.totalFee).abs()
+        : null;
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Info banner
-        Container(
-          padding: const EdgeInsets.all(GwpSpacing.md),
-          decoration: BoxDecoration(
-            color: GwpColors.infoBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: GwpColors.info.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                same ? Icons.info_outline : Icons.compare_arrows,
-                size: 18,
-                color: GwpColors.info,
-              ),
-              const SizedBox(width: GwpSpacing.sm),
-              Expanded(
-                child: Text(
-                  same ? '两种目标得到同一条路径' : '两种目标规划结果不同，已并列展示',
-                  style: const TextStyle(fontSize: 13, color: GwpColors.info),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Fee vs Hops comparison bar
-        if (feeRoute != null && hopsRoute != null && !same) ...[
-          const SizedBox(height: GwpSpacing.md),
-          _FeeCompareBar(feeRoute: feeRoute!, hopsRoute: hopsRoute!),
-        ],
-        const SizedBox(height: GwpSpacing.md),
-
-        if (same)
-          _RouteCard(
-            route: feeRoute!,
-            compareBadge: '两种目标一致',
-            regionIndex: regionIndex,
-            protocolIndex: protocolIndex,
-          )
-        else ...[
-          if (feeRoute != null)
-            _RouteCard(
-              route: feeRoute!,
-              compareBadge: '费用最低',
-              regionIndex: regionIndex,
-              protocolIndex: protocolIndex,
-            ),
-          if (hopsRoute != null) ...[
-            const SizedBox(height: GwpSpacing.md),
-            _RouteCard(
-              route: hopsRoute!,
-              compareBadge: '跳数最少',
-              regionIndex: regionIndex,
-              protocolIndex: protocolIndex,
-            ),
-          ],
-        ],
-      ],
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
-// Fee comparison bar — visual side-by-side fee + hops
-// ──────────────────────────────────────────────────────────────
-
-class _FeeCompareBar extends StatelessWidget {
-  const _FeeCompareBar({required this.feeRoute, required this.hopsRoute});
-
-  final TransferRoute feeRoute;
-  final TransferRoute hopsRoute;
-
-  @override
-  Widget build(BuildContext context) {
-    final feeA = feeRoute.totalFee.toDouble();
-    final feeB = hopsRoute.totalFee.toDouble();
-    final maxFee = feeA > feeB ? feeA : feeB;
-
-    return Container(
-      padding: const EdgeInsets.all(GwpSpacing.md),
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: GwpColors.border, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '费用对比',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: GwpColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: GwpSpacing.sm),
-          // Min fee route bar
-          _compareRow(
-            label: '费用最低',
-            fee: feeRoute.totalFee,
-            hops: feeRoute.legs.length,
-            fraction: maxFee > 0 ? feeA / maxFee : 0,
-            color: const Color(0xFF64748B),
-          ),
-          const SizedBox(height: 6),
-          // Min hops route bar
-          _compareRow(
-            label: '跳数最少',
-            fee: hopsRoute.totalFee,
-            hops: hopsRoute.legs.length,
-            fraction: maxFee > 0 ? feeB / maxFee : 0,
-            color: const Color(0xFF22C55E),
-          ),
-          const SizedBox(height: GwpSpacing.sm),
-          // Delta row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Δ 费用 ${(feeRoute.totalFee - hopsRoute.totalFee).abs()}',
-                style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontSize: 10,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-              Text(
-                'Δ 跳数 ${(feeRoute.legs.length - hopsRoute.legs.length).abs()}',
-                style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontSize: 10,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _compareRow({
-    required String label,
-    required Decimal fee,
-    required int hops,
-    required double fraction,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 56,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: GwpColors.textSecondary,
-            ),
-          ),
-        ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: fraction.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: GwpColors.surface3,
-              valueColor: AlwaysStoppedAnimation(color.withValues(alpha: 0.6)),
-            ),
-          ),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Text(
-          '$fee · $hops跳',
-          style: const TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            color: GwpColors.textPrimary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
-// Route card (enhanced with visual timeline)
-// ──────────────────────────────────────────────────────────────
-
-class _RouteCard extends StatelessWidget {
-  const _RouteCard({
-    required this.route,
-    required this.regionIndex,
-    required this.protocolIndex,
-    this.compareBadge,
-  });
-
-  final TransferRoute route;
-  final RegionIndex regionIndex;
-  final ProtocolIndex protocolIndex;
-  final String? compareBadge;
-
-  @override
-  Widget build(BuildContext context) {
-    final ok = route.isExecutable;
-    final objectiveLabel =
-        compareBadge ??
-        (route.objective == RouteObjective.minFee ? '费用最低' : '跳数最少');
-    final borderColor = ok
-        ? GwpColors.positive.withValues(alpha: 0.3)
-        : GwpColors.negative.withValues(alpha: 0.3);
-    final headerBg = ok ? GwpColors.positiveBg : GwpColors.negativeBg;
-    final headerFg = ok ? GwpColors.positive : GwpColors.negative;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: GwpColors.surface1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
+        if (feeDelta != null)
           Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: GwpSpacing.base,
-              vertical: GwpSpacing.md,
-            ),
+                horizontal: GwpSpacing.md, vertical: GwpSpacing.sm),
             decoration: BoxDecoration(
-              color: headerBg,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
+              color: GwpColors.surface1,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: GwpColors.border, width: 0.5),
             ),
             child: Row(
               children: [
-                Icon(
-                  ok ? Icons.check_circle_outline : Icons.error_outline,
-                  size: 18,
-                  color: headerFg,
-                ),
-                const SizedBox(width: GwpSpacing.sm),
+                const Icon(Icons.compare_arrows,
+                    size: 16, color: GwpColors.info),
+                const SizedBox(width: 8),
                 Text(
-                  ok ? '可执行路径' : '存在违规',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: headerFg,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: GwpColors.surface3,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '$objectiveLabel · ${route.legs.length} 跳',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: GwpColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(GwpSpacing.base),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Visual timeline
-                if (route.legs.isNotEmpty) ...[
-                  _VisualTimeline(
-                    route: route,
-                    regionIndex: regionIndex,
-                    protocolIndex: protocolIndex,
-                  ),
-                  const SizedBox(height: GwpSpacing.md),
-                ],
-
-                // Fee breakdown donut (if multi-hop)
-                if (route.legs.length > 1) ...[
-                  _FeeBreakdownDonut(route: route),
-                  const SizedBox(height: GwpSpacing.md),
-                ],
-
-                // Summary KVs
-                const Divider(height: GwpSpacing.xl),
-                _kv('金额', '${route.amount} ${route.currency}'),
-                _kv('总手续费', '${route.totalFee}'),
-                _kv('源账户扣款', '${route.totalDebit}'),
-                _kv('目标到账', '${route.netCredit}'),
-
-                // Fee rate
-                if (route.amount > Decimal.zero)
-                  _kv(
-                    '费率',
-                    '${(route.totalFee.toDouble() / route.amount.toDouble() * 100).toStringAsFixed(3)}%',
-                  ),
-
-                if (route.violations.isNotEmpty) ...[
-                  const SizedBox(height: GwpSpacing.md),
-                  const Text(
-                    '违规原因',
-                    style: TextStyle(
+                  '费用最低路线节省 ¥$feeDelta',
+                  style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: GwpColors.negative,
-                    ),
-                  ),
-                  for (final v in route.violations) _violation(v),
-                ],
+                      color: GwpColors.textPrimary),
+                ),
               ],
             ),
           ),
+        if (feeRoute != null) ...[
+          const SizedBox(height: GwpSpacing.md),
+          _RouteFlow(
+            route: feeRoute!,
+            regionIndex: regionIndex,
+            protocolIndex: protocolIndex,
+            badge: '费用最低',
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _kv(String k, String v) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 88,
-          child: Text(
-            k,
-            style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+        if (hopsRoute != null) ...[
+          const SizedBox(height: GwpSpacing.md),
+          _RouteFlow(
+            route: hopsRoute!,
+            regionIndex: regionIndex,
+            protocolIndex: protocolIndex,
+            badge: '跳数最少',
           ),
-        ),
-        Expanded(
-          child: Text(
-            v,
-            style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: GwpColors.textPrimary,
-              fontFeatures: GwpTypo.tabularFigures,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _violation(RuleFailure f) => Padding(
-    padding: const EdgeInsets.only(top: 4),
-    child: Text(
-      '• ${f.code.name} — ${f.message}',
-      style: const TextStyle(fontSize: 12, color: GwpColors.negative),
-    ),
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
-// Visual timeline — shows route legs as connected steps
-// ──────────────────────────────────────────────────────────────
-
-class _VisualTimeline extends StatelessWidget {
-  const _VisualTimeline({
-    required this.route,
-    required this.regionIndex,
-    required this.protocolIndex,
-  });
-  final TransferRoute route;
-  final RegionIndex regionIndex;
-  final ProtocolIndex protocolIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var i = 0; i < route.legs.length; i++) ...[
-          _timelineNode(route.legs[i].fromAccount, isFirst: i == 0),
-          _timelineLeg(route.legs[i], i),
-          if (i == route.legs.length - 1)
-            _timelineNode(route.legs[i].toAccount, isLast: true),
         ],
       ],
     );
   }
-
-  Widget _timelineNode(
-    Account account, {
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
-    final typeColor =
-        _typeColors[account.accountType] ?? GwpColors.actionPrimary;
-    final typeIcon = _typeIcons[account.accountType] ?? Icons.account_balance;
-    return Row(
-      children: [
-        SizedBox(
-          width: 28,
-          child: Column(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: isFirst
-                      ? GwpColors.negative
-                      : (isLast ? GwpColors.positive : typeColor),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: GwpColors.surface1, width: 2),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: typeColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          alignment: Alignment.center,
-          child: Icon(typeIcon, size: 12, color: typeColor),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Expanded(
-          child: Row(
-            children: [
-              Flexible(
-                child: Text(
-                  account.institutionName,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                account.accountType.labelZh,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: regionColor(regionIndex, account.sovereigntyRegion),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                account.sovereigntyRegion,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _timelineLeg(RouteLeg leg, int idx) {
-    final protocolColor =
-        _protocolColors[leg.channel.transferProtocol] ??
-        GwpColors.actionPrimary;
-    final protocolIcon =
-        _protocolIcons[leg.channel.transferProtocol] ?? Icons.swap_horiz;
-    final protocolName =
-        protocolDisplayName(protocolIndex, leg.channel.transferProtocol);
-    return Padding(
-      padding: const EdgeInsets.only(left: 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 28,
-            height: 40,
-            child: Center(
-              child: Container(
-                width: 2,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      protocolColor.withValues(alpha: 0.6),
-                      protocolColor.withValues(alpha: 0.3),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: GwpSpacing.sm),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: protocolColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: protocolColor.withValues(alpha: 0.2),
-                  width: 0.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(protocolIcon, size: 14, color: protocolColor),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${leg.channel.name} · $protocolName',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: protocolColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (leg.channel.isBuiltin) ...[
-                          const SizedBox(width: 6),
-                          const BuiltinBadge(),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '费用 ${leg.fee}',
-                    style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: GwpColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// ──────────────────────────────────────────────────────────────
-// Fee breakdown donut (per-leg fee proportions)
-// ──────────────────────────────────────────────────────────────
-
-class _FeeBreakdownDonut extends StatelessWidget {
-  const _FeeBreakdownDonut({required this.route});
-  final TransferRoute route;
-
-  @override
-  Widget build(BuildContext context) {
-    final slices = <_LegSlice>[];
-    for (var i = 0; i < route.legs.length; i++) {
-      final leg = route.legs[i];
-      final feeD = leg.fee.toDouble();
-      if (feeD > 0) {
-        final color =
-            _protocolColors[leg.channel.transferProtocol] ??
-            GwpColors.actionPrimary;
-        slices.add(
-          _LegSlice(label: leg.channel.name, value: feeD, color: color),
-        );
-      }
-    }
-    if (slices.isEmpty) return const SizedBox.shrink();
-    final total = slices.fold<double>(0, (s, e) => s + e.value);
-
-    return Row(
-      children: [
-        SizedBox(
-          width: 56,
-          height: 56,
-          child: PieChart(
-            PieChartData(
-              sections: slices
-                  .map(
-                    (s) => PieChartSectionData(
-                      value: s.value,
-                      color: s.color,
-                      radius: 10,
-                      showTitle: false,
-                    ),
-                  )
-                  .toList(),
-              sectionsSpace: 1,
-              centerSpaceRadius: 16,
-            ),
-          ),
-        ),
-        const SizedBox(width: GwpSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '费用构成',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: GwpColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final s in slices)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: s.color,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          s.label,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: GwpColors.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        '${(s.value / total * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(
-                          fontFamily: GwpTypo.monoFont,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: GwpColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LegSlice {
-  const _LegSlice({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-  final String label;
-  final double value;
-  final Color color;
-}

@@ -97,7 +97,7 @@ void main() {
     final rows = await db.customSelect(
       "SELECT id, name, transfer_protocol, is_builtin FROM channels ORDER BY id",
     ).get();
-    expect(rows, hasLength(6));
+    expect(rows, hasLength(7));
     expect(
       rows
           .map(
@@ -105,6 +105,7 @@ void main() {
           )
           .toList(),
       [
+        'builtin_ch_cn_cips:人民币跨境支付系统通道:CIPS:1',
         'builtin_ch_cn_cny:中国现代化支付系统通道:CNAPS:1',
         'builtin_ch_gb_fps:英国快速支付系统通道:FPS:1',
         'builtin_ch_hk_chats:香港即时支付结算系统通道:CHATS:1',
