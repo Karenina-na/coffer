@@ -321,7 +321,7 @@ class PlanTransferRouteUseCase {
         legs.add(leg);
         totalFee += leg.fee;
         if (e.isFx && e.fxRate != null) {
-          runningAmount = runningAmount *
+          runningAmount = (runningAmount - (e.from.fxFixedFee ?? Decimal.zero)) *
               Decimal.parse((e.fxRate!).toStringAsFixed(6)) *
               (Decimal.one -
                   Decimal.parse(
@@ -367,7 +367,9 @@ class PlanTransferRouteUseCase {
   RouteLeg _legOf(_Edge e, Decimal amount) {
     final fee = e.isFx
         ? (amount *
-            Decimal.parse((e.from.fxSpreadPercent / 100).toStringAsFixed(6)))
+                Decimal.parse(
+                    (e.from.fxSpreadPercent / 100).toStringAsFixed(6))) +
+            (e.from.fxFixedFee ?? Decimal.zero)
         : _feeOf(e.channel!, e.link!, amount);
     return RouteLeg(
       channel: e.isFx
@@ -528,8 +530,9 @@ class PlanTransferRouteUseCase {
       switch (objective) {
         case RouteObjective.minFee:
           return amount *
-              Decimal.parse(
-                  (e.from.fxSpreadPercent / 100).toStringAsFixed(6));
+                  Decimal.parse(
+                      (e.from.fxSpreadPercent / 100).toStringAsFixed(6)) +
+              (e.from.fxFixedFee ?? Decimal.zero);
         case RouteObjective.minHops:
           return Decimal.one; // FX counts as a hop
       }

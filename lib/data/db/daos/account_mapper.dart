@@ -1,7 +1,8 @@
+import 'package:decimal/decimal.dart';
+import 'package:drift/drift.dart';
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
-
+import '../../../core/money/money.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_enums.dart';
 import '../database.dart';
@@ -26,6 +27,7 @@ class AccountMapper {
             ? null
             : (jsonDecode(row.extInfo!) as Map<String, dynamic>),
         fxSpreadPercent: row.fxSpreadPercent,
+        fxFixedFee: Money.parseOrNull(row.fxFixedFee),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         isDeleted: row.isDeleted,
@@ -41,6 +43,7 @@ class AccountMapper {
         openedAt: _val(a.openedAt),
         extInfo: _val(a.extInfo == null ? null : jsonEncode(a.extInfo)),
         fxSpreadPercent: Value(a.fxSpreadPercent),
+        fxFixedFee: Value(Money.stringifyOrNull(a.fxFixedFee) ?? '0'),
         createdAt: a.createdAt,
         updatedAt: a.updatedAt,
         isDeleted: Value(a.isDeleted),

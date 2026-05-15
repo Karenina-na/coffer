@@ -76,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -598,6 +598,11 @@ class AppDatabase extends _$AppDatabase {
         if (from < 28) {
           await customStatement(
             'ALTER TABLE account_channels ADD COLUMN region_override TEXT',
+          );
+        }
+        if (from < 29) {
+          await customStatement(
+            'ALTER TABLE accounts ADD COLUMN fx_fixed_fee TEXT NOT NULL DEFAULT \'0\'',
           );
         }
       }); // end transaction

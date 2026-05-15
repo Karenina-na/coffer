@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../entities/account.dart';
@@ -31,6 +33,7 @@ class CreateAccountUseCase {
     Map<String, dynamic>? extInfo,
     AccountStatus status = AccountStatus.active,
     double fxSpreadPercent = 0,
+    Decimal? fxFixedFee,
   }) {
     if (sovereigntyRegion.trim().isEmpty) {
       return Future.value(
@@ -53,6 +56,7 @@ class CreateAccountUseCase {
       openedAt: openedAt,
       extInfo: extInfo,
       fxSpreadPercent: fxSpreadPercent,
+      fxFixedFee: fxFixedFee,
       createdAt: now,
       updatedAt: now,
     );

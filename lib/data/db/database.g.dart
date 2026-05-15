@@ -128,6 +128,18 @@ class $AccountsTable extends Accounts
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _fxFixedFeeMeta = const VerificationMeta(
+    'fxFixedFee',
+  );
+  @override
+  late final GeneratedColumn<String> fxFixedFee = GeneratedColumn<String>(
+    'fx_fixed_fee',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('0'),
+  );
   static const VerificationMeta _isDeletedMeta = const VerificationMeta(
     'isDeleted',
   );
@@ -156,6 +168,7 @@ class $AccountsTable extends Accounts
     createdAt,
     updatedAt,
     fxSpreadPercent,
+    fxFixedFee,
     isDeleted,
   ];
   @override
@@ -259,6 +272,15 @@ class $AccountsTable extends Accounts
         ),
       );
     }
+    if (data.containsKey('fx_fixed_fee')) {
+      context.handle(
+        _fxFixedFeeMeta,
+        fxFixedFee.isAcceptableOrUnknown(
+          data['fx_fixed_fee']!,
+          _fxFixedFeeMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_deleted')) {
       context.handle(
         _isDeletedMeta,
@@ -318,6 +340,10 @@ class $AccountsTable extends Accounts
         DriftSqlType.double,
         data['${effectivePrefix}fx_spread_percent'],
       )!,
+      fxFixedFee: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fx_fixed_fee'],
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
@@ -343,6 +369,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final double fxSpreadPercent;
+  final String fxFixedFee;
   final bool isDeleted;
   const AccountRow({
     required this.id,
@@ -356,6 +383,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     required this.createdAt,
     required this.updatedAt,
     required this.fxSpreadPercent,
+    required this.fxFixedFee,
     required this.isDeleted,
   });
   @override
@@ -378,6 +406,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['fx_spread_percent'] = Variable<double>(fxSpreadPercent);
+    map['fx_fixed_fee'] = Variable<String>(fxFixedFee);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
   }
@@ -401,6 +430,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       fxSpreadPercent: Value(fxSpreadPercent),
+      fxFixedFee: Value(fxFixedFee),
       isDeleted: Value(isDeleted),
     );
   }
@@ -422,6 +452,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       fxSpreadPercent: serializer.fromJson<double>(json['fxSpreadPercent']),
+      fxFixedFee: serializer.fromJson<String>(json['fxFixedFee']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
   }
@@ -440,6 +471,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'fxSpreadPercent': serializer.toJson<double>(fxSpreadPercent),
+      'fxFixedFee': serializer.toJson<String>(fxFixedFee),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
   }
@@ -456,6 +488,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     DateTime? createdAt,
     DateTime? updatedAt,
     double? fxSpreadPercent,
+    String? fxFixedFee,
     bool? isDeleted,
   }) => AccountRow(
     id: id ?? this.id,
@@ -469,6 +502,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     fxSpreadPercent: fxSpreadPercent ?? this.fxSpreadPercent,
+    fxFixedFee: fxFixedFee ?? this.fxFixedFee,
     isDeleted: isDeleted ?? this.isDeleted,
   );
   AccountRow copyWithCompanion(AccountsCompanion data) {
@@ -492,6 +526,9 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
       fxSpreadPercent: data.fxSpreadPercent.present
           ? data.fxSpreadPercent.value
           : this.fxSpreadPercent,
+      fxFixedFee: data.fxFixedFee.present
+          ? data.fxFixedFee.value
+          : this.fxFixedFee,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
   }
@@ -510,6 +547,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('fxSpreadPercent: $fxSpreadPercent, ')
+          ..write('fxFixedFee: $fxFixedFee, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
         .toString();
@@ -528,6 +566,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
     createdAt,
     updatedAt,
     fxSpreadPercent,
+    fxFixedFee,
     isDeleted,
   );
   @override
@@ -545,6 +584,7 @@ class AccountRow extends DataClass implements Insertable<AccountRow> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.fxSpreadPercent == this.fxSpreadPercent &&
+          other.fxFixedFee == this.fxFixedFee &&
           other.isDeleted == this.isDeleted);
 }
 
@@ -560,6 +600,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<double> fxSpreadPercent;
+  final Value<String> fxFixedFee;
   final Value<bool> isDeleted;
   final Value<int> rowid;
   const AccountsCompanion({
@@ -574,6 +615,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.fxSpreadPercent = const Value.absent(),
+    this.fxFixedFee = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -589,6 +631,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.fxSpreadPercent = const Value.absent(),
+    this.fxFixedFee = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -610,6 +653,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<double>? fxSpreadPercent,
+    Expression<String>? fxFixedFee,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
   }) {
@@ -625,6 +669,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (fxSpreadPercent != null) 'fx_spread_percent': fxSpreadPercent,
+      if (fxFixedFee != null) 'fx_fixed_fee': fxFixedFee,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
     });
@@ -642,6 +687,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<double>? fxSpreadPercent,
+    Value<String>? fxFixedFee,
     Value<bool>? isDeleted,
     Value<int>? rowid,
   }) {
@@ -657,6 +703,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       fxSpreadPercent: fxSpreadPercent ?? this.fxSpreadPercent,
+      fxFixedFee: fxFixedFee ?? this.fxFixedFee,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
     );
@@ -698,6 +745,9 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
     if (fxSpreadPercent.present) {
       map['fx_spread_percent'] = Variable<double>(fxSpreadPercent.value);
     }
+    if (fxFixedFee.present) {
+      map['fx_fixed_fee'] = Variable<String>(fxFixedFee.value);
+    }
     if (isDeleted.present) {
       map['is_deleted'] = Variable<bool>(isDeleted.value);
     }
@@ -721,6 +771,7 @@ class AccountsCompanion extends UpdateCompanion<AccountRow> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('fxSpreadPercent: $fxSpreadPercent, ')
+          ..write('fxFixedFee: $fxFixedFee, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9976,6 +10027,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<double> fxSpreadPercent,
+      Value<String> fxFixedFee,
       Value<bool> isDeleted,
       Value<int> rowid,
     });
@@ -9992,6 +10044,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<double> fxSpreadPercent,
+      Value<String> fxFixedFee,
       Value<bool> isDeleted,
       Value<int> rowid,
     });
@@ -10123,6 +10176,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<double> get fxSpreadPercent => $composableBuilder(
     column: $table.fxSpreadPercent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fxFixedFee => $composableBuilder(
+    column: $table.fxFixedFee,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10271,6 +10329,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fxFixedFee => $composableBuilder(
+    column: $table.fxFixedFee,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isDeleted => $composableBuilder(
     column: $table.isDeleted,
     builder: (column) => ColumnOrderings(column),
@@ -10324,6 +10387,11 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<double> get fxSpreadPercent => $composableBuilder(
     column: $table.fxSpreadPercent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fxFixedFee => $composableBuilder(
+    column: $table.fxFixedFee,
     builder: (column) => column,
   );
 
@@ -10449,6 +10517,7 @@ class $$AccountsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<double> fxSpreadPercent = const Value.absent(),
+                Value<String> fxFixedFee = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
@@ -10463,6 +10532,7 @@ class $$AccountsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 fxSpreadPercent: fxSpreadPercent,
+                fxFixedFee: fxFixedFee,
                 isDeleted: isDeleted,
                 rowid: rowid,
               ),
@@ -10479,6 +10549,7 @@ class $$AccountsTableTableManager
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<double> fxSpreadPercent = const Value.absent(),
+                Value<String> fxFixedFee = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
@@ -10493,6 +10564,7 @@ class $$AccountsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 fxSpreadPercent: fxSpreadPercent,
+                fxFixedFee: fxFixedFee,
                 isDeleted: isDeleted,
                 rowid: rowid,
               ),

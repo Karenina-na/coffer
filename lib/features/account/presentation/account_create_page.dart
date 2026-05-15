@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
   late final TextEditingController _institutionCtrl;
   late final TextEditingController _accountNoCtrl;
   late final TextEditingController _fxSpreadCtrl;
+  late final TextEditingController _fxFixedFeeCtrl;
 
   late String _region;
   late AccountType _type;
@@ -50,6 +52,10 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         text: ((a?.fxSpreadPercent ?? 0) > 0
             ? a!.fxSpreadPercent.toStringAsFixed(2)
             : '0.30'));
+    _fxFixedFeeCtrl = TextEditingController(
+        text: ((a?.fxFixedFee) != null
+            ? a!.fxFixedFee.toString()
+            : ''));
     _supportsFx = (a?.fxSpreadPercent ?? 0) > 0;
     _type = a?.accountType ?? AccountType.bank;
     _status = a?.status ?? AccountStatus.active;
@@ -61,6 +67,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
     _institutionCtrl.dispose();
     _accountNoCtrl.dispose();
     _fxSpreadCtrl.dispose();
+    _fxFixedFeeCtrl.dispose();
     super.dispose();
   }
 
@@ -80,6 +87,9 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         openedAt: _openedAt,
         fxSpreadPercent:
             _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
+        fxFixedFee: _supportsFx
+            ? Decimal.tryParse(_fxFixedFeeCtrl.text)
+            : null,
         updatedAt: now,
       );
       final result =
@@ -103,6 +113,9 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         openedAt: _openedAt,
         fxSpreadPercent:
             _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
+        fxFixedFee: _supportsFx
+            ? Decimal.tryParse(_fxFixedFeeCtrl.text)
+            : null,
       );
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -189,6 +202,19 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                 decoration: const InputDecoration(
                   labelText: '换汇损耗 (%)',
                   helperText: '例如 0.3 表示内部换汇时有 0.3% 的摩擦损耗',
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _fxFixedFeeCtrl,
+                decoration: const InputDecoration(
+                  labelText: '换汇固定费用（可选）',
+                  helperText: '每笔换汇额外收取的固定金额',
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
