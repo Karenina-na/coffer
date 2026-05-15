@@ -17,6 +17,7 @@ import 'package:gwp/features/asset/presentation/asset_providers.dart';
 import 'package:gwp/features/channel/presentation/channel_list_page.dart';
 import 'package:gwp/features/channel/presentation/channel_providers.dart';
 import 'package:gwp/features/channel/presentation/transfer_simulate_page.dart';
+import 'package:gwp/features/exchange_rate/presentation/exchange_rate_providers.dart';
 
 GoRouter _router() => GoRouter(
       initialLocation: '/',
@@ -101,6 +102,7 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
         accountChannelListProvider.overrideWith((ref) => Stream.value(links)),
         channelListProvider.overrideWith((ref) => Stream.value(channels)),
         regionMetaIndexProvider.overrideWith((ref) => Stream.value(<String, RegionMeta>{})),
+        exchangeRateListProvider.overrideWith((ref) => Stream.value(const [])),
         dictEntriesProvider(DictType.currency).overrideWith(
           (ref) => Stream.value(<DictEntry>[]),
         ),

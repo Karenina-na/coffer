@@ -352,6 +352,7 @@ class _RecordingSaveAccountChannelConfigUseCase
     Decimal? feeRateOverride,
     Decimal? fixedFeeOverride,
     String? feeCurrencyOverride,
+    String? regionOverride,
   }) async {
     invocations.add(
       _SaveConfigInvocation(
@@ -360,6 +361,7 @@ class _RecordingSaveAccountChannelConfigUseCase
         feeRateOverride: feeRateOverride,
         fixedFeeOverride: fixedFeeOverride,
         feeCurrencyOverride: feeCurrencyOverride,
+        regionOverride: regionOverride,
       ),
     );
     return Ok(
@@ -382,6 +384,7 @@ class _SaveConfigInvocation {
     required this.feeRateOverride,
     required this.fixedFeeOverride,
     required this.feeCurrencyOverride,
+    this.regionOverride,
   });
 
   final String accountId;
@@ -389,6 +392,7 @@ class _SaveConfigInvocation {
   final Decimal? feeRateOverride;
   final Decimal? fixedFeeOverride;
   final String? feeCurrencyOverride;
+  final String? regionOverride;
 }
 
 class _NoopAccountChannelRepository implements AccountChannelRepository {
@@ -420,6 +424,7 @@ class _NoopAccountChannelRepository implements AccountChannelRepository {
     Decimal? feeRateOverride,
     Decimal? fixedFeeOverride,
     String? feeCurrencyOverride,
+    String? regionOverride,
   }) {
     throw UnimplementedError();
   }

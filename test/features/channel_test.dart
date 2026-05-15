@@ -419,6 +419,64 @@ void main() {
       expect(r.isErr, isTrue);
       expect(r.errorOrNull, isA<ValidationError>());
     });
+
+    test('SWIFT收费15时走CIPS换汇CHATS更便宜', () async {
+      // ICBC(CN): CIPS, SWIFT
+      // HSBC(HK): CIPS, CHATS, SWIFT
+      // IBKR(US): CHATS, SWIFT, ACH
+      // SWIFT fixedFee=15, others free. All accounts FX enabled.
+      // Transfer CNY 20 → USD from ICBC to IBKR.
+      final create = CreateAccountUseCase(accounts, idGenerator: _seq(prefix: 'fx-'), now: () => DateTime.utc(2026, 4, 21));
+      final icbcR = await create(accountType: AccountType.bank, sovereigntyRegion: 'CN', institutionName: '工商银行', fxSpreadPercent: 0.3);
+      final hsbcR = await create(accountType: AccountType.bank, sovereigntyRegion: 'HK', institutionName: '汇丰银行', fxSpreadPercent: 0.3);
+      final ibkrR = await create(accountType: AccountType.broker, sovereigntyRegion: 'US', institutionName: 'IBKR', fxSpreadPercent: 0.3);
+
+      final icbc = icbcR.valueOrNull!;
+      final hsbc = hsbcR.valueOrNull!;
+      final ibkr = ibkrR.valueOrNull!;
+
+      // Create channels (need to use full constructor for protocol)
+      final now = DateTime.utc(2026, 4, 21);
+      Channel _mk(String id, String name, String proto, {Decimal? fixedFee, String? ccy, Map<String, dynamic>? rule}) => Channel(
+        id: id, name: name, transferProtocol: proto, status: ChannelStatus.enabled,
+        fixedFee: fixedFee, limitCurrency: ccy, sovereigntyRegionRule: rule,
+        createdAt: now, updatedAt: now);
+      final cips = _mk('cips', 'CIPS', 'CIPS', ccy: 'CNY', rule: {'allowedRegions': ['CN', 'HK']});
+      final chats = _mk('chats', 'CHATS', 'CHATS', ccy: 'USD', rule: {'allowedRegions': ['HK']});
+      final swift = _mk('swift', 'SWIFT', 'SWIFT', fixedFee: Decimal.fromInt(15));
+      final ach = _mk('ach', 'ACH', 'ACH');
+
+      for (final c in [cips, chats, swift, ach]) {
+        await channels.upsert(c);
+      }
+
+      // Link accounts
+      for (final (acc, ch) in [(icbc, cips), (icbc, swift), (hsbc, cips), (hsbc, chats), (hsbc, swift), (ibkr, chats), (ibkr, swift), (ibkr, ach)]) {
+        await accountChannels.link(accountId: acc.id, channelId: ch.id);
+      }
+      // IBKR on CHATS needs HK region override
+      await accountChannels.saveConfig(
+        accountId: ibkr.id, channelId: chats.id,
+        feeRateOverride: null, fixedFeeOverride: null, feeCurrencyOverride: null,
+        regionOverride: 'HK',
+      );
+
+      final uc = PlanTransferRouteUseCase(accounts, channels, accountChannels, now: () => DateTime.utc(2026, 4, 21));
+      final r = await uc(
+        sourceAccountId: icbc.id, targetAccountId: ibkr.id,
+        amount: Decimal.fromInt(20), currency: 'CNY', targetCurrency: 'USD',
+        fxRates: {'USD/CNY': 7.25, 'CNY/USD': 0.138},
+      );
+
+      expect(r.isOk, isTrue);
+      final route = r.valueOrNull!;
+      // Should be: ICBC→CIPS→HSBC→FX→HSBC(USD)→CHATS→IBKR = 3 hops
+      expect(route.legs.length, greaterThan(1));
+      // Total fee should be just FX (0.3% of 20 ≈ 0.06), SWIFT 15 would be much worse
+      expect(route.totalFee < Decimal.fromInt(10), isTrue, reason: 'should pick cheap CIPS+CHATS path over SWIFT');
+      // First hop should use CIPS
+      expect(route.legs.first.channel.transferProtocol, equals('CIPS'));
+    });
   });
 }
 
