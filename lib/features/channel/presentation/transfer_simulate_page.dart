@@ -84,6 +84,8 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
   TransferRoute? _feeRoute;
   TransferRoute? _hopsRoute;
   String? _errorMsg;
+  bool _amountExpanded = false;
+  Map<String, double> _fxRates = const {};
 
   @override
   void dispose() {
@@ -116,13 +118,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     final uc = ref.read(planTransferRouteUseCaseProvider);
     final ccy = _currency.toUpperCase();
     final tgtCcy = _targetCurrency.toUpperCase();
-    // Build FX rates from exchange rate data
-    final fxRates = <String, double>{};
-    final rateAsync = ref.read(exchangeRateListProvider);
-    final rateList = rateAsync.maybeWhen(data: (d) => d, orElse: () => <ExchangeRate>[]);
-    for (final r in rateList) {
-      fxRates['${r.baseCurrency}/${r.quoteCurrency}'] = r.rate.toDouble();
-    }
+    final fxRates = Map<String, double>.of(_fxRates);
     if (_planMode == _PlanMode.compare) {
       final results = await Future.wait([
         uc(
@@ -189,129 +185,6 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     if (d.abs() >= 1e6) return '${(d / 1e6).toStringAsFixed(1)}M';
     if (d.abs() >= 1e3) return '${(d / 1e3).toStringAsFixed(1)}K';
     return d.toStringAsFixed(1);
-  }
-
-  Future<void> _openAmountSheet() async {
-    final currencies = ref
-        .read(dictEntriesProvider(DictType.currency))
-        .maybeWhen(data: (d) => d, orElse: () => const []);
-    final srcCtrl = TextEditingController(text: _amountCtrl.text);
-    var srcCcy = _currency;
-    var tgtCcy = _targetCurrency;
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: GwpSpacing.base,
-            right: GwpSpacing.base,
-            top: GwpSpacing.base,
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom + GwpSpacing.base,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('转账金额', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: GwpSpacing.md),
-              // Source currency + amount
-              Row(
-                children: [
-                  PopupMenuButton<String>(
-                    offset: const Offset(0, 48),
-                    padding: EdgeInsets.zero,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: GwpColors.surface2,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: GwpColors.border, width: 0.5),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(srcCcy, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_drop_down, size: 16, color: GwpColors.textMuted),
-                        ],
-                      ),
-                    ),
-                    itemBuilder: (_) => currencies
-                        .map((c) => PopupMenuItem<String>(value: c.code, child: Text('${c.code} · ${c.name}', style: const TextStyle(fontSize: 13))))
-                        .toList(),
-                    onSelected: (v) => srcCcy = v,
-                  ),
-                  const SizedBox(width: GwpSpacing.sm),
-                  Expanded(
-                    child: TextField(
-                      controller: srcCtrl,
-                      autofocus: true,
-                      decoration: const InputDecoration(hintText: '金额', isDense: true),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: GwpSpacing.md),
-              // Target currency
-              Row(
-                children: [
-                  const Icon(Icons.arrow_forward_rounded, size: 16, color: GwpColors.textMuted),
-                  const SizedBox(width: 8),
-                  const Text('目标币种', style: TextStyle(fontSize: 13, color: GwpColors.textMuted)),
-                  const Spacer(),
-                  PopupMenuButton<String>(
-                    offset: const Offset(0, 48),
-                    padding: EdgeInsets.zero,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: tgtCcy != srcCcy ? GwpColors.warning.withValues(alpha: 0.08) : GwpColors.surface2,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: GwpColors.border, width: 0.5),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(tgtCcy, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                              color: tgtCcy != srcCcy ? GwpColors.warning : GwpColors.textPrimary)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_drop_down, size: 16, color: GwpColors.textMuted),
-                        ],
-                      ),
-                    ),
-                    itemBuilder: (_) {
-                      final opts = {srcCcy, tgtCcy, 'CNY', 'USD', 'HKD', 'EUR', 'GBP', 'JPY'};
-                      return opts.map((c) => PopupMenuItem<String>(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList();
-                    },
-                    onSelected: (v) => tgtCcy = v,
-                  ),
-                ],
-              ),
-              const SizedBox(height: GwpSpacing.lg),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('确认'),
-              ),
-              const SizedBox(height: GwpSpacing.sm),
-            ],
-          ),
-        ),
-      ),
-    );
-    final text = srcCtrl.text;
-    srcCtrl.dispose();
-    if (ok == true && mounted) {
-      setState(() {
-        _amountCtrl.text = text;
-        _currency = srcCcy;
-        _targetCurrency = tgtCcy;
-      });
-    }
   }
 
   @override
@@ -398,6 +271,40 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
         final amountDecimal = _amountCtrl.text.trim().isEmpty
             ? null
             : _parseAmount();
+        // Ensure FX rate stream is active (used by both display and planner)
+        final fxAsync = ref.watch(exchangeRateListProvider);
+        final fxList = fxAsync.maybeWhen(data: (d) => d, orElse: () => <ExchangeRate>[]);
+        final builtFx = <String, double>{};
+        for (final r in fxList) {
+          final d = r.rate.toDouble();
+          builtFx['${r.baseCurrency}/${r.quoteCurrency}'] = d;
+          if (d > 0) {
+            builtFx['${r.quoteCurrency}/${r.baseCurrency}'] = 1.0 / d;
+          }
+        }
+        _fxRates = builtFx;
+
+        // Estimated target amount from FX rate (look up both directions)
+        String? _estimatedTarget;
+        if (amountDecimal != null && _currency != _targetCurrency) {
+          final src = _currency;
+          final tgt = _targetCurrency;
+          double? estRate;
+          for (final r in fxList) {
+            if (r.baseCurrency == src && r.quoteCurrency == tgt) {
+              estRate = r.rate.toDouble();
+              break;
+            }
+            if (r.baseCurrency == tgt && r.quoteCurrency == src) {
+              estRate = 1.0 / r.rate.toDouble();
+              break;
+            }
+          }
+          if (estRate != null) {
+            final estD = amountDecimal.toDouble() * estRate;
+            _estimatedTarget = _fmtAmountText(Decimal.parse(estD.toStringAsFixed(6)));
+          }
+        }
         final srcNetWorth =
             srcAccount != null ? netWorth[srcAccount.id] : null;
         final exceedsBalance = amountDecimal != null &&
@@ -425,6 +332,14 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               source: srcAccount,
               target: tgtAccount,
               sharedChannels: sharedChannels,
+              totalPaths: hasResult
+                  ? (_planMode != _PlanMode.compare
+                      ? (1 + (_route?.alternatives.length ?? 0))
+                      : ((_feeRoute != null ? 1 : 0) +
+                          (_hopsRoute != null ? 1 : 0) +
+                          (_feeRoute?.alternatives.length ?? 0) +
+                          (_hopsRoute?.alternatives.length ?? 0)))
+                  : null,
               exceedsBalance: exceedsBalance,
               amount: amountDecimal,
               currency: _currency.toUpperCase(),
@@ -441,20 +356,22 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
             ),
             const SizedBox(height: GwpSpacing.md),
 
-            // ── §2 Transfer amount & config ──
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => _openAmountSheet(),
-                    child: Container(
+            // ── §2 Transfer amount (expandable) ──
+            Container(
+              decoration: BoxDecoration(
+                color: GwpColors.surface1,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: GwpColors.border, width: 0.5),
+              ),
+              child: Column(
+                children: [
+                  InkWell(
+                    borderRadius: _amountExpanded
+                        ? const BorderRadius.vertical(top: Radius.circular(8))
+                        : BorderRadius.circular(8),
+                    onTap: () => setState(() => _amountExpanded = !_amountExpanded),
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: GwpColors.surface1,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: GwpColors.border, width: 0.5),
-                      ),
                       child: Row(
                         children: [
                           const Icon(Icons.attach_money, size: 16,
@@ -487,6 +404,12 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                           if (_targetCurrency != _currency) ...[
                             const Icon(Icons.arrow_forward_rounded,
                                 size: 12, color: GwpColors.textMuted),
+                            if (_estimatedTarget != null)
+                              Text(' $_estimatedTarget ',
+                                  style: const TextStyle(
+                                      fontSize: 10, fontWeight: FontWeight.w600,
+                                      color: GwpColors.textSecondary,
+                                      fontFamily: GwpTypo.monoFont)),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                               decoration: BoxDecoration(
@@ -501,83 +424,58 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                             ),
                           ],
                           const Spacer(),
-                          const Icon(Icons.edit_outlined,
-                              size: 14, color: GwpColors.textMuted),
+                          Icon(
+                            _amountExpanded ? Icons.expand_less : Icons.expand_more,
+                            size: 18, color: GwpColors.textMuted,
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: GwpSpacing.sm),
-                PopupMenuButton<_PlanMode>(
-                  offset: const Offset(0, 48),
-                  padding: EdgeInsets.zero,
-                  icon: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: GwpSpacing.sm, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: GwpColors.surface2,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: GwpColors.border, width: 0.5),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _planMode == _PlanMode.compare
-                              ? Icons.compare_arrows
-                              : _planMode == _PlanMode.minHops
-                                  ? Icons.linear_scale
-                                  : Icons.trending_down,
-                          size: 14,
-                          color: GwpColors.actionPrimary,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          _planMode == _PlanMode.compare
-                              ? '对比'
-                              : _planMode == _PlanMode.minHops
-                                  ? '跳数'
-                                  : '费用',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: GwpColors.textPrimary,
-                          ),
-                        ),
-                        const Icon(Icons.arrow_drop_down,
-                            size: 14, color: GwpColors.textMuted),
-                      ],
-                    ),
-                  ),
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: _PlanMode.minFee,
-                      child: ListTile(
-                        leading: Icon(Icons.trending_down, size: 18),
-                        title: Text('费用最低'),
-                        dense: true,
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: _PlanMode.minHops,
-                      child: ListTile(
-                        leading: Icon(Icons.linear_scale, size: 18),
-                        title: Text('跳数最少'),
-                        dense: true,
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: _PlanMode.compare,
-                      child: ListTile(
-                        leading: Icon(Icons.compare_arrows, size: 18),
-                        title: Text('对比'),
-                        dense: true,
-                      ),
+                  if (_amountExpanded) ...[
+                    const Divider(height: 1),
+                    _AmountPanel(
+                      amountCtrl: _amountCtrl,
+                      currency: _currency,
+                      targetCurrency: _targetCurrency,
+                      onCurrencyChanged: (v) => setState(() => _currency = v),
+                      onTargetCurrencyChanged: (v) => setState(() => _targetCurrency = v),
                     ),
                   ],
-                  onSelected: (v) => setState(() => _planMode = v),
+                ],
+              ),
+            ),
+            const SizedBox(height: GwpSpacing.sm),
+
+            // ── §3 Strategy + plan ──
+            Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<_PlanMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: _PlanMode.minFee,
+                        icon: Icon(Icons.trending_down, size: 16),
+                        label: Text('费用', style: TextStyle(fontSize: 11)),
+                      ),
+                      ButtonSegment(
+                        value: _PlanMode.minHops,
+                        icon: Icon(Icons.linear_scale, size: 16),
+                        label: Text('跳数', style: TextStyle(fontSize: 11)),
+                      ),
+                      ButtonSegment(
+                        value: _PlanMode.compare,
+                        icon: Icon(Icons.compare_arrows, size: 16),
+                        label: Text('对比', style: TextStyle(fontSize: 11)),
+                      ),
+                    ],
+                    selected: {_planMode},
+                    onSelectionChanged: (s) => setState(() => _planMode = s.first),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: GwpSpacing.sm),
                 FilledButton.icon(
@@ -678,11 +576,13 @@ class _AccountSelectorBar extends StatelessWidget {
     required this.onSwap,
     required this.onSourceChanged,
     required this.onTargetChanged,
+    this.totalPaths,
   });
 
   final Account? source;
   final Account? target;
   final List<Channel> sharedChannels;
+  final int? totalPaths;
   final bool exceedsBalance;
   final Decimal? amount;
   final String currency;
@@ -780,17 +680,19 @@ class _AccountSelectorBar extends StatelessWidget {
               ),
             ],
           ),
-          // Connectivity
+          // Connectivity / Paths
           if (bothSelected) ...[
             const SizedBox(height: GwpSpacing.md),
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: GwpSpacing.md, vertical: GwpSpacing.sm),
               decoration: BoxDecoration(
-                color: connected ? GwpColors.positiveBg : GwpColors.warningBg,
+                color: connected || (totalPaths != null && totalPaths! > 0)
+                    ? GwpColors.positiveBg
+                    : GwpColors.warningBg,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: (connected
+                  color: (connected || (totalPaths != null && totalPaths! > 0)
                           ? GwpColors.positive
                           : GwpColors.warning)
                       .withValues(alpha: 0.2),
@@ -800,23 +702,29 @@ class _AccountSelectorBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    connected
-                        ? Icons.link_rounded
-                        : Icons.link_off_rounded,
+                    totalPaths != null
+                        ? Icons.alt_route_rounded
+                        : connected
+                            ? Icons.link_rounded
+                            : Icons.link_off_rounded,
                     size: 14,
-                    color:
-                        connected ? GwpColors.positive : GwpColors.warning,
+                    color: connected || (totalPaths != null && totalPaths! > 0)
+                        ? GwpColors.positive
+                        : GwpColors.warning,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    connected
-                        ? '${sharedChannels.length} 条共享通道'
-                        : '无共享通道 — 需中间账户中转',
+                    totalPaths != null && totalPaths! > 0
+                        ? '${totalPaths} 条可用路径'
+                        : connected
+                            ? '${sharedChannels.length} 条共享通道'
+                            : '无共享通道 — 需中间账户中转',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color:
-                          connected ? GwpColors.positive : GwpColors.warning,
+                      color: connected || (totalPaths != null && totalPaths! > 0)
+                          ? GwpColors.positive
+                          : GwpColors.warning,
                     ),
                   ),
                   if (connected) ...[
@@ -1216,12 +1124,14 @@ class _RouteFlow extends StatelessWidget {
     if (legs.isEmpty) return const SizedBox.shrink();
     final ok = route.isExecutable;
     final statusColor = ok ? GwpColors.positive : GwpColors.negative;
+    final multiCcy = route.targetCurrency != null &&
+        route.targetCurrency != route.currency;
 
     return Container(
       decoration: BoxDecoration(
         color: GwpColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.25)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -1235,60 +1145,69 @@ class _RouteFlow extends StatelessWidget {
             child: Row(
               children: [
                 Icon(ok ? Icons.check_circle_outline : Icons.error_outline,
-                    size: 16, color: statusColor),
+                    size: 14, color: statusColor),
                 const SizedBox(width: 6),
                 Text(
                   badge ?? (route.objective == RouteObjective.minFee ? '费用最低' : '跳数最少'),
                   style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor),
+                      fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
                 ),
                 const Spacer(),
-                Text(
-                  '${route.currency}${route.targetCurrency != null && route.targetCurrency != route.currency ? "→${route.targetCurrency}" : ""} · ¥${route.totalFee} · ${legs.length}跳',
+                if (multiCcy)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: GwpColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Text('${route.currency} → ${route.targetCurrency}',
+                        style: const TextStyle(
+                            fontSize: 9, fontWeight: FontWeight.w600,
+                            color: GwpColors.warning, fontFamily: GwpTypo.monoFont)),
+                  ),
+                const SizedBox(width: 6),
+                Text('${route.totalFee.toStringAsFixed(2)} · ${legs.length}跳',
                     style: const TextStyle(
                         fontSize: 11, color: GwpColors.textSecondary)),
-                const SizedBox(width: 4),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                      color: statusColor, shape: BoxShape.circle),
-                ),
               ],
             ),
           ),
           // Flow body
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                GwpSpacing.base, GwpSpacing.md, GwpSpacing.base, GwpSpacing.md),
+                GwpSpacing.base, GwpSpacing.md, GwpSpacing.base, GwpSpacing.sm),
             child: Column(
               children: [
                 for (var i = 0; i < legs.length; i++) ...[
                   _flowAccountRow(legs[i].fromAccount,
                       role: i == 0 ? '源' : '中转',
+                      currency: legs[i].fromCurrency,
                       color: i == 0 ? GwpColors.negative : GwpColors.actionPrimary),
                   _flowChannelRow(legs[i]),
                   if (i == legs.length - 1)
                     _flowAccountRow(legs[i].toAccount,
-                        role: '目标', color: GwpColors.positive),
+                        role: '目标', currency: legs[i].toCurrency,
+                        color: GwpColors.positive),
                 ],
                 const SizedBox(height: GwpSpacing.md),
                 // Summary
-                Row(
-                  children: [
-                    _kvChip('扣款', '${route.totalDebit}'),
-                    const SizedBox(width: 6),
-                    _kvChip('到账', '${route.netCredit}'),
-                    if (route.amount > Decimal.zero) ...[
-                      const SizedBox(width: 6),
-                      _kvChip(
-                        '费率',
-                        '${(route.totalFee.toDouble() / route.amount.toDouble() * 100).toStringAsFixed(2)}%',
-                      ),
+                Container(
+                  padding: const EdgeInsets.all(GwpSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: GwpColors.surface2,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      _sumItem('扣款', '${route.totalDebit.toStringAsFixed(2)} ${route.currency}'),
+                      const SizedBox(width: GwpSpacing.md),
+                      _sumItem('到账', '${route.netCredit.toStringAsFixed(2)} ${route.targetCurrency ?? route.currency}'),
+                      if (route.amount > Decimal.zero) ...[
+                        const SizedBox(width: GwpSpacing.md),
+                        _sumItem('费率', '${(route.totalFee.toDouble() / route.amount.toDouble() * 100).toStringAsFixed(2)}%'),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 // Violations
                 if (route.violations.isNotEmpty) ...[
@@ -1309,64 +1228,90 @@ class _RouteFlow extends StatelessWidget {
     );
   }
 
+  Widget _sumItem(String label, String value) => Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 9, color: GwpColors.textMuted)),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(
+            fontFamily: GwpTypo.monoFont, fontFeatures: GwpTypo.tabularFigures,
+            fontSize: 11, fontWeight: FontWeight.w600, color: GwpColors.textPrimary),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+      ],
+    ),
+  );
+
   Widget _flowAccountRow(Account account,
-      {required String role, required Color color}) {
+      {required String role, required String currency, required Color color}) {
     final typeColor =
         _typeColors[account.accountType] ?? GwpColors.actionPrimary;
     final typeIcon =
         _typeIcons[account.accountType] ?? Icons.account_balance;
     final regionName = regionLabel(regionIndex, account.sovereigntyRegion);
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 1.5),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 1.5),
+            ),
           ),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-            color: typeColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(6),
+          const SizedBox(width: GwpSpacing.sm),
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: typeColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: Icon(typeIcon, size: 14, color: typeColor),
           ),
-          alignment: Alignment.center,
-          child: Icon(typeIcon, size: 14, color: typeColor),
-        ),
-        const SizedBox(width: GwpSpacing.sm),
-        Expanded(
-          child: Text(
-            account.institutionName,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          const SizedBox(width: GwpSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(account.institutionName,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600,
+                        color: GwpColors.textPrimary),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('$regionName · ${account.accountType.labelZh}',
+                    style: const TextStyle(fontSize: 10, color: GwpColors.textMuted)),
+              ],
+            ),
           ),
-        ),
-        Text('$regionName · ${account.accountType.labelZh}',
-            style:
-                const TextStyle(fontSize: 10, color: GwpColors.textMuted)),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(3),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(color: color.withValues(alpha: 0.2)),
+            ),
+            child: Text(currency,
+                style: TextStyle(
+                    fontSize: 9, fontWeight: FontWeight.w700,
+                    color: color, fontFamily: GwpTypo.monoFont)),
           ),
-          child: Text(role,
-              style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: color)),
-        ),
-      ],
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(role,
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1375,98 +1320,71 @@ class _RouteFlow extends StatelessWidget {
     final protoColor = isFx
         ? GwpColors.warning
         : (_protocolColors[leg.channel.transferProtocol] ?? GwpColors.actionPrimary);
-    final changed = leg.fromCurrency != leg.toCurrency;
+    final protoName = isFx ? '' : protocolDisplayName(protocolIndex, leg.channel.transferProtocol);
+    final indent = isFx ? 28.0 : 0.0; // indent FX under the account
     return Padding(
-      padding: const EdgeInsets.only(left: 5),
+      padding: EdgeInsets.only(left: 5 + indent),
       child: SizedBox(
-        height: isFx ? 36 : 32,
+        height: 28,
         child: Row(
           children: [
-            Container(width: 1.5, color: protoColor.withValues(alpha: 0.3)),
-            const SizedBox(width: GwpSpacing.sm + 26 + GwpSpacing.sm - 5),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: protoColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isFx) ...[
-                    Text('${leg.fromCurrency} → ${leg.toCurrency}',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: protoColor)),
-                    if (leg.fxRate != null) ...[
-                      const SizedBox(width: 6),
-                      Text('@${leg.fxRate!.toStringAsFixed(4)}',
-                          style: const TextStyle(
-                              fontFamily: GwpTypo.monoFont,
-                              fontSize: 9,
-                              color: GwpColors.textMuted)),
-                    ],
-                  ] else ...[
-                    Text(leg.channel.transferProtocol,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: protoColor)),
-                    if (leg.channel.isBuiltin) ...[
+            Container(width: 1.5, color: protoColor.withValues(alpha: 0.25)),
+            const SizedBox(width: GwpSpacing.sm + 28 + GwpSpacing.sm - 5),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: protoColor.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(4),
+                  border: isFx
+                      ? Border.all(color: protoColor.withValues(alpha: 0.2), width: 0.5)
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    if (isFx) ...[
+                      Icon(Icons.currency_exchange, size: 12, color: protoColor),
                       const SizedBox(width: 4),
-                      const BuiltinBadge(),
+                      Text('${leg.fromCurrency} → ${leg.toCurrency}',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                              color: protoColor)),
+                      if (leg.fxRate != null) ...[
+                        const SizedBox(width: 4),
+                        Text('@${leg.fxRate!.toStringAsFixed(4)}',
+                            style: const TextStyle(fontFamily: GwpTypo.monoFont,
+                                fontSize: 8, color: GwpColors.textMuted)),
+                      ],
+                    ] else ...[
+                      Container(
+                        width: 6, height: 6,
+                        decoration: BoxDecoration(color: protoColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          '${leg.channel.transferProtocol} · $protoName',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                              color: protoColor),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (leg.channel.isBuiltin) ...[
+                        const SizedBox(width: 3),
+                        const BuiltinBadge(),
+                      ],
                     ],
-                    if (changed) ...[
-                      const SizedBox(width: 4),
-                      Text('${leg.fromCurrency}→${leg.toCurrency}',
-                          style: const TextStyle(
-                              fontSize: 9, color: GwpColors.textMuted)),
-                    ],
+                    const Spacer(),
+                    Text(isFx ? '损耗 ${leg.fee.toStringAsFixed(2)}' : '${leg.fee.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontFamily: GwpTypo.monoFont, fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: isFx ? GwpColors.warning : GwpColors.textSecondary)),
+                    const SizedBox(width: 3),
+                    Icon(Icons.arrow_forward_rounded, size: 12, color: protoColor),
                   ],
-                  const SizedBox(width: 8),
-                  Text(isFx ? '损耗 ${leg.fee}' : '费用 ${leg.fee}',
-                      style: const TextStyle(
-                          fontFamily: GwpTypo.monoFont,
-                          fontSize: 10,
-                          color: GwpColors.textSecondary)),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded,
-                      size: 12, color: protoColor),
-                ],
+                ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _kvChip(String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        decoration: BoxDecoration(
-          color: GwpColors.surface2,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Column(
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 9, color: GwpColors.textMuted)),
-            const SizedBox(height: 1),
-            Text(value,
-                style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: GwpColors.textPrimary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -1566,6 +1484,106 @@ class _CompareFlow extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Amount panel (expandable inline)
+// ──────────────────────────────────────────────────────────────
+
+class _AmountPanel extends ConsumerWidget {
+  const _AmountPanel({
+    required this.amountCtrl,
+    required this.currency,
+    required this.targetCurrency,
+    required this.onCurrencyChanged,
+    required this.onTargetCurrencyChanged,
+  });
+
+  final TextEditingController amountCtrl;
+  final String currency;
+  final String targetCurrency;
+  final ValueChanged<String> onCurrencyChanged;
+  final ValueChanged<String> onTargetCurrencyChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currencies = ref
+        .watch(dictEntriesProvider(DictType.currency))
+        .maybeWhen(data: (d) => d, orElse: () => const []);
+    return Padding(
+      padding: const EdgeInsets.all(GwpSpacing.sm),
+      child: Column(
+        children: [
+          TextField(
+            controller: amountCtrl,
+            decoration: const InputDecoration(hintText: '金额', isDense: true),
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            ],
+          ),
+          const SizedBox(height: GwpSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue:
+                      currencies.any((c) => c.code == currency) ? currency : null,
+                  decoration: const InputDecoration(
+                    labelText: '源币种',
+                    isDense: true,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                  ),
+                  isExpanded: true,
+                  dropdownColor: GwpColors.surface2,
+                  items: currencies
+                      .map((c) => DropdownMenuItem<String>(
+                          value: c.code,
+                          child: Text('${c.code} · ${c.name}',
+                              style: const TextStyle(fontSize: 12))))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) onCurrencyChanged(v);
+                  },
+                ),
+              ),
+              const SizedBox(width: GwpSpacing.sm),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: currencies.any((c) => c.code == targetCurrency)
+                      ? targetCurrency
+                      : null,
+                  decoration: InputDecoration(
+                    labelText: '目标币种',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 8),
+                    labelStyle: TextStyle(
+                        color: targetCurrency != currency
+                            ? GwpColors.warning
+                            : GwpColors.textMuted),
+                  ),
+                  isExpanded: true,
+                  dropdownColor: GwpColors.surface2,
+                  items: currencies
+                      .map((c) => DropdownMenuItem<String>(
+                          value: c.code,
+                          child: Text(c.code,
+                              style: const TextStyle(fontSize: 12))))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) onTargetCurrencyChanged(v);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

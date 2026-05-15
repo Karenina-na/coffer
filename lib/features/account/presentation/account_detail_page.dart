@@ -1943,6 +1943,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
           feeRateOverride: config.feeRateOverride,
           fixedFeeOverride: config.fixedFeeOverride,
           feeCurrencyOverride: config.feeCurrencyOverride,
+          regionOverride: config.regionOverride,
         );
     if (!context.mounted) return;
     r.when(
@@ -2112,6 +2113,7 @@ class _ChannelCard extends ConsumerWidget {
                           feeRateOverride: config.feeRateOverride,
                           fixedFeeOverride: config.fixedFeeOverride,
                           feeCurrencyOverride: config.feeCurrencyOverride,
+                          regionOverride: config.regionOverride,
                         );
                     if (!context.mounted) return;
                     r.when(
@@ -2178,11 +2180,13 @@ class _AccountChannelConfigDraft {
     this.feeRateOverride,
     this.fixedFeeOverride,
     this.feeCurrencyOverride,
+    this.regionOverride,
   });
 
   final Decimal? feeRateOverride;
   final Decimal? fixedFeeOverride;
   final String? feeCurrencyOverride;
+  final String? regionOverride;
 }
 
 Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
@@ -2193,6 +2197,7 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
   var feeRateText = initial?.feeRateOverride?.toString() ?? '';
   var fixedFeeText = initial?.fixedFeeOverride?.toString() ?? '';
   String? feeCurrency = initial?.feeCurrencyOverride;
+  var regionOverride = initial?.regionOverride;
   final formKey = GlobalKey<FormState>();
 
   Decimal? parseOptional(String raw) {
@@ -2261,6 +2266,15 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
                   emptyLabel: '沿用通道默认值',
                   onChanged: (v) => setLocalState(() => feeCurrency = v),
                 ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: regionOverride,
+                  decoration: const InputDecoration(
+                    labelText: '地区覆盖（可空）',
+                    helperText: '例如 IBKR 连 CHATS 时填 HK，绕过地区限制',
+                  ),
+                  onChanged: (v) => regionOverride = v.trim().isEmpty ? null : v.trim(),
+                ),
               ],
             ),
           ),
@@ -2281,6 +2295,7 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
                 feeRateOverride: parseOptional(feeRateText),
                 fixedFeeOverride: parseOptional(fixedFeeText),
                 feeCurrencyOverride: feeCurrency,
+                regionOverride: regionOverride,
               ),
             );
           },

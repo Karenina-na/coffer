@@ -32,6 +32,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
 
   late String _region;
   late AccountType _type;
+  bool _supportsFx = false;
   bool _submitting = false;
 
   bool get _isEdit => widget.initial != null;
@@ -44,7 +45,10 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
     _region = a?.sovereigntyRegion ?? 'CN';
     _accountNoCtrl = TextEditingController(text: a?.accountNo ?? '');
     _fxSpreadCtrl = TextEditingController(
-        text: (a?.fxSpreadPercent ?? 0).toStringAsFixed(2));
+        text: ((a?.fxSpreadPercent ?? 0) > 0
+            ? a!.fxSpreadPercent.toStringAsFixed(2)
+            : '0.30'));
+    _supportsFx = (a?.fxSpreadPercent ?? 0) > 0;
     _type = a?.accountType ?? AccountType.bank;
   }
 
@@ -68,7 +72,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         sovereigntyRegion: _region,
         institutionName: _institutionCtrl.text.trim(),
         accountNo: accountNo,
-        fxSpreadPercent: double.tryParse(_fxSpreadCtrl.text) ?? 0,
+        fxSpreadPercent:
+            _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
         updatedAt: now,
       );
       final result =
@@ -88,7 +93,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         sovereigntyRegion: _region,
         institutionName: _institutionCtrl.text,
         accountNo: accountNo,
-        fxSpreadPercent: double.tryParse(_fxSpreadCtrl.text) ?? 0,
+        fxSpreadPercent:
+            _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
       );
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -144,17 +150,29 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               decoration: const InputDecoration(labelText: '账户编号（可选）'),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _fxSpreadCtrl,
-              decoration: const InputDecoration(
-                labelText: '换汇损耗 (%)',
-                helperText: '0 = 不支持换汇；例如 0.3 表示内部换汇损耗 0.3%',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
+            SwitchListTile.adaptive(
+              title: const Text('支持换汇'),
+              subtitle: const Text('账户内部可进行币种转换'),
+              value: _supportsFx,
+              onChanged: (v) => setState(() => _supportsFx = v),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
             ),
+            if (_supportsFx) ...[
+              const SizedBox(height: 4),
+              TextFormField(
+                controller: _fxSpreadCtrl,
+                decoration: const InputDecoration(
+                  labelText: '换汇损耗 (%)',
+                  helperText: '例如 0.3 表示内部换汇时有 0.3% 的摩擦损耗',
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
