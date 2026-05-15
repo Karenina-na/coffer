@@ -32,6 +32,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
 
   late String _region;
   late AccountType _type;
+  late AccountStatus _status;
+  DateTime? _openedAt;
   bool _supportsFx = false;
   bool _submitting = false;
 
@@ -50,6 +52,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
             : '0.30'));
     _supportsFx = (a?.fxSpreadPercent ?? 0) > 0;
     _type = a?.accountType ?? AccountType.bank;
+    _status = a?.status ?? AccountStatus.active;
+    _openedAt = a?.openedAt;
   }
 
   @override
@@ -72,6 +76,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         sovereigntyRegion: _region,
         institutionName: _institutionCtrl.text.trim(),
         accountNo: accountNo,
+        status: _status,
+        openedAt: _openedAt,
         fxSpreadPercent:
             _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
         updatedAt: now,
@@ -93,6 +99,8 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         sovereigntyRegion: _region,
         institutionName: _institutionCtrl.text,
         accountNo: accountNo,
+        status: _status,
+        openedAt: _openedAt,
         fxSpreadPercent:
             _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
       );
@@ -148,6 +156,22 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
             TextFormField(
               controller: _accountNoCtrl,
               decoration: const InputDecoration(labelText: '账户编号（可选）'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<AccountStatus>(
+              initialValue: _status,
+              decoration: const InputDecoration(labelText: '账户状态'),
+              items: AccountStatus.values
+                  .map((s) =>
+                      DropdownMenuItem(value: s, child: Text(s.labelBilingual)))
+                  .toList(),
+              onChanged: (v) => setState(() => _status = v ?? _status),
+            ),
+            const SizedBox(height: 12),
+            _DatePickerTile(
+              label: '开户时间（可选）',
+              date: _openedAt,
+              onChanged: (d) => setState(() => _openedAt = d),
             ),
             const SizedBox(height: 12),
             SwitchListTile.adaptive(
@@ -210,6 +234,45 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                   : const Text('保存'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DatePickerTile extends StatelessWidget {
+  const _DatePickerTile({required this.label, required this.date, required this.onChanged});
+
+  final String label;
+  final DateTime? date;
+  final ValueChanged<DateTime?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: date ?? DateTime.now(),
+          firstDate: DateTime(1970),
+          lastDate: DateTime(2100),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: date != null
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => onChanged(null),
+                )
+              : const Icon(Icons.calendar_today_outlined, size: 20),
+        ),
+        child: Text(
+          date != null
+              ? '${date!.year}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}'
+              : '未设置',
         ),
       ),
     );
