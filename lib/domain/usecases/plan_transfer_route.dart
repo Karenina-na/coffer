@@ -46,6 +46,7 @@ class TransferRoute {
     required this.netCredit,
     required this.objective,
     required this.violations,
+    this.alternatives = const [],
   });
 
   final List<RouteLeg> legs;
@@ -57,6 +58,9 @@ class TransferRoute {
   final Decimal netCredit;
   final RouteObjective objective;
   final List<RuleFailure> violations;
+
+  /// Alternative routes (excluding the primary route).
+  final List<TransferRoute> alternatives;
 
   bool get isExecutable => violations.isEmpty && legs.isNotEmpty;
 }
@@ -188,53 +192,35 @@ class PlanTransferRouteUseCase {
           final to = accById[members[j]]!;
           final link = linkByKey[(from.id, c.id)];
           if (link == null) continue;
-          final ctx = TransferContext(
-            amount: amount,
-            currency: currency,
-            sourceRegion: from.sovereigntyRegion,
-            targetRegion: to.sovereigntyRegion,
-            at: at,
-            todaysCumulativeAmount: todaysCumulativeAmount,
-          );
+          final toLink = linkByKey[(to.id, c.id)];
           final feeError = _feeErrorOf(c, link, amount);
-          if (feeError != null) {
-            firstFeeError ??= feeError;
-            continue;
-          }
-          final v = _engine.evaluate(c, ctx);
-          final edge = _Edge(
-            from: from,
-            to: to,
-            channel: c,
-            link: link,
-            fromCurrency: currency,
-            toCurrency: currency,
-            isFx: false,
-          );
-          if (v.isEmpty) {
-            // Add edge for every currency state of this account
-            final fromCurrencies =
-                _reachableCurrencies(from, currency, fxRates);
-            final toCurrencies = _reachableCurrencies(to, currency, fxRates);
-            for (final fc in fromCurrencies) {
-              for (final tc in toCurrencies) {
-                if (fc != tc) continue; // channel edges require same currency
-                final key = '${from.id}:$fc';
-                (adj[key] ??= []).add(_Edge(
-                  from: from,
-                  to: to,
-                  channel: c,
-                  link: link,
-                  fromCurrency: fc,
-                  toCurrency: tc,
-                  isFx: false,
-                ));
+          firstFeeError ??= feeError;
+          if (feeError != null) continue; // skip this (from,to) pair
+          final fromCurrencies =
+              _reachableCurrencies(from, currency, fxRates);
+          final toCurrencies = _reachableCurrencies(to, currency, fxRates);
+          for (final fc in fromCurrencies) {
+            for (final tc in toCurrencies) {
+              if (fc != tc) continue;
+              final effSrc = _effectiveRegion(from.sovereigntyRegion, link.regionOverride, c);
+              final effTgt = _effectiveRegion(to.sovereigntyRegion, toLink?.regionOverride, c);
+              final ctx = TransferContext(
+                amount: amount,
+                currency: fc,
+                sourceRegion: effSrc,
+                targetRegion: effTgt,
+                at: at,
+                todaysCumulativeAmount: todaysCumulativeAmount,
+              );
+              final v = _engine.evaluate(c, ctx);
+              final e = _Edge(from: from, to: to, channel: c, link: link,
+                  fromCurrency: fc, toCurrency: tc, isFx: false);
+              if (v.isEmpty) {
+                (adj['${from.id}:$fc'] ??= []).add(e);
+              } else if (firstRejectEdge == null || from.id == src.id) {
+                firstRejectEdge = e;
+                firstReject = v;
               }
-            }
-          } else {
-            if (firstRejectEdge == null || from.id == src.id) {
-              firstRejectEdge = edge;
-              firstReject = v;
             }
           }
         }
@@ -281,6 +267,7 @@ class PlanTransferRouteUseCase {
     final startKey = '${src.id}:$currency';
     final goalKey = '${tgt.id}:$tgtCcy';
 
+    // Primary: Dijkstra finds optimal path (handles FX edges correctly)
     final path = adj.containsKey(startKey)
         ? _dijkstra(
             adj: adj,
@@ -290,6 +277,18 @@ class PlanTransferRouteUseCase {
             objective: objective,
           )
         : null;
+
+    // Enumerate alternatives via DFS for display
+    final altPaths = path != null
+        ? _allPaths(adj, startKey, goalKey, 5)
+            .where((p) => !_samePath(p, path!))
+            .toList()
+        : <List<_Edge>>[];
+    altPaths.sort((a, b) {
+      final wa = a.fold<Decimal>(Decimal.zero, (s, e) => s + _weight(e, amount, objective));
+      final wb = b.fold<Decimal>(Decimal.zero, (s, e) => s + _weight(e, amount, objective));
+      return wa.compareTo(wb);
+    });
 
     if (path == null) {
       if (firstRejectEdge != null && firstReject != null &&
@@ -306,42 +305,62 @@ class PlanTransferRouteUseCase {
           netCredit: amount,
           objective: objective,
           violations: firstReject,
+          alternatives: const [],
         ));
       }
       if (firstFeeError != null) return Err(firstFeeError);
       return const Err(NotFoundError('no route between accounts'));
     }
 
-    final legs = <RouteLeg>[];
-    Decimal totalFee = Decimal.zero;
-    Decimal runningAmount = amount;
-    for (final e in path) {
-      final leg = _legOf(e, runningAmount);
-      legs.add(leg);
-      totalFee += leg.fee;
-      // Update running amount for FX hops
-      if (e.isFx && e.fxRate != null) {
-        runningAmount = runningAmount *
-            Decimal.parse((e.fxRate!).toStringAsFixed(6)) *
-            (Decimal.one -
-                Decimal.parse(
-                    ((e.from.fxSpreadPercent) / 100).toStringAsFixed(6)));
+    TransferRoute _buildRoute(List<_Edge> edges) {
+      final legs = <RouteLeg>[];
+      Decimal totalFee = Decimal.zero;
+      Decimal runningAmount = amount;
+      for (final e in edges) {
+        final leg = _legOf(e, runningAmount);
+        legs.add(leg);
+        totalFee += leg.fee;
+        if (e.isFx && e.fxRate != null) {
+          runningAmount = runningAmount *
+              Decimal.parse((e.fxRate!).toStringAsFixed(6)) *
+              (Decimal.one -
+                  Decimal.parse(
+                      ((e.from.fxSpreadPercent) / 100).toStringAsFixed(6)));
+        }
       }
+      final effectiveCcy =
+          legs.isNotEmpty ? legs.last.toCurrency : tgtCcy;
+      return TransferRoute(
+        legs: legs,
+        amount: amount,
+        currency: currency,
+        targetCurrency: effectiveCcy,
+        totalFee: totalFee,
+        totalDebit: amount + totalFee,
+        netCredit: runningAmount,
+        objective: objective,
+        violations: const [],
+        alternatives: const [],
+      );
     }
 
-    final effectiveTargetCcy =
-        legs.isNotEmpty ? legs.last.toCurrency : tgtCcy;
+    final primary = _buildRoute(path!);
+    final alts = altPaths
+        .take(4)
+        .map((p) => _buildRoute(p))
+        .toList(growable: false);
 
     return Ok(TransferRoute(
-      legs: legs,
-      amount: amount,
-      currency: currency,
-      targetCurrency: effectiveTargetCcy,
-      totalFee: totalFee,
-      totalDebit: amount + totalFee,
-      netCredit: runningAmount,
-      objective: objective,
-      violations: const [],
+      legs: primary.legs,
+      amount: primary.amount,
+      currency: primary.currency,
+      targetCurrency: primary.targetCurrency,
+      totalFee: primary.totalFee,
+      totalDebit: primary.totalDebit,
+      netCredit: primary.netCredit,
+      objective: primary.objective,
+      violations: primary.violations,
+      alternatives: alts,
     ));
   }
 
@@ -369,6 +388,56 @@ class PlanTransferRouteUseCase {
       toCurrency: e.toCurrency,
       fxRate: e.fxRate != null ? Decimal.parse(e.fxRate!.toStringAsFixed(6)) : null,
     );
+  }
+
+  bool _samePath(List<_Edge> a, List<_Edge> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].channel?.id != b[i].channel?.id) return false;
+      if (a[i].from.id != b[i].from.id) return false;
+      if (a[i].to.id != b[i].to.id) return false;
+      if (a[i].fromCurrency != b[i].fromCurrency) return false;
+      if (a[i].toCurrency != b[i].toCurrency) return false;
+    }
+    return true;
+  }
+
+  /// DFS to enumerate all simple paths from [start] to [goal] within [maxHops].
+  List<List<_Edge>> _allPaths(
+    Map<String, List<_Edge>> adj,
+    String start,
+    String goal,
+    int maxHops,
+  ) {
+    final results = <List<_Edge>>[];
+    final visitedAccts = <String>{};
+    final goalAcct = goal.split(':').first;
+
+    void dfs(String node, List<_Edge> soFar) {
+      if (soFar.length >= maxHops) return;
+      for (final e in adj[node] ?? const <_Edge>[]) {
+        // Allow same-account FX transitions; otherwise avoid cycles
+        final nextAcct = e.to.id;
+        final isFx = e.from.id == e.to.id;
+        if (!isFx && visitedAccts.contains(nextAcct)) continue;
+        // Also prevent infinite FX loops
+        if (isFx && soFar.isNotEmpty && soFar.last.from.id == e.to.id && soFar.last.to.id == e.from.id && soFar.last.isFx) continue;
+        final nextKey = '${e.to.id}:${e.toCurrency}';
+        final path = [...soFar, e];
+        if (e.to.id == goalAcct) {
+          results.add(path);
+          continue;
+        }
+        visitedAccts.add(nextAcct);
+        dfs(nextKey, path);
+        visitedAccts.remove(nextAcct);
+      }
+    }
+
+    final startAcct = start.split(':').first;
+    visitedAccts.add(startAcct);
+    dfs(start, []);
+    return results;
   }
 
   List<_Edge>? _dijkstra({
@@ -471,6 +540,20 @@ class PlanTransferRouteUseCase {
       case RouteObjective.minHops:
         return Decimal.one;
     }
+  }
+
+  /// Effective region for an account on a channel:
+  /// stored override > account's own region > auto-inferred from channel's allowedRegions.
+  static String _effectiveRegion(String acctRegion, String? storedOverride, Channel c) {
+    if (storedOverride != null && storedOverride.isNotEmpty) return storedOverride;
+    final rule = c.sovereigntyRegionRule;
+    final allowedRaw = rule?['allowedRegions'];
+    if (allowedRaw is List && allowedRaw.isNotEmpty) {
+      final allowed = allowedRaw.map((e) => e.toString().toUpperCase()).toSet();
+      if (allowed.contains(acctRegion.toUpperCase())) return acctRegion;
+      return allowed.first;
+    }
+    return acctRegion;
   }
 
   Decimal _feeOf(Channel c, AccountChannel link, Decimal amount) {

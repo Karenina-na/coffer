@@ -28,6 +28,7 @@ class SaveAccountChannelConfigUseCase {
     Decimal? feeRateOverride,
     Decimal? fixedFeeOverride,
     String? feeCurrencyOverride,
+    String? regionOverride,
   }) async {
     final aid = accountId.trim();
     final cid = channelId.trim();
@@ -60,6 +61,7 @@ class SaveAccountChannelConfigUseCase {
       feeRateOverride: feeRateOverride,
       fixedFeeOverride: fixedFeeOverride,
       feeCurrencyOverride: feeCurrency,
+      regionOverride: regionOverride,
     );
   }
 }

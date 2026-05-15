@@ -76,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -593,6 +593,11 @@ class AppDatabase extends _$AppDatabase {
             "('builtin_ccy_myr', 'CURRENCY', 'MYR', '马来西亚林吉特', 'Malaysian Ringgit', 100, 1, 0, '$now27', '$now27'), "
             "('builtin_ccy_cad', 'CURRENCY', 'CAD', '加拿大元', 'Canadian Dollar', 110, 1, 0, '$now27', '$now27'), "
             "('builtin_ccy_aud', 'CURRENCY', 'AUD', '澳大利亚元', 'Australian Dollar', 120, 1, 0, '$now27', '$now27')",
+          );
+        }
+        if (from < 28) {
+          await customStatement(
+            'ALTER TABLE account_channels ADD COLUMN region_override TEXT',
           );
         }
       }); // end transaction
