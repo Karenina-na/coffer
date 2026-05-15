@@ -24,6 +24,7 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
         feeRateOverride: Money.parseOrNull(r.feeRateOverride),
         fixedFeeOverride: Money.parseOrNull(r.fixedFeeOverride),
         feeCurrencyOverride: r.feeCurrencyOverride,
+        regionOverride: r.regionOverride,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       );
@@ -82,6 +83,7 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
     Decimal? feeRateOverride,
     Decimal? fixedFeeOverride,
     String? feeCurrencyOverride,
+    String? regionOverride,
   }) async {
     try {
       final now = _now();
@@ -96,6 +98,7 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
         feeRateOverride: _val(Money.stringifyOrNull(feeRateOverride)),
         fixedFeeOverride: _val(Money.stringifyOrNull(fixedFeeOverride)),
         feeCurrencyOverride: _val(feeCurrencyOverride),
+        regionOverride: _val(regionOverride),
         createdAt: createdAt,
         updatedAt: Value(now),
       ));
@@ -105,6 +108,7 @@ class DriftAccountChannelRepository implements AccountChannelRepository {
         feeRateOverride: feeRateOverride,
         fixedFeeOverride: fixedFeeOverride,
         feeCurrencyOverride: feeCurrencyOverride,
+        regionOverride: regionOverride,
         createdAt: createdAt,
         updatedAt: now,
       ));

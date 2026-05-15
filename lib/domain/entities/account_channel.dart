@@ -16,6 +16,9 @@ abstract class AccountChannel with _$AccountChannel {
     Decimal? feeRateOverride,
     Decimal? fixedFeeOverride,
     String? feeCurrencyOverride,
+    /// Override the account's sovereignty region for this channel
+    /// (e.g. IBKR US can receive CHATS via its HK branch).
+    String? regionOverride,
     required DateTime createdAt,
     DateTime? updatedAt,
   }) = _AccountChannel;

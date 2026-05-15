@@ -23,6 +23,7 @@ abstract interface class AccountChannelRepository {
     Decimal? feeRateOverride,
     Decimal? fixedFeeOverride,
     String? feeCurrencyOverride,
+    String? regionOverride,
   });
 
   Future<Result<void, AppError>> unlink({

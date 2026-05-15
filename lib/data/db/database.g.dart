@@ -1741,6 +1741,17 @@ class $AccountChannelsTable extends AccountChannels
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _regionOverrideMeta = const VerificationMeta(
+    'regionOverride',
+  );
+  @override
+  late final GeneratedColumn<String> regionOverride = GeneratedColumn<String>(
+    'region_override',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1770,6 +1781,7 @@ class $AccountChannelsTable extends AccountChannels
     feeRateOverride,
     fixedFeeOverride,
     feeCurrencyOverride,
+    regionOverride,
     createdAt,
     updatedAt,
   ];
@@ -1828,6 +1840,15 @@ class $AccountChannelsTable extends AccountChannels
         ),
       );
     }
+    if (data.containsKey('region_override')) {
+      context.handle(
+        _regionOverrideMeta,
+        regionOverride.isAcceptableOrUnknown(
+          data['region_override']!,
+          _regionOverrideMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1871,6 +1892,10 @@ class $AccountChannelsTable extends AccountChannels
         DriftSqlType.string,
         data['${effectivePrefix}fee_currency_override'],
       ),
+      regionOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}region_override'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1895,6 +1920,7 @@ class AccountChannelRow extends DataClass
   final String? feeRateOverride;
   final String? fixedFeeOverride;
   final String? feeCurrencyOverride;
+  final String? regionOverride;
   final DateTime createdAt;
   final DateTime? updatedAt;
   const AccountChannelRow({
@@ -1903,6 +1929,7 @@ class AccountChannelRow extends DataClass
     this.feeRateOverride,
     this.fixedFeeOverride,
     this.feeCurrencyOverride,
+    this.regionOverride,
     required this.createdAt,
     this.updatedAt,
   });
@@ -1919,6 +1946,9 @@ class AccountChannelRow extends DataClass
     }
     if (!nullToAbsent || feeCurrencyOverride != null) {
       map['fee_currency_override'] = Variable<String>(feeCurrencyOverride);
+    }
+    if (!nullToAbsent || regionOverride != null) {
+      map['region_override'] = Variable<String>(regionOverride);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || updatedAt != null) {
@@ -1940,6 +1970,9 @@ class AccountChannelRow extends DataClass
       feeCurrencyOverride: feeCurrencyOverride == null && nullToAbsent
           ? const Value.absent()
           : Value(feeCurrencyOverride),
+      regionOverride: regionOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regionOverride),
       createdAt: Value(createdAt),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
@@ -1960,6 +1993,7 @@ class AccountChannelRow extends DataClass
       feeCurrencyOverride: serializer.fromJson<String?>(
         json['feeCurrencyOverride'],
       ),
+      regionOverride: serializer.fromJson<String?>(json['regionOverride']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -1973,6 +2007,7 @@ class AccountChannelRow extends DataClass
       'feeRateOverride': serializer.toJson<String?>(feeRateOverride),
       'fixedFeeOverride': serializer.toJson<String?>(fixedFeeOverride),
       'feeCurrencyOverride': serializer.toJson<String?>(feeCurrencyOverride),
+      'regionOverride': serializer.toJson<String?>(regionOverride),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -1984,6 +2019,7 @@ class AccountChannelRow extends DataClass
     Value<String?> feeRateOverride = const Value.absent(),
     Value<String?> fixedFeeOverride = const Value.absent(),
     Value<String?> feeCurrencyOverride = const Value.absent(),
+    Value<String?> regionOverride = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => AccountChannelRow(
@@ -1998,6 +2034,9 @@ class AccountChannelRow extends DataClass
     feeCurrencyOverride: feeCurrencyOverride.present
         ? feeCurrencyOverride.value
         : this.feeCurrencyOverride,
+    regionOverride: regionOverride.present
+        ? regionOverride.value
+        : this.regionOverride,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -2014,6 +2053,9 @@ class AccountChannelRow extends DataClass
       feeCurrencyOverride: data.feeCurrencyOverride.present
           ? data.feeCurrencyOverride.value
           : this.feeCurrencyOverride,
+      regionOverride: data.regionOverride.present
+          ? data.regionOverride.value
+          : this.regionOverride,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2027,6 +2069,7 @@ class AccountChannelRow extends DataClass
           ..write('feeRateOverride: $feeRateOverride, ')
           ..write('fixedFeeOverride: $fixedFeeOverride, ')
           ..write('feeCurrencyOverride: $feeCurrencyOverride, ')
+          ..write('regionOverride: $regionOverride, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2040,6 +2083,7 @@ class AccountChannelRow extends DataClass
     feeRateOverride,
     fixedFeeOverride,
     feeCurrencyOverride,
+    regionOverride,
     createdAt,
     updatedAt,
   );
@@ -2052,6 +2096,7 @@ class AccountChannelRow extends DataClass
           other.feeRateOverride == this.feeRateOverride &&
           other.fixedFeeOverride == this.fixedFeeOverride &&
           other.feeCurrencyOverride == this.feeCurrencyOverride &&
+          other.regionOverride == this.regionOverride &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2062,6 +2107,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
   final Value<String?> feeRateOverride;
   final Value<String?> fixedFeeOverride;
   final Value<String?> feeCurrencyOverride;
+  final Value<String?> regionOverride;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
@@ -2071,6 +2117,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
     this.feeRateOverride = const Value.absent(),
     this.fixedFeeOverride = const Value.absent(),
     this.feeCurrencyOverride = const Value.absent(),
+    this.regionOverride = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2081,6 +2128,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
     this.feeRateOverride = const Value.absent(),
     this.fixedFeeOverride = const Value.absent(),
     this.feeCurrencyOverride = const Value.absent(),
+    this.regionOverride = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2093,6 +2141,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
     Expression<String>? feeRateOverride,
     Expression<String>? fixedFeeOverride,
     Expression<String>? feeCurrencyOverride,
+    Expression<String>? regionOverride,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -2104,6 +2153,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
       if (fixedFeeOverride != null) 'fixed_fee_override': fixedFeeOverride,
       if (feeCurrencyOverride != null)
         'fee_currency_override': feeCurrencyOverride,
+      if (regionOverride != null) 'region_override': regionOverride,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -2116,6 +2166,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
     Value<String?>? feeRateOverride,
     Value<String?>? fixedFeeOverride,
     Value<String?>? feeCurrencyOverride,
+    Value<String?>? regionOverride,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
     Value<int>? rowid,
@@ -2126,6 +2177,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
       feeRateOverride: feeRateOverride ?? this.feeRateOverride,
       fixedFeeOverride: fixedFeeOverride ?? this.fixedFeeOverride,
       feeCurrencyOverride: feeCurrencyOverride ?? this.feeCurrencyOverride,
+      regionOverride: regionOverride ?? this.regionOverride,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -2152,6 +2204,9 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
         feeCurrencyOverride.value,
       );
     }
+    if (regionOverride.present) {
+      map['region_override'] = Variable<String>(regionOverride.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2172,6 +2227,7 @@ class AccountChannelsCompanion extends UpdateCompanion<AccountChannelRow> {
           ..write('feeRateOverride: $feeRateOverride, ')
           ..write('fixedFeeOverride: $fixedFeeOverride, ')
           ..write('feeCurrencyOverride: $feeCurrencyOverride, ')
+          ..write('regionOverride: $regionOverride, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -11090,6 +11146,7 @@ typedef $$AccountChannelsTableCreateCompanionBuilder =
       Value<String?> feeRateOverride,
       Value<String?> fixedFeeOverride,
       Value<String?> feeCurrencyOverride,
+      Value<String?> regionOverride,
       required DateTime createdAt,
       Value<DateTime?> updatedAt,
       Value<int> rowid,
@@ -11101,6 +11158,7 @@ typedef $$AccountChannelsTableUpdateCompanionBuilder =
       Value<String?> feeRateOverride,
       Value<String?> fixedFeeOverride,
       Value<String?> feeCurrencyOverride,
+      Value<String?> regionOverride,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
       Value<int> rowid,
@@ -11179,6 +11237,11 @@ class $$AccountChannelsTableFilterComposer
 
   ColumnFilters<String> get feeCurrencyOverride => $composableBuilder(
     column: $table.feeCurrencyOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get regionOverride => $composableBuilder(
+    column: $table.regionOverride,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11263,6 +11326,11 @@ class $$AccountChannelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get regionOverride => $composableBuilder(
+    column: $table.regionOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -11341,6 +11409,11 @@ class $$AccountChannelsTableAnnotationComposer
 
   GeneratedColumn<String> get feeCurrencyOverride => $composableBuilder(
     column: $table.feeCurrencyOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get regionOverride => $composableBuilder(
+    column: $table.regionOverride,
     builder: (column) => column,
   );
 
@@ -11432,6 +11505,7 @@ class $$AccountChannelsTableTableManager
                 Value<String?> feeRateOverride = const Value.absent(),
                 Value<String?> fixedFeeOverride = const Value.absent(),
                 Value<String?> feeCurrencyOverride = const Value.absent(),
+                Value<String?> regionOverride = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11441,6 +11515,7 @@ class $$AccountChannelsTableTableManager
                 feeRateOverride: feeRateOverride,
                 fixedFeeOverride: fixedFeeOverride,
                 feeCurrencyOverride: feeCurrencyOverride,
+                regionOverride: regionOverride,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -11452,6 +11527,7 @@ class $$AccountChannelsTableTableManager
                 Value<String?> feeRateOverride = const Value.absent(),
                 Value<String?> fixedFeeOverride = const Value.absent(),
                 Value<String?> feeCurrencyOverride = const Value.absent(),
+                Value<String?> regionOverride = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11461,6 +11537,7 @@ class $$AccountChannelsTableTableManager
                 feeRateOverride: feeRateOverride,
                 fixedFeeOverride: fixedFeeOverride,
                 feeCurrencyOverride: feeCurrencyOverride,
+                regionOverride: regionOverride,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

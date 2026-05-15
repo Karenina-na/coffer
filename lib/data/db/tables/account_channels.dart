@@ -16,6 +16,8 @@ class AccountChannels extends Table {
   TextColumn get fixedFeeOverride => text().named('fixed_fee_override').nullable()();
   TextColumn get feeCurrencyOverride =>
       text().named('fee_currency_override').nullable()();
+  TextColumn get regionOverride =>
+      text().named('region_override').nullable()();
   DateTimeColumn get createdAt => dateTime().named('created_at')();
   DateTimeColumn get updatedAt => dateTime().named('updated_at').nullable()();
 
