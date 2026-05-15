@@ -23,7 +23,7 @@
 
 | 领域 | 选型 | 说明 |
 |---|---|---|
-| UI | Flutter 3.x + Material 3 | 跨端一套代码 |
+| UI | Flutter (stable channel) + Material 3 | Dart SDK ^3.11.5，跨端一套代码 |
 | 状态管理 | Riverpod 3 | 编译期安全、天然 DI |
 | 路由 | go_router | 声明式路由 |
 | 本地数据库 | Drift | 类型安全 SQL，支持 SQLCipher |
@@ -93,13 +93,17 @@ lib/
 
 ## 5. 数据层规范
 
-- 一个 Drift `Database`（当前 `schemaVersion = 19`），12 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs / SearchHistoryEntries`；字段约束对齐 `doc/data-definitions.md`
+- 一个 Drift `Database`（当前 `schemaVersion = 28`），13 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs / SearchHistoryEntries / RegionGroupOrders`；字段约束对齐 `doc/data-definitions.md`
 - JSON 字段（`ext_info`、`sovereignty_region_rule`、`raw_payload`）以 `TEXT` 存储，DAO 层负责 `fromJson/toJson`
 - `DECIMAL(28,8)` / `DECIMAL(28,10)` 及阈值类字段（含 `watched_pairs.threshold_high / threshold_low / alert_change_pct`，v12 起）在 SQLite 无原生支持，统一以 `TEXT` 存储，应用层使用 `Decimal`，**禁止使用 `REAL`**
 - 软删除：带 `is_deleted` 的表建立 partial index，查询统一 `where is_deleted = 0`
 - `account_channels` 通过外键约束连接 `accounts / channels`，并在父记录硬删除时级联清理，避免孤儿关联
+- `region_group_orders` 承载用户自定义的地区分组排序（按 scene 分场景，`scene + region_code` 复合主键）
 - 敏感列（`card_no_ciphertext`、`cvv_ciphertext`）在库级加密之外再做字段级 AES-GCM，密钥独立派生
 - 迁移：Drift `MigrationStrategy`，schema 版本号与 DDL 一同入库提交
+- 新增关键字段：
+  - `accounts.fx_spread_percent`（REAL, default 0）：账户内部换汇的百分比损耗，0 表示该账户不支持内部货币兑换
+  - `account_channels.region_override`（TEXT, nullable）：算法层运行时地区覆盖，不写入账户自身地区字段
 
 ## 6. 领域层规范
 
@@ -109,8 +113,12 @@ lib/
   - `ChannelRuleEngine`：按 Channel 的日限、单笔、地区规则校验
   - `PlanTransferRouteUseCase`：以 Account.id 为图节点 Dijkstra 多跳路径规划
 - **事件驱动估值**：价格或汇率更新触发事件，订阅者异步重算受影响的 `Asset.market_value`，避免查询时实时计算
-- **Channel 规则引擎**：`sovereignty_region_rule` 采用 JSON Schema + 谓词列表实现，避免 if-else 蔓延
-- **多跳路径规划**：`PlanTransferRouteUseCase` 以 Account.id 为图节点，按 `AccountChannel` 聚合同一通道的成员账户并在两两之间生成双向边，规则引擎按 (from, to) 的 `sovereignty_region` 逐边评估；Dijkstra 支持 minFee / minHops 两种目标。费用计算优先读取源账户在该 `AccountChannel` 上的 override（完全覆盖通道默认值），否则回退 `Channel.feeRate / fixedFee`
+- **Channel 规则引擎**：`sovereignty_region_rule` 采用 JSON Schema + 谓词列表实现（`allowedRegions` / `blockedRegions` / `requireSameRegion`），避免 if-else 蔓延。规则评估按边进行，`TransferContext` 携带边特定的 currency
+- **多币种多跳路径规划**：`PlanTransferRouteUseCase` 使用 Dijkstra 在扩展状态空间 `(accountId, currency)` 上搜索（而非仅 Account.id）。两类边：
+  1. **通道边** `(A, C) → (B, C)`：同币种通过共享通道转移，权重 = fee
+  2. **换汇边** `(A, C1) → (A, C2)`：账户内部货币兑换，仅当 `Account.fxSpreadPercent > 0` 且 FX rate 存在时创建，权重 = `amount × (fxSpreadPercent / 100)`
+  支持 minFee / minHops 两种目标。费用优先读取源账户在 `AccountChannel` 上的 override（完全覆盖通道默认值），否则回退 `Channel.feeRate / fixedFee`。DFS `_allPaths()` 枚举替代路径供对比展示
+- **运行时地区推断**：`_effectiveRegion()` 在算法层运行时解析账户在某通道上的有效地区——优先 `AccountChannel.regionOverride`，其次从通道 `allowedRegions` 匹配账户自身地区，最后回退账户 `sovereigntyRegion`。此逻辑不持久化到数据库，属于算法层拼装
 - **ExchangeRate 抽象**：定义 `AssetPriceProvider`（行情源）和 `PriceProvider`（汇率源）接口，REALTIME / HOURLY / DAILY 三种快照类型对应不同实现，便于替换与离线兜底
 - **全局计价货币**：Presentation 层通过统一的 `valuationCurrencyProvider` 管理当前计价货币；金额统计不直接横向累加 `Asset.market_value`，而是先经 `ValueAssetsInCurrencyUseCase` 换算到当前计价货币，再驱动仪表盘、分析页、账户/资产列表与详情展示
 - **成本/盈亏口径**：凡使用计价值 `valuedAmount` 的收益、盈亏、成本对比，也必须同步使用换算后的成本基准（`valuedCostBasis`）；禁止把原币 `costPrice × quantity` 直接与计价值做减法
@@ -124,6 +132,7 @@ lib/
 - 金额展示统一走 `MoneyFormatter`；原币值按资产 `currency` 精度渲染，统计与汇总按当前全局计价货币渲染
 - 敏感字段仅展示 masked 值，绝不渲染明文密文
 - 支持 Material 3 动态取色与深色模式
+- 含水平滑动内容的页面（拓扑图、日历、图表）必须包裹 `HorizontalGestureGuard`，通过 `HorizontalGestureGuardNotification` 通知壳层临时禁用 Tab 滑动切换，防止手势冲突
 
 ## 8. 安全规范
 
@@ -140,11 +149,13 @@ lib/
 3. ✅ 实现 Account / Card / Asset 三个 feature 的 CRUD 与列表
 4. ✅ 接入 ExchangeRate 的手动导入（CSV / JSON）+ `PriceProvider` 抽象（Frankfurter）
 5. ✅ 实现 Asset 估值 UseCase + 事件总线 + Event 持久化
-6. ✅ 构建 Channel 规则引擎与多跳路径规划（`PlanTransferRouteUseCase`，Dijkstra on Account.id graph）
+6. ✅ 构建 Channel 规则引擎与多币种多跳路径规划（`PlanTransferRouteUseCase`，Dijkstra on `(accountId, currency)` 状态空间 + FX 换汇边）
 7. ✅ 接入生物识别、备份导入导出
 8. ✅ 外部资产行情（Yahoo / 东方财富 / OKX / Composite）+ 统一同步按钮 + 缓存覆盖
 9. ✅ 统一搜索（AppBar 按钮 + `GlobalSearchDelegate` + 预设过滤 Chip + 实时结果）
 10. ✅ 全量实体 CRUD 闭环：账户 / 资产 / 卡片 / 通道 / 事件 的编辑路由 + 软/硬删除；卡片 `update()` 允许选择性替换卡号 / CVV
 11. ✅ 仪表盘深度优化：多维度 KPI、趋势区间切换、资产配置 donut、信用卡账单预警、近期活动 feed
 12. ✅ 体验与可维护性：事件中心快捷操作、本地通知（默认关闭）、资产成本历史审计
-13. ⬜ UI 打磨：多语言、深色模式优化、空状态与错误态细节（持续进行中）
+13. ✅ 字典扩展：新增 CIPS/FEDWIRE/CHAPS/ZENGIN/NPP 转账协议内置条目，新增 JPY/KRW/TWD/SGD/MYR/CAD/AUD 货币内置条目
+14. ✅ 货币、地区、转账协议三大字典全部内置化，UI 与 UseCase 双重校验
+15. ⬜ UI 打磨：多语言、深色模式优化、空状态与错误态细节（持续进行中）

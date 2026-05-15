@@ -20,6 +20,7 @@
 | institution_name | VARCHAR(128) | 是 | 开户机构 |
 | status | ENUM | 是 | ACTIVE / INACTIVE / DORMANT / CLOSED |
 | opened_at | DATETIME | 否 | 开户时间 |
+| fx_spread_percent | REAL | 是 | 账户内部换汇百分比损耗（0–100，默认 0）。0 表示该账户不支持内部货币兑换；例如 0.3 表示每次换汇损失 0.3% |
 | ext_info | JSON | 否 | 扩展信息 |
 | created_at | DATETIME | 是 | 创建时间 |
 | updated_at | DATETIME | 是 | 更新时间 |
@@ -59,14 +60,18 @@
 | daily_limit | DECIMAL(28,8) | 否 | 每日限额 |
 | single_limit | DECIMAL(28,8) | 否 | 单笔限额 |
 | status | ENUM | 是 | ENABLED / DISABLED / MAINTENANCE |
+| is_builtin | TINYINT(1) | 是 | 是否内置通道（默认 0）。内置通道不可删除，共 7 条：SWIFT / HK FPS / GB FPS / HK CHATS / CN CNAPS / CN CIPS / US ACH |
+| sort_order | INTEGER | 是 | 用户自定义排序（默认 1000） |
 | effective_from | DATETIME | 否 | 生效时间 |
 | effective_to | DATETIME | 否 | 失效时间 |
 | created_at | DATETIME | 是 | 创建时间 |
 | updated_at | DATETIME | 是 | 更新时间 |
 
-> Channel 不再绑定源/目账户类型；是否两个账户能通过某通道互转，由 `account_channels` 关联决定。路由规划（Dijkstra on Account id）会为同一通道内所有账户对生成双向边。
+> Channel 不再绑定源/目账户类型；是否两个账户能通过某通道互转，由 `account_channels` 关联决定。路由规划（多币种 Dijkstra on `(accountId, currency)`）会为同一通道内所有账户对生成双向边，并在每条边上以边特定货币评估规则引擎。
 
 > `transfer_protocol` / `limit_currency` / `sovereignty_region_rule.allowedRegions|blockedRegions` 都必须来自字典选择器；地区列表不再接受逗号分隔自由文本。
+
+> 内置转账协议共 11 个：SWIFT / ACH / FPS / CNAPS / SEPA / CHATS / CIPS / FEDWIRE / CHAPS / ZENGIN / NPP；内置货币共 12 个：CNY / USD / GBP / EUR / HKD / JPY / KRW / TWD / SGD / MYR / CAD / AUD。
 
 ## 4a. AccountChannel（账户-通道关联）
 
@@ -74,25 +79,32 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| id | UUID / BIGINT | 是 | 主键 |
-| account_id | UUID / BIGINT | 是 | 外键，关联 Account.id |
-| channel_id | UUID / BIGINT | 是 | 外键，关联 Channel.id |
+| account_id | UUID / BIGINT | 是 | 外键，关联 Account.id；复合主键之一 |
+| channel_id | UUID / BIGINT | 是 | 外键，关联 Channel.id；复合主键之一 |
 | fee_rate_override | DECIMAL(10,6) / TEXT | 否 | 账户级比例费率覆盖；为空 = 沿用 Channel.fee_rate；`0` 合法，表示免比例费 |
 | fixed_fee_override | DECIMAL(18,6) / TEXT | 否 | 账户级固定费覆盖；为空 = 沿用 Channel.fixed_fee；`0` 合法，表示免固定费 |
 | fee_currency_override | VARCHAR(10) | 否 | 账户级费用币种覆盖；为空 = 沿用 Channel.limit_currency；UI 必须提供明确空态而非预填默认值 |
+| region_override | VARCHAR(16) | 否 | 运行时地区覆盖（算法层拼装，不修改账户自身 region）。用于跨地区通道场景，例如 IBKR(US) 通过其 HK 分行接入 CHATS 时需将有效地区设为 HK |
 | created_at | DATETIME | 是 | 创建时间 |
 | updated_at | DATETIME | 否 | 最近一次修改账户级通道配置的时间 |
 
-唯一约束：`(account_id, channel_id)`。
+复合主键：`(account_id, channel_id)`（无独立 `id` 列）。
 
 外键约束：
 - `account_id -> accounts.id`（`ON DELETE CASCADE`）
 - `channel_id -> channels.id`（`ON DELETE CASCADE`）
 
+> 注：无独立 `id` 列，复合主键 `(account_id, channel_id)` 同时承担外键角色。
+
 费用语义：
 - `AccountChannel` 上的 override 为**完全覆盖**通道默认值，不做叠加；
 - 规划转账路径时按**源账户**在该通道上的 override 计费；
 - override 为 `0` 视为有效值，不等同于空。
+
+地区语义：
+- `region_override` 仅在算法运行时生效（`_effectiveRegion()`），不会写回 `accounts.sovereignty_region`；
+- 优先级：`region_override` > 通道 `allowedRegions` 匹配 > 账户自身地区；
+- 同一账户在不同通道上可拥有不同的有效地区。
 
 ## 5. Card
 
@@ -118,6 +130,7 @@
 | billing_address | VARCHAR(256) | 否 | 账单地址 |
 | is_virtual | TINYINT(1) | 是 | 是否虚拟卡 |
 | status | ENUM | 是 | ACTIVE / LOCKED / EXPIRED / CLOSED |
+| sort_order | INTEGER | 是 | 用户自定义排序（默认 1000） |
 | created_at | DATETIME | 是 | 创建时间 |
 | updated_at | DATETIME | 是 | 更新时间 |
 
@@ -147,6 +160,7 @@
 | threshold_high | DECIMAL(28,10) / TEXT | 否 | 上沿阈值；`rate ≥ threshold_high` 触发 high 预警 |
 | threshold_low | DECIMAL(28,10) / TEXT | 否 | 下沿阈值；`rate ≤ threshold_low` 触发 low 预警 |
 | alert_change_pct | DECIMAL(28,10) / TEXT | 否 | 日环比波动阈值（%，正数）；`|pct| ≥` 触发 change 预警 |
+| sort_order | INTEGER | 是 | 用户自定义排序（默认 1000） |
 
 - 阈值字段自 schema v12 起从 `REAL` 迁移到 `TEXT`（`Decimal.toString()`），遵循「金额/数值类永远禁止 double」约束
 - 触发判定由 `CheckRateAlertsUseCase` 执行，幂等键 `RATE_ALERT:{pairKey}:{yyyymmdd}:{kind}` 保证同天同类型不重复写入
@@ -271,7 +285,43 @@ UI 的资产价格走势图、Dashboard 净资产趋势均从此表读取。
 写入方：`asset_create_page` 编辑流程自动追加（当 `costPrice` 或 `quantity` 发生变更时）。
 读取方：`assetCostHistoryProvider`（Stream，按 asset 维度 `trigger_time DESC`）。
 
-## 10. SearchHistoryEntries
+## 10. DictEntry
+
+通用字典表，承载「转账协议 / 主权地区 / 货币」三个业务字典。三者读写同构（列表 / 新增 / 改名），合并到一张表减少模板代码。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| id | INTEGER | 是 | 自增主键 |
+| type | VARCHAR(32) | 是 | 字典类型：`TRANSFER_PROTOCOL` / `SOVEREIGNTY_REGION` / `CURRENCY` |
+| code | VARCHAR(32) | 是 | 业务代码，统一大写（如 SWIFT / CN / USD） |
+| name | VARCHAR(128) | 是 | 本地化展示名 |
+| name_en | VARCHAR(128) | 否 | 英文名 |
+| sort_order | INTEGER | 是 | 排序（默认 1000） |
+| is_builtin | TINYINT(1) | 是 | 是否内置项（内置项禁止删除，仅允许改名） |
+| flag_emoji | VARCHAR(8) | 否 | 国旗 emoji（仅 SOVEREIGNTY_REGION 使用） |
+| continent | VARCHAR(32) | 否 | 大洲分组标签（仅 SOVEREIGNTY_REGION 使用） |
+| color_hex | VARCHAR(16) | 否 | 强调色 hex（仅 SOVEREIGNTY_REGION 使用） |
+| map_lon | REAL | 否 | 地理经度（仅 SOVEREIGNTY_REGION 使用） |
+| map_lat | REAL | 否 | 地理纬度（仅 SOVEREIGNTY_REGION 使用） |
+| anchor_lon | REAL | 否 | 地图锚点经度（仅 SOVEREIGNTY_REGION 使用） |
+| anchor_lat | REAL | 否 | 地图锚点纬度（仅 SOVEREIGNTY_REGION 使用） |
+| parent_region | VARCHAR(32) | 否 | 上级区域 code（如 DE 的 parent_region = 'EU'） |
+| created_at | DATETIME | 是 | 创建时间 |
+| updated_at | DATETIME | 是 | 更新时间 |
+
+唯一索引：`(type, code)`。
+
+约束：
+- `is_builtin = true` 的条目不可删除，`code` 不可变；用户可改名
+- 写入前 `code` 统一 `toUpperCase()`
+- 查询始终带 `type = ?` 过滤
+
+当前内置条目：转账协议 11 个（SWIFT / ACH / FPS / CNAPS / SEPA / CHATS / CIPS / FEDWIRE / CHAPS / ZENGIN / NPP）、主权地区 16 个（HK / CN / US / SG / GB / DE / FR / IT / JP / KR / TW / MY / CA / AU / EU / CRYPTO）、货币 12 个（CNY / USD / GBP / EUR / HKD / JPY / KRW / TWD / SGD / MYR / CAD / AUD）。
+
+写入方：`DictRepository.addCustom()` / `updateEntry()`。
+读取方：`dictEntriesProvider(DictType)` StreamProvider。
+
+## 11. SearchHistoryEntries
 
 全局搜索的最近查询与最近访问记录。
 
@@ -303,3 +353,18 @@ UI 的资产价格走势图、Dashboard 净资产趋势均从此表读取。
 
 写入方：`GlobalSearchDelegate`（搜索提交、搜索结果点击）。
 读取方：`searchHistoryProvider` 空态页（最近搜索 / 最近访问）。
+
+## 12. RegionGroupOrders
+
+用户自定义的列表地区分组排序（schema v26 新增）。不承载业务数据，仅控制 UI 展示顺序。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| scene | VARCHAR(32) | 是 | 展示场景标识（如 `account_list` / `asset_list`），复合主键之一 |
+| region_code | VARCHAR(16) | 是 | 地区编码（来自 `sovereignty_region` 字典），复合主键之一 |
+| sort_order | INTEGER | 是 | 该场景下该地区的展示排序（默认 1000） |
+
+主键：`(scene, region_code)`。
+
+写入方：列表页用户拖拽排序后持久化。
+读取方：账户/资产列表页的地区分组排序。

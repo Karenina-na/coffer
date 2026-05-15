@@ -429,7 +429,7 @@ flutter analyze
 flutter test
 ```
 
-当前基线：**253 tests passed**，`flutter analyze` 0 issue。
+当前基线：**518 tests passed**，`flutter analyze` 0 issue。
 
 覆盖：
 - Drift in-memory 集成测试（Account / Asset / Card / Channel / Event CRUD）

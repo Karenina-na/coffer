@@ -37,13 +37,18 @@ ShellRoute                 // 底部导航壳，保持 NavigationBar 常驻
 // 以下路由在 Shell 之外，全屏呈现，无底部导航
 /accounts/new              // 新建账户
 /accounts/:id              // 账户详情
+/accounts/:id/edit         // 编辑账户
 /assets/new                // 新建资产
 /assets/:id                // 资产详情
+/assets/:id/edit           // 编辑资产
 /cards/new                 // 新建卡片
+/cards/:id/edit            // 编辑卡片
 /events/new                // 新建事件（手动录入）
 /channels                  // 通道列表
 /channels/new              // 新建通道
 /channels/:id              // 通道详情
+/channels/:id/edit         // 编辑通道
+/topology                  // 全局关系全景图
 /backup                    // 备份中心
 /backup/export             // 导出加密备份
 /backup/restore            // 从备份恢复
@@ -62,10 +67,13 @@ ShellRoute                 // 底部导航壳，保持 NavigationBar 常驻
 
 定位：净资产总览 + 跨币种聚合 + 快捷入口。
 
-- **净资产卡片**：显示当前**全局计价货币**下的总额；AppBar 货币选择器会切换全局计价货币，并驱动仪表盘、资金分析、账户/资产列表与详情中的统计口径同步刷新。
-- **统计摘要**：账户数量、资产数量；分别点击跳 `/holdings?tab=0` 与 `/holdings?tab=1`，直达对应二级 Tab。
-- **缺失汇率提示**：若聚合过程中存在无法换算的资产，展示 `missingAssetIds` 提醒用户补录汇率，**点击跳 `/rates`**。
-- **快捷入口**：转账通道管理；备份 / 恢复统一从设置页中的备份中心进入。
+- **全球节点地图**（`_GridMapHero`）：以点阵世界地图展示全球账户分布，节点大小反映地区资产规模，作为仪表盘 Hero 区。
+- **今日汇率提醒**（`_TodaysAlertsBanner`）：紧贴 Hero 展示当日汇率波动告警，作为第一视觉焦点。
+- **KPI 网格**：账户总数、卡片总数、待处理事件数，三格并排；分别点击跳 `/holdings?tab=0`、`/cards`、`/events`。
+- **资产配置**（`_AllocationSection`）：按币种 / 类型 / 地区的 donut 饼图，支持 segmented 切换。
+- **净资产趋势**（`_TrendSection`）：折线图 + 时间窗口切换（7D / 1M / 3M / 1Y / ALL）。
+- **即将到来的账单**（`_UpcomingBillsSection`）：信用卡账单日 / 还款日预警，仅在有数据时渲染。
+- **近期活动**（`_RecentActivitySection`）：最近事件 feed，最多 3 条 + "查看全部"入口。
 - **顶部搜索**：注册 `topSearchOpenerProvider` → 打开全局搜索（`SearchFeature.dashboard`，仅跨模块命中，不分模块过滤）。
 
 数据流：
@@ -90,24 +98,26 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 | 转账 | `TransferSimulateBody` | — | 通道管理 + 备份 |
 | 分析 | `PortfolioAnalysisBody` | — | 同步资产行情 |
 
-> **「转账」语义说明**：此处转账**不涉及账务变动**，仅用于基于 Channel 拓扑与费率模型**规划最优转移路径**（Route Planning）。用户选定源/目标账户及金额后，调用 `PlanTransferRouteUseCase`（`lib/domain/usecases/plan_transfer_route.dart`）以 **Account.id** 为节点跑 Dijkstra：图的边由 `AccountChannel` 派生——同一通道下的任意两个账户互为可达，规则引擎按 (from, to) 双方 `sovereignty_region` 过滤违规边。支持两种目标：
+> **「转账」语义说明**：此处转账**不涉及账务变动**，仅用于基于 Channel 拓扑与费率模型**规划最优转移路径**（Route Planning）。用户选定源/目标账户及金额后，调用 `PlanTransferRouteUseCase`（`lib/domain/usecases/plan_transfer_route.dart`）在扩展状态空间 `(accountId, currency)` 上跑 Dijkstra：
 >
-> - **费用最低（minFee）**：权重 = `amount * feeRate + fixedFee`
-> - **跳数最少（minHops）**：权重恒为 1
+> - **通道边** `(A, C) → (B, C)`：同币种通过共享通道转移，权重 = `amount × feeRate + fixedFee`
+> - **换汇边** `(A, C1) → (A, C2)`：账户内部货币兑换，仅当 `Account.fxSpreadPercent > 0` 且 FX rate 存在时创建，权重 = `amount × (fxSpreadPercent / 100)`
 >
-> 返回的 `TransferRoute` 按顺序列出每一跳 `RouteLeg`（含 channel、起止 Account、单段手续费），UI 以 `节点链 + 逐段卡片` 形式呈现（节点标签为 `机构名 (账户类型)`）。被规则引擎判定违规的边会从候选中剔除，规划器自动绕行；若无可用边则回落为带 `violations` 的单跳不可执行 Route，展示拦截原因。
+> 支持三种模式：**最低费用（minFee）**、**最少跳数（minHops）**、**对比（compare 同时展示两条）**。规则引擎按每条边的 `(from, to)` 双方有效地区过滤违规边——有效地区由 `_effectiveRegion()` 运行时推断（`regionOverride` > 通道 `allowedRegions` 匹配 > 账户自身地区）。
+>
+> 返回的 `TransferRoute` 包含 `legs`（每跳含通道/起止账户/单段手续费/币种/汇率）、`alternatives`（DFS 枚举的替代路径，最多 4 条）、`violations`（无合法路径时的拦截原因）。UI 以**管道流动**可视化呈现：账户节点 → 通道管道（含协议名 + 全称 + 费用）→ 箭头流向，换汇跳左侧缩进以区分子资金流动。金额统一保留两位小数。
 >
 > **账户 ↔ 通道绑定**：账户详情页 `支持的转账通道` 区块维护当前账户声明支持的通道集合（添加 / 移除）；通道详情页 `成员账户` 区块只读展示所有已绑定该通道的账户，入口可跳转至账户详情。
 >
-> **账户级手续费配置**：账户详情页的通道区块除维护是否接入外，还可为当前账户配置该通道的账户级费用覆盖（比例费率 / 固定费 / 费用币种）。覆盖值为空时沿用通道默认值；`0` 为有效值，表示该账户在该通道上免手续费。路径规划按源账户的覆盖值计费。
+> **账户级手续费配置**：账户详情页的通道区块除维护是否接入外，还可为当前账户配置该通道的账户级费用覆盖（比例费率 / 固定费 / 费用币种 / 地区覆盖）。覆盖值为空时沿用通道默认值；`0` 为有效值，表示该账户在该通道上免手续费。路径规划按源账户的覆盖值计费。
 >
 > **字典锚定约束**：地区、货币、转账协议相关输入必须优先使用字典选择器，而不是手填字符串。当前约定如下：
 >
 > - Channel 的 `transfer_protocol`、`limit_currency`、`allowedRegions`、`blockedRegions` 全部来自字典；地区规则使用多选而非 CSV 输入。
 > - 账户级 `fee_currency_override`、关注币对的 `base/quote`、卡片 `supported_currencies` 全部来自 `currency` 字典。
-> - 对于可空覆盖字段，选择器必须提供明确的“沿用默认值”空态，而不是把默认值预填成显式 override。
+> - 对于可空覆盖字段，选择器必须提供明确的”沿用默认值”空态，而不是把默认值预填成显式 override。
 >
-> **对比模式**：顶部 `SwitchListTile`「对比模式」开启后，一次点击并行跑两种目标，结果并排渲染；若二者得到同一条路径则合并为单卡并标注"两种目标一致"，否则给出 `ΔFee` / `ΔHops` 差值，便于用户权衡费用与合规/稳定性。
+> **对比模式**：顶部 `SegmentedButton` 三选：最低费用 / 最少跳数 / 对比。对比模式下自动规划两条路径并排渲染管道，底部给出 `ΔFee` / `ΔHops` 差异摘要；若两条路径一致则标注”两种策略得出同一路径”。
 
 实现要点：
 
@@ -259,6 +269,7 @@ FeaturePage              // 含 Scaffold 与 AppBar，作为独立路由节点
 - **v5（当前）**：专业级数据可视化升级，已落地详见 §10。
 - **v6**：底部导航改为实色胶囊、去 `extendBody`（解决页面半透明叠层导致的虚化/模糊问题）。
 - **v7**：主 Tab 底部导航升级为悬浮式液态玻璃胶囊；Shell 使用 `Stack + Positioned` 叠加导航层，模糊严格限制在胶囊内部，外部内容保持可见且可交互。
+- **v8（当前）**：多币种路径规划（`(accountId, currency)` 状态空间 + FX 换汇边）、转账页管道流动可视化、通道拓扑改为卡片式布局、`HorizontalGestureGuard` 手势冲突防护、运行时地区推断（算法层拼装）。内置字典扩展至 11 种转账协议 / 16 个主权地区 / 12 种货币。
 
 ---
 
@@ -271,7 +282,7 @@ FeaturePage              // 含 Scaffold 与 AppBar，作为独立路由节点
 **技术选型**
 
 - 图表库：`fl_chart`（折线 / 柱状 / 饼图 / 雷达图，纯 Flutter 渲染，无 WebView 开销）
-- 拓扑图：`graphview`（力导向 / 树形布局）+ `GwpNodeMap`（CustomPainter 全球地图）
+- 拓扑图：通道拓扑使用卡片式列表布局；全局关系全景图使用 `graphview` 力导向布局；`GwpNodeMap`（CustomPainter 全球地图）
 - 动画：Material 3 `AnimatedSwitcher` / `Hero` / `ImplicitlyAnimatedWidget` 系列
 - 数据层：所有聚合指标通过新增 `Provider` 组合已有 Repository 数据，**不新增 Drift 表**；历史趋势依赖已有 `ExchangeRate.asOfTime` + `AssetPriceHistory.triggerTime` 时间序列
 
@@ -290,37 +301,38 @@ FeaturePage              // 含 Scaffold 与 AppBar，作为独立路由节点
 
 ```
 ┌─────────────────────────────────────────────┐
-│ AppBar: 仪表盘 | 基准货币选择器 | 🔍 搜索    │
+│ AppBar: 仪表盘 | 🔍 搜索                     │
 ├─────────────────────────────────────────────┤
-│ A. 净资产英雄卡片 (Hero Net Worth Card)      │
+│ A. 全球节点地图 (Hero — 点阵世界地图)         │
 │    ┌───────────────────────────────────────┐ │
-│    │ ¥ 1,234,567.89          CNY ▼        │ │
-│    │ ▲ +12.34% (+¥152,345)  过去30天      │ │
-│    │ [微型面积图 — 30天净资产走势]          │ │
+│    │  ● Beijing  ¥456K   ● London  £12K   │ │
+│    │       ╲               │               │ │
+│    │        ● Singapore    ● NewYork      │ │
+│    │         S$89K          $234K          │ │
 │    └───────────────────────────────────────┘ │
 ├─────────────────────────────────────────────┤
-│ B. KPI 指标网格 (2×3 Grid)                   │
+│ B+. 今日汇率提醒 (紧贴 Hero 下方)             │
+│    "USD/CNY ▲ +0.12%  ·  EUR/CNY ▼ -0.08%" │
+├─────────────────────────────────────────────┤
+│ B. KPI 网格 (1×3)                            │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │ 账户总数  │ │ 资产总数  │ │ 活跃通道  │    │
-│  │    12    │ │    47    │ │    5     │    │
-│  │ 3 地区   │ │ 8 币种   │ │ 3 协议   │    │
-│  └──────────┘ └──────────┘ └──────────┘    │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │ 信用额度  │ │ 待处理事件│ │ 缺失汇率  │    │
-│  │ ¥50,000  │ │   3 条   │ │  2 对    │    │
-│  │ 已用 62% │ │ 1 CRIT   │ │ 影响3资产 │    │
+│  │ 账户总数  │ │ 卡片总数  │ │ 待处理事件│    │
+│  │    12    │ │    8     │ │   3 条   │    │
+│  │ 3 地区   │ │ 2 组织   │ │ 1 紧急    │    │
 │  └──────────┘ └──────────┘ └──────────┘    │
 ├─────────────────────────────────────────────┤
-│ C. 资产配置概览 (横向滑动卡片组)              │
-│  [按币种饼图] [按类型饼图] [按地区饼图]       │
+│ C. 资产配置 (Segmented: 币种 / 类型 / 地区)   │
+│  [环形饼图 + Top 6 legend]                   │
 ├─────────────────────────────────────────────┤
-│ D. 全球账户节点地图 (Global Node Map)        │
-│  → 详见 §10.4.1                             │
+│ D. 净资产趋势 (折线图 + 时间窗口切换)          │
+│  [7D / 1M / 3M / 1Y / ALL]                  │
+│  期初 · 期末 · 区间高低 · 变动%  四栏统计     │
 ├─────────────────────────────────────────────┤
-│ E. 趋势快照 (Recent Trends)                  │
-│  [30天净资产折线] [汇率变动热力条]            │
+│ E. 即将到来的账单 (仅在有信用卡数据时渲染)     │
+│  账单日 / 还款日 ≤3天 转红                    │
 ├─────────────────────────────────────────────┤
-│ F. 快捷操作 + 最近事件                       │
+│ F. 近期活动 (最近 3 条事件 feed)              │
+│  [查看全部 → /events]                        │
 └─────────────────────────────────────────────┘
 ```
 
@@ -342,33 +354,29 @@ Future<DashboardKpi> dashboardKpi(Ref ref) async {
 }
 ```
 
-各 KPI 提取逻辑：
+各 KPI 提取逻辑（当前为 1×3 网格）：
 
-- **净资产总额** = `DashboardSummary.total`（已有）
-- **净资产变动率** = 需对比 30 天前快照 → 从 `asset_price_history` 按日聚合历史 marketValue 求和（缺项按最近一条 carry-forward）
-- **账户总数** = `accounts.length`，按 `sovereigntyRegion` 分组计地区数
-- **资产总数** = `assets.length`，按 `currency` 去重计币种数
-- **活跃通道** = `channels.where(c => c.status == enabled).length`，按 `transferProtocol` 去重计协议数
-- **信用额度汇总** = `cards.where(c => c.cardType == credit).map(c => c.creditLimit).sum`，已用比例 = `1 - availableCredit.sum / creditLimit.sum`
-- **待处理事件** = `events.where(e => e.ackStatus == pending).length`，按 `priority` 高亮 CRITICAL 数量
-- **缺失汇率** = `DashboardSummary.missingAssetIds.length`
+- **账户总数** = `accounts.length`，按 `sovereigntyRegion` 分组计地区数。点击 → `/holdings?tab=0`
+- **卡片总数** = `cards.length`，按 `cardOrganization` 去重计组织数。点击 → `/cards`
+- **待处理事件** = `pendingAckEvents.length`，按 `priority` 高亮 CRITICAL 数量。点击 → `/events`
 
-#### 10.1.3 英雄卡片交互
+> 注：早期设计中 2×6 网格（含资产总数、活跃通道、信用额度、缺失汇率）在迭代中简化为 1×3，以降低首屏视觉密度。缺失汇率提示改为内嵌于资产配置区块中。
 
-- 点击货币标签 → 弹出 `ModalBottomSheet` 币种选择器，切换后整页刷新
-- 点击变动率区域 → 下钻到趋势详情（§10.2 折线图全屏模式）
-- 微型面积图使用 `fl_chart` 的 `LineChart`，高度 48px，无坐标轴，仅填充渐变
+#### 10.1.3 全球节点地图交互
+
+- 点阵世界地图以 CustomPainter 渲染大陆轮廓 + 账户节点
+- 节点位置由 `sovereignty_region` 映射到地理坐标
+- 节点大小反映该地区资产总值（对数比例）
+- 点击节点 → 展开该地区账户列表 BottomSheet
+- 整体高度 220px，作为仪表盘 Hero 区
 
 #### 10.1.4 KPI 网格交互
 
-每个格子为 `InkWell` + `Card`：
+当前为 1×3 布局，每个格子为 `InkWell` + `Card`：
 
 - 「账户总数」→ `/holdings?tab=0`
-- 「资产总数」→ `/holdings?tab=1`
-- 「活跃通道」→ `/channels`
-- 「信用额度」→ `/cards`（筛选信用卡）
+- 「卡片总数」→ `/cards`
 - 「待处理事件」→ `/events`（筛选 pending）
-- 「缺失汇率」→ `/rates`
 
 ---
 
@@ -653,63 +661,40 @@ for (final channel in enabledChannels) {
 
 #### 10.4.2 转账页 — 通道拓扑图
 
-**定位**：将现有转账模拟页的下拉选择框模式升级为可视化拓扑图模式，直观呈现所有账户与通道的连接关系。
+**定位**：以通道卡片式布局替代力导向节点图，展示全局通道网络关系。
 
-**布局**：转账 Tab 顶部新增拓扑视图（可收起），高度 280px：
+**布局**：转账页下方「通道网络」折叠区，每张通道卡片展示：
 
 ```
 ┌─────────────────────────────────────────┐
-│  通道拓扑图                    [收起 ▲]  │
+│  通道网络                        [展开]  │
 │                                          │
-│  ┌──────┐   SWIFT    ┌──────┐           │
-│  │招商CN │◄──────────►│UBS SG│           │
-│  │ BANK  │            │BROKER│           │
-│  └──┬────┘            └──┬───┘           │
-│     │ CNAPS               │ FPS          │
-│     │                     │              │
-│  ┌──┴────┐            ┌──┴───┐           │
-│  │工商CN │             │HSBC  │           │
-│  │ BANK  │◄──SEPA────►│HK    │           │
-│  └───────┘            └──────┘           │
-│                                          │
-│  ● 选中源    ◆ 选中目标                   │
-│  ── 可用通道  ╌╌ 违规通道（红色虚线）      │
-│  粗线 = 推荐路径                          │
+│  ┌─ SWIFT · 环球银行金融电信协会 ────────┐ │
+│  │  成员: ICBC(CN), HSBC(HK), BoC(CN)   │ │
+│  └──────────────────────────────────────┘ │
+│  ┌─ FPS · 快速支付系统 ──────────────────┐ │
+│  │  成员: HSBC(HK), BoC(HK)             │ │
+│  └──────────────────────────────────────┘ │
+│  ┌─ CHATS · 港元即时支付结算系统 ────────┐ │
+│  │  成员: HSBC(HK), IBKR(HK地区覆盖)    │ │
+│  └──────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
 ```
 
 **实现方案**：
 
-```
-Widget: ChannelTopologyView extends ConsumerStatefulWidget
-├── InteractiveViewer (支持缩放平移)
-│   └── GraphView (package:graphview)
-│       layout: FruchtermanReingoldAlgorithm (力导向布局)
-│       nodes: 每个 Account 一个节点
-│         └── _AccountNode Widget
-│             ├── CircleAvatar(institutionName首字母)
-│             ├── Text(institutionName, 截断)
-│             ├── Text(accountType + region)
-│             └── 选中态: 描边高亮 + 放大动画
-│       edges: 每个 Channel 对应的账户对之间连线
-│         └── _ChannelEdgePainter
-│             ├── 颜色: enabled → 主题色, disabled → 灰色, violated → 红色虚线
-│             ├── 标签: 通道名 + 费率
-│             └── 粗细: 选中路径 3px, 其余 1px
-├── GestureDetector
-│   ├── 点击节点 → 设为源/目标账户 (交替选择)
-│   └── 长按节点 → 跳转 /accounts/:id
-└── AnimatedPath (路径动画)
-    └── 路径规划结果高亮: 从源到目标逐段点亮，流光动画
-```
+- `ChannelTopologyView` 不再使用 `graphview` 力导向布局，改为基于 `_ChannelGroup` 的卡片列表
+- 每条通道卡片展示协议名称 + 全称、成员账户列表（机构名 + 地区）
+- 可通过 `sourceId` / `targetId` 参数高亮相关通道
+- 内容区包裹 `HorizontalGestureGuard` 防止手势冲突
 
 **与路径规划联动**：
 
-1. 用户在拓扑图上点选源节点（蓝色高亮）和目标节点（绿色高亮）
-2. 自动填充下方的源/目标 Dropdown
-3. 输入金额后，调用 `PlanTransferRouteUseCase`
-4. 结果路径在拓扑图上以粗线 + 流光动画高亮
-5. 违规边以红色虚线 + ⚠️ 标记
+1. 用户在顶部账户选择器栏选源/目标账户
+2. 输入金额（可选，默认 1,000），选择规划策略
+3. 调用 `PlanTransferRouteUseCase` 获取多币种路径
+4. 结果以管道流动可视化展示（`_RouteFlow` / `_CompareFlow`）
+5. 通道网络区折叠在下方，高亮路径涉及的通道
 
 #### 10.4.3 全局关系全景图（新增独立页面）
 
@@ -773,10 +758,11 @@ Widget: ChannelTopologyView extends ConsumerStatefulWidget
 | `GwpRadarChart` | 多维度雷达图 | `dimensions: List<RadarDimension>`, `values: List<double>` |
 | `GwpHeatStrip` | 单行热力条 | `value: double`, `range: (min, max)`, `label` |
 | `GwpNodeMap` | 全球节点地图 | `nodes: List<MapNode>`, `edges: List<MapEdge>`, `onNodeTap`, `onEdgeTap` |
-| `GwpTopologyGraph` | 通道拓扑图（力导向） | （实际实现为 `ChannelTopologyView`） |
+| `GwpTopologyGraph` | 通道拓扑图（卡片式） | 已实现为 `ChannelTopologyView`，使用通道卡片列表替代力导向图 |
 | `GwpKpiTile` | KPI 指标格 | `title`, `value`, `subtitle`, `icon`, `onTap`, `trend` |
 | `GwpProgressRing` | 进度环（信用额度等） | （暂未实现，由 `GwpDonutChart` 单弧模式替代） |
 | `GwpCollapsibleSection` | 可折叠分区 | （暂未实现，账户详情页使用自定义 SectionCard） |
+| `_RouteFlow` / `_CompareFlow` | 转账路径管道可视化 | 已实现于 `transfer_simulate_page.dart`，管道流动隐喻展示多跳多币种路径 |
 
 #### 10.5.2 依赖包新增
 
@@ -784,10 +770,8 @@ Widget: ChannelTopologyView extends ConsumerStatefulWidget
 # pubspec.yaml 新增
 dependencies:
   fl_chart: ^0.70.0       # 折线/柱状/饼图/雷达图
-  graphview: ^1.2.1        # 力导向/树形拓扑图布局
+  graphview: ^1.2.1        # 力导向/树形拓扑图布局（用于 /topology 全局关系全景图）
 ```
-
-无新增外部网络请求、无新增 Drift 表，符合 AGENTS.md §1 本地优先约束。
 
 ---
 
@@ -805,15 +789,17 @@ dependencies:
 - 汇率热力条 + 增强型汇率列表行
 - 资产详情页 `_PriceChart` 升级
 
-**Phase 3 — 通道拓扑图 + 分析 Tab** ✅ 已落地
-- `ChannelTopologyView` 力导向布局组件
-- 转账页拓扑视图 + 路径规划联动
+**Phase 3 — 通道拓扑 + 分析 Tab + 多币种路径规划** ✅ 已落地
+- `ChannelTopologyView` 卡片式通道列表（替代力导向图）
+- 转账页管道流动可视化（`_RouteFlow` / `_CompareFlow`）
+- 多币种 Dijkstra 路径规划（`PlanTransferRouteUseCase` 扩展状态空间 + FX 换汇边）
 - 资金页「分析」Tab（Top10 / 健康雷达图）
-- `PortfolioAnalysisBody`（堆叠柱状 / 热力矩阵待补）
+- 对含水平滑动内容的页面添加 `HorizontalGestureGuard` 手势冲突防护
 
 **Phase 4 — 全景关系图 + 下钻完善** ⚠ 部分落地
 - `/topology` 全景页面 ✅
 - 全局搜索 + 深层导航 ✅
 - 账户详情页成本与收益区块 ✅
+- 转账页管道可视化 ✅
 - 详情页折叠展开改造 ⬜ 留待后续
 - 全局交互打磨与动画 ⬜ 留待后续

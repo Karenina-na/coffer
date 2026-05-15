@@ -98,6 +98,7 @@ If you change the database schema, update both `schemaVersion` and the migration
 - Detail and create/edit routes for entities live outside the shell.
 - Edit routes consistently use `_EntityEditLoader` to load the current entity from Riverpod before rendering the create/edit page.
 - The shell also owns cross-feature UX patterns such as the floating bottom navigation, global search entry point, keyboard shortcut (`Cmd/Ctrl+K`), and horizontal-swipe navigation between top-level tabs.
+- Pages that contain horizontally scrollable content (topology views, calendars, charts) must wrap those regions in `HorizontalGestureGuard` to prevent the shell's swipe-to-switch-tab gesture from consuming horizontal drags. The guard notifies ancestors via `HorizontalGestureGuardNotification` so the shell can temporarily disable tab swiping.
 
 ### Layering
 
@@ -169,6 +170,27 @@ Asset pricing is coordinated rather than embedded in widgets:
 - Account-to-channel capability is modeled through `account_channels`, which gives the transfer planner a graph to search.
 - Route planning and fee calculation live in domain use cases and rule engines rather than widgets.
 - Account-level channel fee overrides replace channel defaults rather than stacking on top of them.
+
+**Multi-currency route planning** (`PlanTransferRouteUseCase`):
+
+The route planner uses Dijkstra on an expanded state space `(accountId, currency)` — not just accountId. This enables cross-currency paths where funds are exchanged within an account before continuing.
+
+Two edge types:
+1. **Channel edges** — `(A, C) → (B, C)`, same-currency transfer via a shared channel. Weight = fee denominated in source currency.
+2. **FX edges** — `(A, C1) → (A, C2)`, internal account currency exchange. Only created when `Account.fxSpreadPercent > 0` and a valid FX rate exists. Weight = `amount × (fxSpreadPercent / 100)`.
+
+Channel rule evaluation happens per-edge with edge-specific currency in `TransferContext`. The engine checks status, effective window, currency match, single/daily limits, and region rules (`allowedRegions`, `blockedRegions`, `requireSameRegion` from `Channel.sovereigntyRegionRule`).
+
+**Runtime region inference** — `_effectiveRegion()` in `plan_transfer_route.dart`:
+
+The effective region for an account on a channel is resolved at algorithm runtime (not persisted):
+1. Use `AccountChannel.regionOverride` if non-empty
+2. If the channel's `allowedRegions` list exists, pick the account's own region if it's in the list; otherwise use the first allowed region
+3. Fall back to the account's `sovereigntyRegion`
+
+This is intentional: region inference is algorithm-level assembly (拼装), not a database write. The same account may need different effective regions on different channels (e.g., IBKR(US) accessing CHATS needs region HK).
+
+**Alternative route enumeration** — DFS `_allPaths()` collects up to 5 simple paths, deduplicated against the primary Dijkstra path. The UI can display alternatives in compare mode.
 
 ### Search and feature composition
 
