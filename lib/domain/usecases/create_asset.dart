@@ -4,6 +4,7 @@ import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../entities/asset.dart';
 import '../entities/asset_enums.dart';
+import '../entities/asset_type_info.dart';
 import '../repositories/account_repository.dart';
 import '../repositories/asset_repository.dart';
 
@@ -37,6 +38,7 @@ class CreateAssetUseCase {
     Decimal? costPrice,
     Decimal? currentPrice,
     AssetStatus status = AssetStatus.holding,
+    AssetTypeInfo? typeInfo,
     Map<String, dynamic>? extInfo,
   }) async {
     if (quantity < Decimal.zero) {
@@ -59,6 +61,7 @@ class CreateAssetUseCase {
 
     final now = _now();
     final market = currentPrice == null ? null : quantity * currentPrice;
+    final mergedExt = _mergeExt(extInfo, typeInfo, assetType);
     final asset = Asset(
       id: _idGen(),
       accountId: accountId,
@@ -71,10 +74,21 @@ class CreateAssetUseCase {
       marketValue: market,
       valuationTime: currentPrice == null ? null : now,
       status: status,
-      extInfo: extInfo,
+      extInfo: mergedExt,
       createdAt: now,
       updatedAt: now,
     );
     return _assets.create(asset);
+  }
+
+  Map<String, dynamic>? _mergeExt(
+    Map<String, dynamic>? raw,
+    AssetTypeInfo? typed,
+    AssetType type,
+  ) {
+    if (typed == null) return raw;
+    final t = typed.toJson();
+    if (raw == null) return t;
+    return {...raw, ...t};
   }
 }
