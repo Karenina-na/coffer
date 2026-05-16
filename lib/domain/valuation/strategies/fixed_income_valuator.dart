@@ -4,24 +4,22 @@ import '../../../core/errors.dart';
 import '../../../core/result.dart';
 import '../../entities/asset.dart';
 import '../../entities/asset_enums.dart';
+import '../../entities/asset_type_info.dart';
 import '../asset_valuator.dart';
 
 /// 固收类资产估值引擎：定期存款 (CD) / 债券 (BOND)。
 ///
-/// 用 [Asset.extInfo] 中的以下字段进行计息推算（均可省略，缺失字段走安全回落）：
-/// - `principal` (String/num) → 本金；缺省用 `quantity`
-/// - `annualRate` (String/num) → 年化利率小数，如 0.035 表示 3.5%
-/// - `startDate`   (ISO8601) → 计息起始日；缺省用 `createdAt`
-/// - `maturityDate`(ISO8601) → 到期日；到期后利息不再累计
-/// - `compounding` (String) → 'simple' | 'daily' | 'monthly' | 'annual'
+/// 参数从 [AssetTypeInfo]（通过 [Asset.typeInfo]）读取，而非直接读 extInfo：
+/// - `annualRate`  — 年化利率小数，如 0.035 表示 3.5%
+/// - `startDate`    — 计息起始日；缺省用 `createdAt`
+/// - `maturityDate` — 到期日；到期后利息不再累计
+/// - `compounding`  — 'simple' | 'daily' | 'monthly' | 'annual'
 ///     缺省：CD → simple，BOND → annual
-/// - `dayCount`    (num)    → 计息基数，缺省 365
+/// - `dayCount`     — 计息基准，缺省 365
 ///
-/// 估值口径：当前持有人可赎回价值 = 本金 + 截至估值时间的已累计利息。
-/// 上层会再乘以 `quantity` 得到市值，因此这里的 price 是「单位本金的净值」：
+/// 估值口径：`quantity` 即本金（按 currency 计价），price 是「单位本金的净值」：
 ///   price = 1 + accrued_interest_ratio
-/// 为保持 `marketValue = quantity * price` 在现有 `ValuateAssetUseCase` 中仍然成立，
-/// 这里约定：`quantity` 存的是「本金（按 currency 计价）」。
+///   marketValue = quantity × price
 ///
 /// 实现要点：
 /// - 所有金额相关中间计算全部走 `Decimal`，禁止经过 `double`（AGENTS §4）
@@ -136,6 +134,29 @@ class FixedIncomeValuator implements AssetValuator {
   );
 
   _FIParams _readParams(Asset a) {
+    final info = a.typeInfo;
+    if (info case FixedIncomeInfo(:final annualRate, :final startDate,
+        :final maturityDate, :final compounding, :final dayCount)) {
+      final rate = annualRate ?? Decimal.zero;
+      final dc = dayCount ?? 365;
+      return _FIParams(
+        annualRate: rate,
+        start: startDate ?? a.createdAt,
+        maturity: maturityDate,
+        compounding: _Compounding.parse(
+          compounding,
+          fallback: a.assetType == AssetType.cd
+              ? _Compounding.simple
+              : _Compounding.annual,
+        ),
+        dayCount: Decimal.fromInt(dc <= 0 ? 365 : dc),
+      );
+    }
+    // Fallback: bare extInfo without typed wrapper (legacy data)
+    return _readParamsLegacy(a);
+  }
+
+  _FIParams _readParamsLegacy(Asset a) {
     final ext = a.extInfo ?? const <String, dynamic>{};
     final dc = _toDecimal(ext['dayCount']) ?? Decimal.fromInt(365);
     final compounding = ext['compounding'];

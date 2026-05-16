@@ -24,6 +24,7 @@ import '../../../domain/entities/account.dart';
 import '../../../domain/entities/asset.dart';
 import '../../../domain/entities/asset_enums.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
+import '../../../domain/entities/asset_type_info.dart';
 import '../../../domain/usecases/value_assets_in_currency.dart';
 import '../../../domain/valuation/asset_valuator.dart';
 import '../../../domain/usecases/transfer_asset.dart';
@@ -284,6 +285,14 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                     ),
                   ],
                 ),
+                if (_hasTypeInfo(asset)) ...[
+                  const SizedBox(height: GwpSpacing.md),
+                  _SectionCard(
+                    icon: Icons.category_outlined,
+                    title: _typeInfoTitle(asset.assetType),
+                    children: [_TypeInfoCard(asset: asset)],
+                  ),
+                ],
                 const SizedBox(height: GwpSpacing.md),
                 _SectionCard(
                   icon: Icons.account_balance_outlined,
@@ -1741,6 +1750,137 @@ class _BasicInfoCard extends StatelessWidget {
         ],
       ],
     );
+  }
+}
+
+bool _hasTypeInfo(Asset asset) =>
+    switch (asset.assetType) {
+      AssetType.cd || AssetType.bond || AssetType.policy ||
+      AssetType.preciousMetal => true,
+      _ => false,
+    };
+
+String _typeInfoTitle(AssetType type) => switch (type) {
+      AssetType.cd => '存单详情',
+      AssetType.bond => '债券详情',
+      AssetType.policy => '保单详情',
+      AssetType.preciousMetal => '贵金属详情',
+      _ => '详情',
+    };
+
+class _TypeInfoCard extends StatelessWidget {
+  const _TypeInfoCard({required this.asset});
+  final Asset asset;
+
+  @override
+  Widget build(BuildContext context) {
+    final info = asset.typeInfo;
+    return Column(
+      children: switch (info) {
+        FixedIncomeInfo(:final issuer, :final annualRate,
+            :final startDate, :final maturityDate, :final compounding,
+            :final dayCount) =>
+          _fiRows(issuer, annualRate, startDate, maturityDate,
+              compounding, dayCount),
+        InsuranceInfo(:final insurer, :final policyNumber,
+            :final annualPremium, :final coverage, :final effectiveDate,
+            :final maturityDate, :final paymentFrequency) =>
+          _insRows(insurer, policyNumber, annualPremium, coverage,
+              effectiveDate, maturityDate, paymentFrequency),
+        PreciousMetalInfo(:final metalType, :final weight, :final purity) =>
+          _pmRows(metalType, weight, purity),
+        _ => [const SizedBox.shrink()],
+      },
+    );
+  }
+
+  // ── fixed income ──
+
+  List<Widget> _fiRows(
+    String? issuer,
+    Decimal? annualRate,
+    DateTime? startDate,
+    DateTime? maturityDate,
+    String? compounding,
+    int? dayCount,
+  ) {
+    final rows = <(String, String)>[
+      if (issuer != null && issuer.isNotEmpty) ('发行机构', issuer),
+      if (annualRate != null)
+        ('年利率',
+          '${(annualRate * Decimal.fromInt(100)).toStringAsFixed(2)}%'),
+      if (startDate != null) ('起息日', _fmtDate(startDate)),
+      if (maturityDate != null) ('到期日', _fmtDate(maturityDate)),
+      if (compounding != null)
+        ('计息方式', switch (compounding) {
+          'simple' => '到期一次性还本付息',
+          'daily' => '按日复利',
+          'monthly' => '按月复利',
+          'annual' => '按年复利',
+          _ => compounding,
+        }),
+      if (dayCount != null) ('计息基准', '$dayCount 天'),
+    ];
+    return _buildRows(rows);
+  }
+
+  // ── insurance ──
+
+  List<Widget> _insRows(
+    String? insurer,
+    String? policyNumber,
+    Decimal? annualPremium,
+    Decimal? coverage,
+    DateTime? effectiveDate,
+    DateTime? maturityDate,
+    String? paymentFrequency,
+  ) {
+    final rows = <(String, String)>[
+      if (insurer != null && insurer.isNotEmpty) ('保险公司', insurer),
+      if (policyNumber != null && policyNumber.isNotEmpty) ('保单号', policyNumber),
+      if (annualPremium != null) ('年缴保费', annualPremium.toString()),
+      if (coverage != null) ('保额', coverage.toString()),
+      if (effectiveDate != null) ('生效日期', _fmtDate(effectiveDate)),
+      if (maturityDate != null) ('满期日期', _fmtDate(maturityDate)),
+      if (paymentFrequency != null)
+        ('缴费频率', switch (paymentFrequency) {
+          'monthly' => '月缴',
+          'quarterly' => '季缴',
+          'semiAnnual' => '半年缴',
+          'annual' => '年缴',
+          'single' => '趸缴',
+          _ => paymentFrequency,
+        }),
+    ];
+    return _buildRows(rows);
+  }
+
+  // ── precious metal ──
+
+  List<Widget> _pmRows(String? metalType, Decimal? weight, Decimal? purity) {
+    final rows = <(String, String)>[
+      if (metalType != null)
+        ('品种', switch (metalType) {
+          'gold' => '黄金',
+          'silver' => '白银',
+          'platinum' => '铂金',
+          'palladium' => '钯金',
+          _ => metalType,
+        }),
+      if (weight != null) ('重量', '$weight g'),
+      if (purity != null) ('纯度', purity.toString()),
+    ];
+    return _buildRows(rows);
+  }
+
+  List<Widget> _buildRows(List<(String, String)> rows) {
+    return [
+      for (var i = 0; i < rows.length; i++) ...[
+        _KvRow(k: rows[i].$1, v: rows[i].$2),
+        if (i < rows.length - 1)
+          const Divider(height: 1, color: GwpColors.border),
+      ],
+    ];
   }
 }
 
