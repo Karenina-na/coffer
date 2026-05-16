@@ -222,8 +222,8 @@ return $default(_that.id,_that.accountNo,_that.accountType,_that.sovereigntyRegi
 /// @nodoc
 
 
-class _Account implements Account {
-  const _Account({required this.id, this.accountNo, required this.accountType, required this.sovereigntyRegion, required this.institutionName, required this.status, this.openedAt, final  Map<String, dynamic>? extInfo, this.fxSpreadPercent = 0, this.fxFixedFee, required this.createdAt, required this.updatedAt, this.isDeleted = false}): _extInfo = extInfo;
+class _Account extends Account {
+  const _Account({required this.id, this.accountNo, required this.accountType, required this.sovereigntyRegion, required this.institutionName, required this.status, this.openedAt, final  Map<String, dynamic>? extInfo, this.fxSpreadPercent = 0, this.fxFixedFee, required this.createdAt, required this.updatedAt, this.isDeleted = false}): _extInfo = extInfo,super._();
   
 
 @override final  String id;

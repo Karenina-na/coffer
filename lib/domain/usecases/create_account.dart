@@ -4,6 +4,7 @@ import '../../core/errors.dart';
 import '../../core/result.dart';
 import '../entities/account.dart';
 import '../entities/account_enums.dart';
+import '../entities/account_type_info.dart';
 import '../repositories/account_repository.dart';
 
 /// 新建账户用例。
@@ -30,6 +31,7 @@ class CreateAccountUseCase {
     required String institutionName,
     String? accountNo,
     DateTime? openedAt,
+    AccountTypeInfo? typeInfo,
     Map<String, dynamic>? extInfo,
     AccountStatus status = AccountStatus.active,
     double fxSpreadPercent = 0,
@@ -46,6 +48,7 @@ class CreateAccountUseCase {
       );
     }
     final now = _now();
+    final mergedExt = _mergeExt(extInfo, typeInfo);
     final account = Account(
       id: _idGen(),
       accountNo: accountNo,
@@ -54,12 +57,22 @@ class CreateAccountUseCase {
       institutionName: institutionName.trim(),
       status: status,
       openedAt: openedAt,
-      extInfo: extInfo,
+      extInfo: mergedExt,
       fxSpreadPercent: fxSpreadPercent,
       fxFixedFee: fxFixedFee,
       createdAt: now,
       updatedAt: now,
     );
     return _repo.create(account);
+  }
+
+  Map<String, dynamic>? _mergeExt(
+    Map<String, dynamic>? raw,
+    AccountTypeInfo? typed,
+  ) {
+    if (typed == null) return raw;
+    final t = typed.toJson();
+    if (raw == null) return t;
+    return {...raw, ...t};
   }
 }

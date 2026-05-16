@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'account_enums.dart';
+import 'account_type_info.dart';
 
 part 'account.freezed.dart';
 
@@ -31,4 +32,14 @@ abstract class Account with _$Account {
     required DateTime updatedAt,
     @Default(false) bool isDeleted,
   }) = _Account;
+
+  const Account._();
+
+  /// 类型安全的扩展信息，按 [accountType] 解析 [extInfo]。
+  AccountTypeInfo get typeInfo =>
+      AccountTypeInfo.fromJson(extInfo, accountType);
+
+  /// 返回更新了 [extInfo] 的副本。
+  Account copyWithTypeInfo(AccountTypeInfo info) =>
+      copyWith(extInfo: info.toJson());
 }
