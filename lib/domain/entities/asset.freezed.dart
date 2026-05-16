@@ -219,8 +219,8 @@ return $default(_that.id,_that.accountId,_that.assetType,_that.assetCode,_that.q
 /// @nodoc
 
 
-class _Asset implements Asset {
-  const _Asset({required this.id, required this.accountId, required this.assetType, this.assetCode, required this.quantity, this.costPrice, this.currentPrice, required this.currency, this.marketValue, this.valuationTime, required this.status, final  Map<String, dynamic>? extInfo, required this.createdAt, required this.updatedAt, this.isDeleted = false}): _extInfo = extInfo;
+class _Asset extends Asset {
+  const _Asset({required this.id, required this.accountId, required this.assetType, this.assetCode, required this.quantity, this.costPrice, this.currentPrice, required this.currency, this.marketValue, this.valuationTime, required this.status, final  Map<String, dynamic>? extInfo, required this.createdAt, required this.updatedAt, this.isDeleted = false}): _extInfo = extInfo,super._();
   
 
 @override final  String id;
