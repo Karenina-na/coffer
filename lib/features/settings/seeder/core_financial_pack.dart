@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:decimal/decimal.dart';
 
 import '../../../domain/entities/account_enums.dart';
+import '../../../domain/entities/account_type_info.dart';
 import '../../../domain/entities/asset_enums.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
+import '../../../domain/entities/asset_type_info.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/entities/card_enums.dart';
 import '../../../domain/entities/channel.dart';
@@ -39,6 +41,9 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     required String region,
     required String institution,
     AccountStatus status = AccountStatus.active,
+    AccountTypeInfo? typeInfo,
+    double fxSpreadPercent = 0,
+    Decimal? fxFixedFee,
   }) async {
     await ctx.collect(
       deps.createAccount(
@@ -47,6 +52,9 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
         institutionName: institution,
         accountNo: accountNo,
         status: status,
+        typeInfo: typeInfo,
+        fxSpreadPercent: fxSpreadPercent,
+        fxFixedFee: fxFixedFee,
       ),
       (dynamic a) {
         ctx.accountIds[key] = a.id as String;
@@ -62,6 +70,12 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.bank,
     region: 'CN',
     institution: '招商银行',
+    typeInfo: const BankAccountInfo(
+      swiftBic: 'CMBCCNBS',
+      branchName: '深圳分行',
+      accountSubtype: 'savings',
+    ),
+    fxSpreadPercent: 0.3,
   );
   await addAccount(
     key: 'us_broker',
@@ -69,6 +83,13 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.broker,
     region: 'US',
     institution: 'Interactive Brokers',
+    typeInfo: const BrokerAccountInfo(
+      accountSubtype: 'margin',
+      baseCurrency: 'USD',
+      marginEnabled: true,
+    ),
+    fxSpreadPercent: 0.2,
+    fxFixedFee: Decimal.parse('2'),
   );
   await addAccount(
     key: 'cn_payment',
@@ -76,6 +97,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.payment,
     region: 'CN',
     institution: '微信支付',
+    typeInfo: const PaymentAccountInfo(platform: 'wechat'),
   );
   await addAccount(
     key: 'cn_insurance',
@@ -83,6 +105,10 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.insurance,
     region: 'CN',
     institution: '平安人寿',
+    typeInfo: const InsuranceAccountInfo(
+      policyType: 'life',
+      registrationNo: 'PICC-TEST-001',
+    ),
   );
   await addAccount(
     key: 'hk_bank_dormant',
@@ -91,6 +117,10 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     region: 'HK',
     institution: 'HSBC Hong Kong',
     status: AccountStatus.dormant,
+    typeInfo: const BankAccountInfo(
+      swiftBic: 'HSBCHKHH',
+      accountSubtype: 'checking',
+    ),
   );
   await addAccount(
     key: 'us_custody',
@@ -98,6 +128,10 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.custody,
     region: 'US',
     institution: 'Fidelity Custody',
+    typeInfo: const CustodyAccountInfo(
+      custodianName: 'Fidelity Investments',
+      accountStructure: 'segregated',
+    ),
   );
   await addAccount(
     key: 'sg_broker_inactive',
@@ -106,6 +140,10 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     region: 'SG',
     institution: 'Tiger Brokers Singapore',
     status: AccountStatus.inactive,
+    typeInfo: const BrokerAccountInfo(
+      accountSubtype: 'cash',
+      baseCurrency: 'SGD',
+    ),
   );
   await addAccount(
     key: 'eu_bank_closed',
@@ -114,6 +152,11 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     region: 'EU',
     institution: 'Deutsche Bank Europe',
     status: AccountStatus.closed,
+    typeInfo: const BankAccountInfo(
+      swiftBic: 'DEUTDEFF',
+      iban: 'DE89370400440532013000',
+      accountSubtype: 'checking',
+    ),
   );
   await addAccount(
     key: 'crypto_exchange',
@@ -121,6 +164,10 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.cryptoExchange,
     region: 'CRYPTO',
     institution: 'Binance',
+    typeInfo: const CryptoExchangeInfo(
+      hasApiKey: true,
+      supportedNetworks: 'ERC20,TRC20,BEP20,BEP2',
+    ),
   );
   await addAccount(
     key: 'crypto_wallet',
@@ -128,6 +175,10 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.cryptoWallet,
     region: 'CRYPTO',
     institution: 'MetaMask',
+    typeInfo: const CryptoWalletInfo(
+      walletType: 'hot',
+      chain: 'Ethereum',
+    ),
   );
 
   Future<void> addAsset({
@@ -140,6 +191,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     required String price,
     required String currency,
     AssetStatus status = AssetStatus.holding,
+    AssetTypeInfo? typeInfo,
   }) async {
     final accountId = ctx.accountIds[accountKey];
     if (accountId == null) return;
@@ -153,6 +205,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
         costPrice: Decimal.parse(cost),
         currentPrice: Decimal.parse(price),
         status: status,
+        typeInfo: typeInfo,
       ),
       (dynamic a) {
         ctx.assetIds[key] = a.id as String;
@@ -201,6 +254,13 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     cost: '100',
     price: '96.40',
     currency: 'USD',
+    typeInfo: FixedIncomeInfo(
+      annualRate: Decimal.parse('0.04'),
+      startDate: DateTime.utc(2023, 8, 15),
+      maturityDate: DateTime.utc(2033, 8, 15),
+      compounding: 'annual',
+      dayCount: 365,
+    ),
   );
   await addAsset(
     key: 'cd',
@@ -211,16 +271,31 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     cost: '1',
     price: '1.032',
     currency: 'CNY',
+    typeInfo: FixedIncomeInfo(
+      annualRate: Decimal.parse('0.032'),
+      startDate: DateTime.utc(2024, 6, 1),
+      maturityDate: DateTime.utc(2025, 6, 1),
+      compounding: 'simple',
+      dayCount: 365,
+    ),
   );
   await addAsset(
     key: 'policy',
     accountKey: 'cn_insurance',
     type: AssetType.policy,
     code: 'PA-ENDOW-20Y',
-    qty: '1',
+    qty: '500000',
     cost: '60000',
     price: '72500',
     currency: 'CNY',
+    typeInfo: InsuranceInfo(
+      insurer: '平安人寿',
+      policyNumber: 'PA-ENDOW-2024-001',
+      annualPremium: Decimal.parse('3000'),
+      coverage: Decimal.parse('500000'),
+      effectiveDate: DateTime.utc(2024, 1, 1),
+      paymentFrequency: 'annual',
+    ),
   );
   await addAsset(
     key: 'gold',
@@ -231,6 +306,11 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     cost: '1900',
     price: '2318',
     currency: 'USD',
+    typeInfo: PreciousMetalInfo(
+      metalType: 'gold',
+      weight: Decimal.parse('8'),
+      purity: Decimal.parse('0.9999'),
+    ),
   );
   await addAsset(
     key: 'btc',
