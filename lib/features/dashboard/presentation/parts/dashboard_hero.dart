@@ -1184,9 +1184,8 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
     final pctStr =
         widget.totalValue > 0 ? '${(pct * 100).toStringAsFixed(2)}%' : '—';
 
-    final continent = regionMetaOf(widget.regionIndex, node.regionCode)?.continent;
     final accentColor =
-        kContinentColors[continent] ?? GwpColors.actionPrimary;
+        regionColor(widget.regionIndex, node.regionCode);
     final regionName = regionMetaOf(widget.regionIndex, node.regionCode)?.shortName
         ?? regionLabel(widget.regionIndex, node.regionCode);
     final scaleAlign =
@@ -1450,7 +1449,6 @@ class _DotWorldPainter extends CustomPainter {
     if (layers.contains(_MapLayer.edges)) _drawEdges(canvas, size);
     if (layers.contains(_MapLayer.regionDots)) {
       _drawRegionDots(canvas, size);
-      _drawRankBadges(canvas, size);
       if (layers.contains(_MapLayer.labels)) {
         _drawRegionLabels(canvas, size);
       }
@@ -1637,9 +1635,8 @@ class _DotWorldPainter extends CustomPainter {
           maxVal > 0 ? (node.value / maxVal).clamp(0.0, 1.0) : 0.5;
       final isSel = node.regionCode == selectedRegion;
 
-      final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final nodeColor =
-          kContinentColors[continent] ?? GwpColors.actionPrimary;
+          regionColor(regionIndex, node.regionCode);
 
       // Radar-ping ring (expanding + fading)
       // Phase-offset each node slightly so they don't all pulse together
@@ -1743,9 +1740,8 @@ class _DotWorldPainter extends CustomPainter {
       final rawCoords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords ?? (0.5, 0.5);
       final projected = _projectNode(size, node, cn);
       final depth = isCrypto ? 0.95 : FinanceMapProjection.projectDepth(rawCoords);
-      final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final badgeColor =
-          kContinentColors[continent] ?? GwpColors.actionPrimary;
+          regionColor(regionIndex, node.regionCode);
       final badgeR = 4.4 + depth * 0.75;
       final center = Offset(projected.dx - badgeR, projected.dy - badgeR);
       result[i + 1] = _HeroBadgeLayout(
@@ -1784,9 +1780,8 @@ class _DotWorldPainter extends CustomPainter {
 
       final projected = _projectNode(size, node, cn);
       final depth = isCrypto ? 0.95 : FinanceMapProjection.projectDepth(rawCoords);
-      final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final labelColor =
-          (kContinentColors[continent] ?? GwpColors.textMuted)
+          regionColor(regionIndex, node.regionCode)
               .withValues(alpha: 0.34 + depth * 0.26);
       final tp = TextPainter(
         text: TextSpan(
@@ -1813,9 +1808,10 @@ class _DotWorldPainter extends CustomPainter {
           anchorRadius: 3.5,
           priority: (priorityByCode[node.regionCode] ?? 0) * 100 + node.accountCount,
           keepVisible: topCodes.contains(node.regionCode),
-          gap: 2,
-          maxRing: 3,
-          ringSpacing: 8,
+          gap: 3,
+          leaderThreshold: 999,
+          maxRing: 4,
+          ringSpacing: 9,
         ),
       );
     }
@@ -1833,17 +1829,6 @@ class _DotWorldPainter extends CustomPainter {
       final center = centers[placement.id];
       final color = colors[placement.id];
       if (tp == null || center == null || color == null) continue;
-
-      if (placement.showLeaderLine) {
-        canvas.drawLine(
-          center,
-          placement.attachPoint,
-          Paint()
-            ..color = color.withValues(alpha: 0.32)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.5,
-        );
-      }
 
       tp.paint(canvas, placement.rect.topLeft);
     }
