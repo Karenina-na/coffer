@@ -17,9 +17,13 @@ class ProjectedLandSurface {
 
   static final Map<String, ProjectedLandSurface> _cache = {};
 
-  static ProjectedLandSurface forGrid({required int cols, required int rows}) {
-    final key = '$cols x $rows';
-    return _cache.putIfAbsent(key, () => _build(cols: cols, rows: rows));
+  static ProjectedLandSurface forGrid({
+    required int cols,
+    required int rows,
+    int gapFill = 5,
+  }) {
+    final key = '$cols x $rows g$gapFill';
+    return _cache.putIfAbsent(key, () => _build(cols: cols, rows: rows, gapFill: gapFill));
   }
 
   bool containsProjected(double px, double py) {
@@ -39,7 +43,11 @@ class ProjectedLandSurface {
     return count;
   }
 
-  static ProjectedLandSurface _build({required int cols, required int rows}) {
+  static ProjectedLandSurface _build({
+    required int cols,
+    required int rows,
+    int gapFill = 5,
+  }) {
     final bitmap = List.generate(rows, (_) => List.filled(cols, false));
     final sampleCols = cols * 3;
     final sampleRows = rows * 3;
@@ -61,7 +69,7 @@ class ProjectedLandSurface {
     return ProjectedLandSurface._(
       cols: cols,
       rows: rows,
-      bitmap: _fillBitmapGaps(bitmap, cols: cols, rows: rows),
+      bitmap: _fillBitmapGaps(bitmap, cols: cols, rows: rows, threshold: gapFill),
     );
   }
 }
@@ -79,10 +87,14 @@ bool containsRawLand(double px, double py) {
   return false;
 }
 
+/// Fills single-cell gaps in the bitmap.
+/// [threshold] controls aggressiveness: higher = less filling (more gaps preserved).
+/// Original default was 4. At 8, only fully-surrounded cells get filled.
 List<List<bool>> _fillBitmapGaps(
   List<List<bool>> bitmap, {
   required int cols,
   required int rows,
+  int threshold = 5,
 }) {
   final expanded = List.generate(
     rows,
@@ -102,7 +114,7 @@ List<List<bool>> _fillBitmapGaps(
           if (bitmap[rr][cc]) neighbors++;
         }
       }
-      if (neighbors >= 4) expanded[r][c] = true;
+      if (neighbors >= threshold) expanded[r][c] = true;
     }
   }
 
