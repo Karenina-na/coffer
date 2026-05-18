@@ -4,27 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gwp/core/ui/finance_map_projection.dart';
 
 void main() {
-  group('FinanceMapProjection model', () {
-    test('default model exposes named finance zones and frame params', () {
-      expect(FinanceMapProjection.defaultModel.frame.hemisphereWidth, closeTo(0.94, 1e-9));
-      expect(
-        FinanceMapProjection.defaultModel.zones.map((z) => z.name),
-        orderedEquals([
-          'northAtlanticCompression',
-          'canadaNorthCompression',
-          'europeBasin',
-          'northAmericaCorridor',
-          'eastAsiaBasin',
-          'southeastAsiaSupport',
-        ]),
-      );
+  group('FinanceProjectionFrame', () {
+    test('frame exposes essential params', () {
+      expect(FinanceMapProjection.frame.hemisphereWidthLeft, greaterThan(1.0));
+      expect(FinanceMapProjection.frame.hemisphereWidthRight, lessThan(1.05));
+      expect(FinanceMapProjection.frame.northSpan, lessThan(0.5));
+      expect(FinanceMapProjection.frame.mapSideInset, greaterThan(0));
     });
   });
 
   group('projectPoint', () {
     const size = Size(360, 196);
 
-    test('center sits higher than lateral points at the same latitude', () {
+    test('center sits higher than lateral points at same latitude', () {
       final left = FinanceMapProjection.projectPoint(size, (0.1, 0.4));
       final center = FinanceMapProjection.projectPoint(size, (0.5, 0.4));
       final right = FinanceMapProjection.projectPoint(size, (0.9, 0.4));
@@ -40,7 +32,7 @@ void main() {
       expect(center.dx, lessThan(right.dx));
     });
 
-    test('projected points remain in bounds', () {
+    test('projected Y remains in bounds, X may crop at edges', () {
       final points = [
         FinanceMapProjection.projectPoint(size, (0.0, 0.0)),
         FinanceMapProjection.projectPoint(size, (1.0, 0.0)),
@@ -48,7 +40,6 @@ void main() {
         FinanceMapProjection.projectPoint(size, (1.0, 1.0)),
       ];
       for (final point in points) {
-        expect(point.dx, inInclusiveRange(0.0, size.width));
         expect(point.dy, inInclusiveRange(0.0, size.height));
       }
     });
@@ -59,24 +50,14 @@ void main() {
       expect(north.dy, lessThan(south.dy));
     });
 
-    test('edge sits lower than center for dome depth', () {
+    test('edge sits lower than center (hemisphere curvature)', () {
       final center = FinanceMapProjection.projectPoint(size, (0.5, 0.35));
       final edge = FinanceMapProjection.projectPoint(size, (0.0, 0.35));
       expect(center.dy, lessThan(edge.dy));
     });
   });
 
-  group('warpCoords and projectDepth', () {
-    test('finance belts reshape local horizontal spacing', () {
-      final europeLeft = FinanceMapProjection.warpCoords((0.49, 0.275)).$1;
-      final europeRight = FinanceMapProjection.warpCoords((0.58, 0.275)).$1;
-      expect(europeRight - europeLeft, greaterThan(0.09));
-
-      final eastAsiaLeft = FinanceMapProjection.warpCoords((0.73, 0.315)).$1;
-      final eastAsiaRight = FinanceMapProjection.warpCoords((0.80, 0.315)).$1;
-      expect(eastAsiaRight - eastAsiaLeft, isNot(closeTo(0.07, 1e-3)));
-    });
-
+  group('projectDepth', () {
     test('depth is higher at center and north', () {
       expect(
         FinanceMapProjection.projectDepth((0.5, 0.4)),
@@ -98,6 +79,27 @@ void main() {
         final depth = FinanceMapProjection.projectDepth(sample);
         expect(depth, inInclusiveRange(0.0, 1.0));
       }
+    });
+  });
+
+  group('display transform', () {
+    test('negative offsetY shifts map up', () {
+      // frame has displayOffsetY = -0.08
+      final north = FinanceMapProjection.projectPoint(const Size(360, 300), (0.5, 0.0));
+      // With negative offset, northernmost point may shift above canvas
+      expect(north.dy, lessThan(30));
+    });
+  });
+
+  group('projectCryptoShelf', () {
+    test('positions nodes evenly at bottom', () {
+      const size = Size(360, 300);
+      final a = FinanceMapProjection.projectCryptoShelf(size, 0, 2);
+      final b = FinanceMapProjection.projectCryptoShelf(size, 1, 2);
+      expect(a.dx, lessThan(b.dx));
+      // Both near bottom
+      expect(a.dy, greaterThan(size.height * 0.80));
+      expect(b.dy, greaterThan(size.height * 0.80));
     });
   });
 }
