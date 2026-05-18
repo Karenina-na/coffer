@@ -104,7 +104,8 @@ List<MapEdge> heroFilterEdges(
 const _dotCols = 88;
 const _dotRows = 42;
 
-final _landSurface = ProjectedLandSurface.forGrid(cols: _dotCols, rows: _dotRows);
+final _landSurface = ProjectedLandSurface.forGrid(
+    cols: _dotCols, rows: _dotRows, gapFill: 6);
 
 @visibleForTesting
 bool heroLandContainsPoint(double px, double py) => containsRawLand(px, py);
@@ -118,9 +119,7 @@ int heroLandCellCount() => _landSurface.cellCount();
 
 
 @visibleForTesting
-(double, double) heroWarpCoords((double, double) norm) {
-  return FinanceMapProjection.warpCoords(norm);
-}
+(double, double) heroWarpCoords((double, double) norm) => norm;
 
 @visibleForTesting
 double heroProjectDepth((double, double) norm) {
@@ -283,10 +282,23 @@ class _GridMapContentState extends State<_GridMapContent>
     Offset? hitOffset;
 
     if (_layers.contains(_MapLayer.regionDots)) {
+      final cn = _visibleNodes
+          .where((n) => regionMetaOf(widget.regionIndex, n.regionCode)?.continent == '数字')
+          .toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
       for (final node in _visibleNodes) {
-        final coords = regionMetaOf(widget.regionIndex, node.regionCode)?.mapCoords;
-        if (coords == null) continue;
-        final dotPos = FinanceMapProjection.projectPoint(canvasSize, coords);
+        final isCrypto = regionMetaOf(widget.regionIndex, node.regionCode)?.continent == '数字';
+        final dotPos = isCrypto
+            ? FinanceMapProjection.projectCryptoShelf(
+                canvasSize,
+                cn.indexWhere((n) => n.regionCode == node.regionCode),
+                cn.length,
+                maxValue: cn.isEmpty ? 1 : cn.first.value,
+                nodeValue: node.value,
+              )
+            : FinanceMapProjection.projectPoint(
+                canvasSize,
+                regionMetaOf(widget.regionIndex, node.regionCode)?.mapCoords ?? (0.5, 0.5));
         final dist = (tap - dotPos).distance;
         if (dist < bestDist) {
           bestDist = dist;
@@ -373,7 +385,7 @@ class _GridMapContentState extends State<_GridMapContent>
         // ── Map canvas ────────────────────────────────────────
         LayoutBuilder(builder: (context, constraints) {
           final canvasWidth = constraints.maxWidth;
-          final canvasHeight = (canvasWidth * 0.49).clamp(176.0, 204.0);
+          final canvasHeight = (canvasWidth * 0.48).clamp(220.0, 250.0);
           final canvasSize = Size(canvasWidth, canvasHeight);
           final compactCanvas = canvasWidth < 430;
 
@@ -1412,6 +1424,26 @@ class _DotWorldPainter extends CustomPainter {
   final String? selectedRegion;
   final double pulseValue;
 
+  bool _isCrypto(String code) =>
+      regionMetaOf(regionIndex, code)?.continent == '数字';
+
+  List<MapNode> get _cryptoNodes =>
+      nodes.where((n) => _isCrypto(n.regionCode)).toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+  Offset _projectNode(Size size, MapNode node, List<MapNode> cn) {
+    if (_isCrypto(node.regionCode)) {
+      final idx = cn.indexWhere((n) => n.regionCode == node.regionCode);
+      return FinanceMapProjection.projectCryptoShelf(
+        size, idx >= 0 ? idx : 0, cn.length,
+        maxValue: cn.isEmpty ? 1 : cn.first.value,
+        nodeValue: node.value,
+      );
+    }
+    final rc = regionMetaOf(regionIndex, node.regionCode)?.mapCoords ?? (0.5, 0.5);
+    return FinanceMapProjection.projectPoint(size, rc);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     _drawDotMatrix(canvas, size);
@@ -1423,7 +1455,21 @@ class _DotWorldPainter extends CustomPainter {
         _drawRegionLabels(canvas, size);
       }
     }
-    _drawVignette(canvas, size);
+    _drawCryptoShelfBg(canvas, size);
+  }
+
+  void _drawCryptoShelfBg(Canvas canvas, Size size) {
+    final cn = _cryptoNodes;
+    if (cn.isEmpty) return;
+    final hub = FinanceMapProjection.cryptoHubCenter;
+    final center = FinanceMapProjection.projectPoint(size, hub);
+    final radius = FinanceMapProjection.cryptoHubRadius(size);
+    // Dot-matrix style: same color as land dots, thin dotted ring
+    final paint = Paint()
+      ..color = GwpColors.borderStrong.withValues(alpha: 0.25)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, radius, paint);
   }
 
   // ── Dot matrix ───────────────────────────────────────────────
@@ -1520,6 +1566,7 @@ class _DotWorldPainter extends CustomPainter {
   void _drawEdges(Canvas canvas, Size size) {
     final compact = size.width < 430;
     for (final edge in edges) {
+      if (_isCrypto(edge.fromRegion) || _isCrypto(edge.toRegion)) continue;
       final geometry = projectEdgeGeometry(
         size: size,
         fromCoords: regionMetaOf(regionIndex, edge.fromRegion)?.mapCoords,
@@ -1578,12 +1625,13 @@ class _DotWorldPainter extends CustomPainter {
     if (nodes.isEmpty) return;
     final compact = size.width < 430;
     final maxVal = nodes.fold<double>(0, (m, n) => n.value > m ? n.value : m);
+    final cn = _cryptoNodes;
 
     for (final node in nodes) {
-      final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
-      if (coords == null) continue;
-      final center = FinanceMapProjection.projectPoint(size, coords);
-      final depth = FinanceMapProjection.projectDepth(coords);
+      final isCrypto = _isCrypto(node.regionCode);
+      final rawCoords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords ?? (0.5, 0.5);
+      final center = _projectNode(size, node, cn);
+      final depth = isCrypto ? 0.95 : FinanceMapProjection.projectDepth(rawCoords);
 
       final ratio =
           maxVal > 0 ? (node.value / maxVal).clamp(0.0, 1.0) : 0.5;
@@ -1595,7 +1643,9 @@ class _DotWorldPainter extends CustomPainter {
 
       // Radar-ping ring (expanding + fading)
       // Phase-offset each node slightly so they don't all pulse together
-      final phaseOffset = ((coords.$1 + coords.$2) * 3.7) % 1.0;
+      final phaseOffset = isCrypto
+          ? (center.dx / size.width + center.dy / size.height) * 3.7 % 1.0
+          : ((rawCoords.$1 + rawCoords.$2) * 3.7) % 1.0;
       final phase = (pulseValue + phaseOffset) % 1.0;
       final pingR = ((isSel ? 7.2 : 4.8) + phase * 8.8) * (0.90 + depth * 0.18);
       final pingAlpha = (1 - phase) * (isSel ? 0.22 : 0.10) * (0.72 + depth * 0.28);
@@ -1686,13 +1736,13 @@ class _DotWorldPainter extends CustomPainter {
     final top = sorted.take(3).toList();
     final result = <int, _HeroBadgeLayout>{};
 
+    final cn = _cryptoNodes;
     for (var i = 0; i < top.length; i++) {
       final node = top[i];
-      final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
-      if (coords == null) continue;
-
-      final projected = heroProjectPoint(size, coords);
-      final depth = heroProjectDepth(coords);
+      final isCrypto = _isCrypto(node.regionCode);
+      final rawCoords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords ?? (0.5, 0.5);
+      final projected = _projectNode(size, node, cn);
+      final depth = isCrypto ? 0.95 : FinanceMapProjection.projectDepth(rawCoords);
       final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final badgeColor =
           kContinentColors[continent] ?? GwpColors.actionPrimary;
@@ -1726,13 +1776,14 @@ class _DotWorldPainter extends CustomPainter {
     final centers = <String, Offset>{};
     final colors = <String, Color>{};
 
+    final cn = _cryptoNodes;
     for (final node in nodes) {
       if (node.regionCode == selectedRegion) continue;
-      final coords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords;
-      if (coords == null) continue;
+      final isCrypto = _isCrypto(node.regionCode);
+      final rawCoords = regionMetaOf(regionIndex, node.regionCode)?.mapCoords ?? (0.5, 0.5);
 
-      final projected = heroProjectPoint(size, coords);
-      final depth = heroProjectDepth(coords);
+      final projected = _projectNode(size, node, cn);
+      final depth = isCrypto ? 0.95 : FinanceMapProjection.projectDepth(rawCoords);
       final continent = regionMetaOf(regionIndex, node.regionCode)?.continent;
       final labelColor =
           (kContinentColors[continent] ?? GwpColors.textMuted)
@@ -1748,7 +1799,7 @@ class _DotWorldPainter extends CustomPainter {
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout(maxWidth: 24);
+      )..layout(maxWidth: 40);
 
       textPainters[node.regionCode] = tp;
       depths[node.regionCode] = depth;
