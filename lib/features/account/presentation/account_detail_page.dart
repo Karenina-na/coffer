@@ -656,177 +656,168 @@ class _AccountHero extends StatelessWidget {
 // Account type-specific info card
 // ──────────────────────────────────────────────────────────────
 
-class _AccountInfoCard extends StatelessWidget {
+class _AccountInfoCard extends StatefulWidget {
   const _AccountInfoCard({required this.account});
   final Account account;
 
   @override
-  Widget build(BuildContext context) {
-    final info = account.typeInfo;
-    return _SectionCard(
-      icon: Icons.info_outline,
-      iconColor: GwpColors.actionPrimary,
-      title: '账户信息',
-      child: Column(children: [
-        // Basic fields (always shown)
-        _KvRow(k: '类型', v: account.accountType.labelZh),
-        const Divider(height: 1, color: GwpColors.border),
-        _KvRow(k: '状态', v: account.status.labelZh),
-        const Divider(height: 1, color: GwpColors.border),
-        _KvRow(k: '地区', v: account.sovereigntyRegion),
-        if (account.accountNo != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '编号', v: account.accountNo!),
-        ],
-        if (account.openedAt != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '开户时间', v: _fmtDate(account.openedAt!)),
-        ],
-        if (account.fxSpreadPercent > 0) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(
-            k: '换汇损耗',
-            v: '${account.fxSpreadPercent.toStringAsFixed(2)}%',
-          ),
-        ],
-        if (account.fxFixedFee != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '换汇固定费', v: account.fxFixedFee.toString()),
-        ],
-        // Type-specific
-        if (info is BankAccountInfo) _bankRows(info),
-        if (info is BrokerAccountInfo) _brokerRows(info),
-        if (info is CryptoWalletInfo) _walletRows(info),
-        if (info is CryptoExchangeInfo) _cexRows(info),
-        if (info is InsuranceAccountInfo) _insuranceRows(info),
-        if (info is PaymentAccountInfo) _paymentRows(info),
-        if (info is CustodyAccountInfo) _custodyRows(info),
-      ]),
-    );
-  }
+  State<_AccountInfoCard> createState() => _AccountInfoCardState();
+}
 
-  Widget _bankRows(BankAccountInfo info) => Column(children: [
-        if (info.swiftBic != null && info.swiftBic!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: 'SWIFT/BIC', v: info.swiftBic!),
-        ],
-        if (info.iban != null && info.iban!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: 'IBAN', v: info.iban!),
-        ],
-        if (info.branchName != null && info.branchName!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '分行', v: info.branchName!),
-        ],
-        if (info.accountSubtype != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '账户子类型', v: _bankSubtypeLabel(info.accountSubtype!)),
-        ],
-      ]);
+class _AccountInfoCardState extends State<_AccountInfoCard> {
+  bool _expanded = false;
 
-  Widget _brokerRows(BrokerAccountInfo info) => Column(children: [
-        if (info.accountSubtype != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '账户子类型', v: _brokerSubtypeLabel(info.accountSubtype!)),
-        ],
-        if (info.baseCurrency != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '基础币种', v: info.baseCurrency!),
-        ],
-        const Divider(height: 1, color: GwpColors.border),
-        _KvRow(k: '保证金', v: info.marginEnabled ? '已开通' : '未开通'),
-      ]);
-
-  Widget _walletRows(CryptoWalletInfo info) => Column(children: [
-        if (info.walletType != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '钱包类型', v: _walletTypeLabel(info.walletType!)),
-        ],
-        if (info.chain != null && info.chain!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '链网络', v: info.chain!),
-        ],
-      ]);
-
-  Widget _cexRows(CryptoExchangeInfo info) => Column(children: [
-        const Divider(height: 1, color: GwpColors.border),
-        _KvRow(k: 'API Key', v: info.hasApiKey ? '已配置' : '未配置'),
-        if (info.supportedNetworks != null &&
-            info.supportedNetworks!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '支持网络', v: info.supportedNetworks!),
-        ],
-      ]);
-
-  Widget _insuranceRows(InsuranceAccountInfo info) => Column(children: [
-        if (info.policyType != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '保单类型', v: _policyTypeLabel(info.policyType!)),
-        ],
-        if (info.registrationNo != null && info.registrationNo!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '注册号', v: info.registrationNo!),
-        ],
-      ]);
-
-  Widget _paymentRows(PaymentAccountInfo info) => Column(children: [
-        if (info.platform != null && info.platform!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '平台', v: info.platform!),
-        ],
-      ]);
-
-  Widget _custodyRows(CustodyAccountInfo info) => Column(children: [
-        if (info.custodianName != null && info.custodianName!.isNotEmpty) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '托管机构', v: info.custodianName!),
-        ],
-        if (info.accountStructure != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(
-              k: '账户结构',
-              v: info.accountStructure == 'omnibus' ? '综合账户' : '分离账户'),
-        ],
-      ]);
-
-  // ── label helpers ──
-
-  static String _bankSubtypeLabel(String v) => switch (v) {
-        'checking' => '活期 (Checking)',
-        'savings' => '储蓄 (Savings)',
-        'timeDeposit' => '定期 (Time Deposit)',
-        _ => v,
-      };
-
-  static String _brokerSubtypeLabel(String v) => switch (v) {
-        'cash' => '现金账户 (Cash)',
-        'margin' => '保证金账户 (Margin)',
-        'retirement' => '退休账户 (Retirement)',
-        'education' => '教育账户 (Education)',
-        _ => v,
-      };
-
-  static String _walletTypeLabel(String v) => switch (v) {
-        'hot' => '热钱包 (Hot)',
-        'cold' => '冷钱包 (Cold)',
-        'hardware' => '硬件钱包 (Hardware)',
-        'multisig' => '多签钱包 (Multisig)',
-        _ => v,
-      };
-
-  static String _policyTypeLabel(String v) => switch (v) {
-        'life' => '寿险',
-        'health' => '健康险',
-        'property' => '财产险',
-        'annuity' => '年金',
-        _ => v,
-      };
+  Account get account => widget.account;
 
   static String _fmtDate(DateTime d) {
     final l = d.toLocal();
     String p(int n) => n.toString().padLeft(2, '0');
     return '${l.year}-${p(l.month)}-${p(l.day)}';
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final info = account.typeInfo;
+    final hasDetails = info is! AccountNoExtraInfo ||
+        account.openedAt != null ||
+        account.fxSpreadPercent > 0 ||
+        account.fxFixedFee != null;
+
+    return _SectionCard(
+      icon: Icons.info_outline,
+      iconColor: GwpColors.actionPrimary,
+      title: '账户信息',
+      child: Column(children: [
+        _KvRow(k: '类型', v: account.accountType.labelZh),
+        const Divider(height: 1, color: GwpColors.border),
+        _KvRow(k: '状态', v: account.status.labelZh),
+        if (account.accountNo != null) ...[
+          const Divider(height: 1, color: GwpColors.border),
+          _KvRow(k: '编号', v: account.accountNo!),
+        ],
+        if (_expanded) ...[
+          const Divider(height: 1, color: GwpColors.border),
+          _KvRow(k: '地区', v: account.sovereigntyRegion),
+          if (account.openedAt != null) ...[
+            const Divider(height: 1, color: GwpColors.border),
+            _KvRow(k: '开户时间', v: _fmtDate(account.openedAt!)),
+          ],
+          if (account.fxSpreadPercent > 0) ...[
+            const Divider(height: 1, color: GwpColors.border),
+            _KvRow(k: '换汇损耗',
+                v: '${account.fxSpreadPercent.toStringAsFixed(2)}%'),
+          ],
+          if (account.fxFixedFee != null) ...[
+            const Divider(height: 1, color: GwpColors.border),
+            _KvRow(k: '换汇固定费', v: account.fxFixedFee.toString()),
+          ],
+          if (info is BankAccountInfo) ...[
+            if (info.swiftBic != null && info.swiftBic!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: 'SWIFT/BIC', v: info.swiftBic!)],
+            if (info.iban != null && info.iban!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: 'IBAN', v: info.iban!)],
+            if (info.branchName != null && info.branchName!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '分行', v: info.branchName!)],
+            if (info.accountSubtype != null)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '账户子类型',
+                      v: _bankSubtype(info.accountSubtype!))],
+          ],
+          if (info is BrokerAccountInfo) ...[
+            if (info.accountSubtype != null)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(
+                      k: '账户子类型',
+                      v: _brokerSubtype(info.accountSubtype!))],
+            if (info.baseCurrency != null)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '基础币种', v: info.baseCurrency!)],
+            const Divider(height: 1, color: GwpColors.border),
+            _KvRow(k: '保证金', v: info.marginEnabled ? '已开通' : '未开通'),
+          ],
+          if (info is CryptoWalletInfo) ...[
+            if (info.walletType != null)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(
+                      k: '钱包类型', v: _walletType(info.walletType!))],
+            if (info.chain != null && info.chain!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '链网络', v: info.chain!)],
+          ],
+          if (info is CryptoExchangeInfo) ...[
+            const Divider(height: 1, color: GwpColors.border),
+            _KvRow(k: 'API Key', v: info.hasApiKey ? '已配置' : '未配置'),
+            if (info.supportedNetworks != null &&
+                info.supportedNetworks!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '支持网络', v: info.supportedNetworks!)],
+          ],
+          if (info is InsuranceAccountInfo) ...[
+            if (info.policyType != null)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(
+                      k: '保单类型', v: _policyType(info.policyType!))],
+            if (info.registrationNo != null &&
+                info.registrationNo!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '注册号', v: info.registrationNo!)],
+          ],
+          if (info is PaymentAccountInfo) ...[
+            if (info.platform != null && info.platform!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '平台', v: info.platform!)],
+          ],
+          if (info is CustodyAccountInfo) ...[
+            if (info.custodianName != null &&
+                info.custodianName!.isNotEmpty)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(k: '托管机构', v: info.custodianName!)],
+            if (info.accountStructure != null)
+              ...[const Divider(height: 1, color: GwpColors.border),
+                  _KvRow(
+                      k: '账户结构',
+                      v: info.accountStructure == 'omnibus'
+                          ? '综合账户'
+                          : '分离账户')],
+          ],
+        ],
+        if (hasDetails) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 16, color: GwpColors.textMuted),
+              const SizedBox(width: 4),
+              Text(_expanded ? '收起' : '展开详情',
+                  style: const TextStyle(
+                      fontSize: 11, color: GwpColors.textMuted)),
+            ]),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  static String _bankSubtype(String v) => switch (v) {
+        'checking' => '活期', 'savings' => '储蓄',
+        'timeDeposit' => '定期', _ => v,
+      };
+  static String _brokerSubtype(String v) => switch (v) {
+        'cash' => '现金账户', 'margin' => '保证金账户',
+        'retirement' => '退休账户', 'education' => '教育账户', _ => v,
+      };
+  static String _walletType(String v) => switch (v) {
+        'hot' => '热钱包', 'cold' => '冷钱包',
+        'hardware' => '硬件钱包', 'multisig' => '多签钱包', _ => v,
+      };
+  static String _policyType(String v) => switch (v) {
+        'life' => '寿险', 'health' => '健康险',
+        'property' => '财产险', 'annuity' => '年金', _ => v,
+      };
 }
 
 class _KvRow extends StatelessWidget {
@@ -1863,10 +1854,14 @@ class _CardGallerySection extends StatelessWidget {
             ),
             data: (cards) {
               if (cards.isEmpty) return const _EmptyHint('账户下暂无卡片');
-              return Wrap(
-                spacing: GwpSpacing.sm,
-                runSpacing: GwpSpacing.sm,
-                children: [for (final c in cards) _VisualCard(card: c, account: account)],
+              return SizedBox(
+                height: 110,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: cards.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: GwpSpacing.sm),
+                  itemBuilder: (_, i) => _VisualCard(card: cards[i], account: account),
+                ),
               );
             },
           ),
