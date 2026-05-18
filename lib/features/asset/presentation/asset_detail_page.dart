@@ -254,6 +254,12 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                 ),
                 const SizedBox(height: GwpSpacing.base),
                 _SectionCard(
+                  icon: Icons.category_outlined,
+                  title: '资产详情',
+                  children: [_TypeInfoCard(asset: asset)],
+                ),
+                const SizedBox(height: GwpSpacing.md),
+                _SectionCard(
                   icon: Icons.show_chart,
                   title: '价格走势',
                   children: [
@@ -285,14 +291,6 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                     ),
                   ],
                 ),
-                if (_hasTypeInfo(asset)) ...[
-                  const SizedBox(height: GwpSpacing.md),
-                  _SectionCard(
-                    icon: Icons.category_outlined,
-                    title: _typeInfoTitle(asset.assetType),
-                    children: [_TypeInfoCard(asset: asset)],
-                  ),
-                ],
                 const SizedBox(height: GwpSpacing.md),
                 _SectionCard(
                   icon: Icons.account_balance_outlined,
@@ -306,12 +304,6 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                           : regionLabel(regionIndex, account.sovereigntyRegion),
                     ),
                   ],
-                ),
-                const SizedBox(height: GwpSpacing.md),
-                _SectionCard(
-                  icon: Icons.info_outline,
-                  title: '基本信息',
-                  children: [_BasicInfoCard(asset: asset)],
                 ),
                 if (filtered.isNotEmpty) ...[
                   const SizedBox(height: GwpSpacing.md),
@@ -1588,29 +1580,27 @@ class _MetricCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: GwpTypo.monoFont,
+            fontFeatures: GwpTypo.tabularFigures,
+            fontSize: emphasize ? 14 : 12,
+            fontWeight: emphasize ? FontWeight.w600 : FontWeight.w500,
+            color: GwpColors.textPrimary,
           ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
-              fontSize: emphasize ? 14 : 12,
-              fontWeight: emphasize ? FontWeight.w600 : FontWeight.w500,
-              color: GwpColors.textPrimary,
-            ),
-            maxLines: 2,
-            softWrap: true,
-          ),
-        ],
-      ),
+          maxLines: 2,
+          softWrap: true,
+        ),
+      ],
     );
   }
 }
@@ -1768,29 +1758,51 @@ String _typeInfoTitle(AssetType type) => switch (type) {
       _ => '详情',
     };
 
-class _TypeInfoCard extends StatelessWidget {
+class _TypeInfoCard extends StatefulWidget {
   const _TypeInfoCard({required this.asset});
   final Asset asset;
+
+  @override
+  State<_TypeInfoCard> createState() => _TypeInfoCardState();
+}
+
+class _TypeInfoCardState extends State<_TypeInfoCard> {
+  bool _expanded = false;
+
+  Asset get asset => widget.asset;
 
   @override
   Widget build(BuildContext context) {
     final info = asset.typeInfo;
     return Column(
-      children: switch (info) {
-        FixedIncomeInfo(:final issuer, :final annualRate,
-            :final startDate, :final maturityDate, :final compounding,
-            :final dayCount) =>
-          _fiRows(issuer, annualRate, startDate, maturityDate,
-              compounding, dayCount),
-        InsuranceInfo(:final insurer, :final policyNumber,
-            :final annualPremium, :final coverage, :final effectiveDate,
-            :final maturityDate, :final paymentFrequency) =>
-          _insRows(insurer, policyNumber, annualPremium, coverage,
-              effectiveDate, maturityDate, paymentFrequency),
-        PreciousMetalInfo(:final metalType, :final weight, :final purity) =>
-          _pmRows(metalType, weight, purity),
-        _ => [const SizedBox.shrink()],
-      },
+      children: [
+        if (_expanded)
+          ...switch (info) {
+            FixedIncomeInfo(:final issuer, :final annualRate,
+                :final startDate, :final maturityDate, :final compounding,
+                :final dayCount) =>
+              _fiRows(issuer, annualRate, startDate, maturityDate,
+                  compounding, dayCount),
+            InsuranceInfo(:final insurer, :final policyNumber,
+                :final annualPremium, :final coverage, :final effectiveDate,
+                :final maturityDate, :final paymentFrequency) =>
+              _insRows(insurer, policyNumber, annualPremium, coverage,
+                  effectiveDate, maturityDate, paymentFrequency),
+            PreciousMetalInfo(:final metalType, :final weight, :final purity) =>
+              _pmRows(metalType, weight, purity),
+            _ => _basicRows(),
+          },
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                size: 16, color: GwpColors.textMuted),
+            const SizedBox(width: 4),
+            Text(_expanded ? '收起' : '展开详情',
+                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted)),
+          ]),
+        ),
+      ],
     );
   }
 
@@ -1881,6 +1893,19 @@ class _TypeInfoCard extends StatelessWidget {
           const Divider(height: 1, color: GwpColors.border),
       ],
     ];
+  }
+
+  List<Widget> _basicRows() {
+    final a = asset;
+    final rows = <(String, String)>[
+      ('资产类型', _assetTypeLabel(a.assetType)),
+      ('状态', _assetStatusLabel(a.status)),
+      ('币种', a.currency),
+      if (a.assetCode != null) ('代码', a.assetCode!),
+      ('创建时间', _fmtDateTime(a.createdAt)),
+      ('更新时间', _fmtDateTime(a.updatedAt)),
+    ];
+    return _buildRows(rows);
   }
 }
 
