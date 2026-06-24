@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/domain/entities/account.dart';
-import 'package:gwp/domain/entities/account_channel.dart';
-import 'package:gwp/domain/entities/account_enums.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/channel.dart';
-import 'package:gwp/domain/entities/channel_enums.dart';
-import 'package:gwp/domain/entities/dict_entry.dart';
-import 'package:gwp/domain/entities/dict_type.dart';
-import 'package:gwp/features/account/presentation/account_providers.dart';
-import 'package:gwp/features/channel/presentation/channel_detail_page.dart';
-import 'package:gwp/features/channel/presentation/channel_providers.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/domain/entities/account.dart';
+import 'package:coffer/domain/entities/account_channel.dart';
+import 'package:coffer/domain/entities/account_enums.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/channel.dart';
+import 'package:coffer/domain/entities/channel_enums.dart';
+import 'package:coffer/domain/entities/dict_entry.dart';
+import 'package:coffer/domain/entities/dict_type.dart';
+import 'package:coffer/features/account/presentation/account_providers.dart';
+import 'package:coffer/features/channel/presentation/channel_detail_page.dart';
+import 'package:coffer/features/channel/presentation/channel_providers.dart';
 
 Future<void> _pumpChannelDetail(WidgetTester tester) async {
   tester.view.physicalSize = const Size(1080, 2400);
@@ -42,6 +42,7 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
       sovereigntyRegion: 'CN',
       institutionName: 'ICBC',
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     ),
@@ -51,16 +52,13 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
       sovereigntyRegion: 'US',
       institutionName: 'Fidelity',
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     ),
   ];
   final links = [
-    AccountChannel(
-      accountId: 'acc-1',
-      channelId: 'ch-1',
-      createdAt: now,
-    ),
+    AccountChannel(accountId: 'acc-1', channelId: 'ch-1', createdAt: now),
     AccountChannel(
       accountId: 'acc-2',
       channelId: 'ch-1',
@@ -85,7 +83,8 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
               type: DictType.transferProtocol,
               code: 'SWIFT',
               name: '环球银行金融电信协会',
-              nameEn: 'Society for Worldwide Interbank Financial Telecommunication',
+              nameEn:
+                  'Society for Worldwide Interbank Financial Telecommunication',
               isBuiltin: true,
               createdAt: now,
               updatedAt: now,
@@ -99,9 +98,7 @@ Future<void> _pumpChannelDetail(WidgetTester tester) async {
           }),
         ),
       ],
-      child: const MaterialApp(
-        home: ChannelDetailPage(channelId: 'ch-1'),
-      ),
+      child: const MaterialApp(home: ChannelDetailPage(channelId: 'ch-1')),
     ),
   );
   await tester.pump();

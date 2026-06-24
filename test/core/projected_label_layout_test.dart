@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/ui/projected_label_layout.dart';
+import 'package:coffer/core/ui/projected_label_layout.dart';
 
 void main() {
   group('computeProjectedLabelPlacements', () {

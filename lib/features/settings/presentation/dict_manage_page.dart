@@ -64,7 +64,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
   Widget _buildRegionSubtitle(DictEntry e, Map<String, String> regionNameByCode) {
     final parts = <Widget>[];
     if (e.continent != null) {
-      parts.add(const Icon(Icons.public, size: 12, color: GwpColors.textMuted));
+      parts.add(const Icon(Icons.public, size: 12, color: CofferColors.textMuted));
       parts.add(const SizedBox(width: 2));
       parts.add(Text(e.continent!, style: const TextStyle(fontSize: 12)));
     }
@@ -75,8 +75,8 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
           '锚 ${e.anchorLat!.toStringAsFixed(1)}, ${e.anchorLon!.toStringAsFixed(1)}',
           style: const TextStyle(
             fontSize: 11,
-            fontFamily: GwpTypo.monoFont,
-            color: GwpColors.textMuted,
+            fontFamily: CofferTypo.monoFont,
+            color: CofferColors.textMuted,
           ),
         ),
       );
@@ -88,8 +88,8 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
           '地 ${e.mapLat!.toStringAsFixed(1)}, ${e.mapLon!.toStringAsFixed(1)}',
           style: const TextStyle(
             fontSize: 11,
-            fontFamily: GwpTypo.monoFont,
-            color: GwpColors.textMuted,
+            fontFamily: CofferTypo.monoFont,
+            color: CofferColors.textMuted,
           ),
         ),
       );
@@ -100,7 +100,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
       parts.add(
         Text(
           '⊂ $parentLabel',
-          style: const TextStyle(fontSize: 11, color: GwpColors.info),
+          style: const TextStyle(fontSize: 11, color: CofferColors.info),
         ),
       );
     }
@@ -164,11 +164,10 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
       return const Center(child: Text('暂无条目，从右上「更多 → 新建」新增'));
     }
     return ReorderableListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: CofferSpacing.sm),
       itemCount: entries.length,
       buildDefaultDragHandles: false,
-      onReorder: (oldIndex, newIndex) async {
-        if (newIndex > oldIndex) newIndex -= 1;
+      onReorderItem: (oldIndex, newIndex) async {
         final reordered = [...entries];
         final moved = reordered.removeAt(oldIndex);
         reordered.insert(newIndex, moved);
@@ -193,7 +192,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
                 children: [
                   if (_isRegion && e.flagEmoji != null) ...[
                     Text(e.flagEmoji!, style: const TextStyle(fontSize: 18)),
-                    const SizedBox(width: GwpSpacing.sm),
+                    const SizedBox(width: CofferSpacing.sm),
                   ],
                   Flexible(
                     child: Text(
@@ -202,17 +201,17 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: GwpSpacing.sm),
+                  const SizedBox(width: CofferSpacing.sm),
                   Text(
                     e.code,
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 12,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                   if (e.isBuiltin) ...[
-                    const SizedBox(width: GwpSpacing.sm),
+                    const SizedBox(width: CofferSpacing.sm),
                     const BuiltinBadge(),
                   ],
                 ],
@@ -243,7 +242,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
                     index: i,
                     child: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.drag_handle, color: GwpColors.textMuted),
+                      child: Icon(Icons.drag_handle, color: CofferColors.textMuted),
                     ),
                   ),
                 ],
@@ -330,7 +329,7 @@ class _DictManagePageState extends ConsumerState<DictManagePage> {
             child: const Text('取消'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: GwpColors.negative),
+            style: FilledButton.styleFrom(backgroundColor: CofferColors.negative),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('删除'),
           ),
@@ -515,15 +514,15 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: GwpColors.surface2,
+                      color: CofferColors.surface2,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: GwpColors.border, width: 0.5),
+                      border: Border.all(color: CofferColors.border, width: 0.5),
                     ),
                     child: const Text(
                       '可先只填代码和名称，保存后用右上角同步自动补全旗帜、地理坐标、大洲和上级区域等信息；地图锚点可单独微调金融中心位置。',
                       style: TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                   ),
@@ -545,7 +544,7 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                           _showAdvancedRegionMeta
                               ? Icons.expand_less_rounded
                               : Icons.expand_more_rounded,
-                          color: GwpColors.textMuted,
+                          color: CofferColors.textMuted,
                         ),
                       ],
                     ),
@@ -583,7 +582,7 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                   ),
@@ -631,7 +630,7 @@ class _DictFormDialogState extends State<_DictFormDialog> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                   ),

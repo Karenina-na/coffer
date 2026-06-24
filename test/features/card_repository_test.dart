@@ -1,18 +1,18 @@
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/crypto/field_cipher.dart';
-import 'package:gwp/core/crypto/key_derivation.dart';
-import 'package:gwp/core/crypto/secure_key_store.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/data/crypto_service.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/data/repositories/drift_account_repository.dart';
-import 'package:gwp/data/repositories/drift_card_repository.dart';
-import 'package:gwp/domain/entities/account_enums.dart';
-import 'package:gwp/domain/entities/card_enums.dart';
-import 'package:gwp/domain/usecases/create_account.dart';
-import 'package:gwp/domain/usecases/create_card.dart';
+import 'package:coffer/core/crypto/field_cipher.dart';
+import 'package:coffer/core/crypto/key_derivation.dart';
+import 'package:coffer/core/crypto/secure_key_store.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/data/crypto_service.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/data/repositories/drift_account_repository.dart';
+import 'package:coffer/data/repositories/drift_card_repository.dart';
+import 'package:coffer/domain/entities/account_enums.dart';
+import 'package:coffer/domain/entities/card_enums.dart';
+import 'package:coffer/domain/usecases/create_account.dart';
+import 'package:coffer/domain/usecases/create_card.dart';
 
 class _FakeKeyStore implements SecureKeyStore {
   _FakeKeyStore(this._key);

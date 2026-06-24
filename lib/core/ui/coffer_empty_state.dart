@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'design_tokens.dart';
 
 /// Actionable empty / error / loading states per DESIGN.md §4.7.
-class GwpEmptyState extends StatelessWidget {
-  const GwpEmptyState({
+class CofferEmptyState extends StatelessWidget {
+  const CofferEmptyState({
     super.key,
     required this.icon,
     required this.title,
@@ -14,7 +14,7 @@ class GwpEmptyState extends StatelessWidget {
   });
 
   /// Error variant with retry.
-  const factory GwpEmptyState.error({
+  const factory CofferEmptyState.error({
     Key? key,
     required String message,
     VoidCallback? onRetry,
@@ -34,7 +34,7 @@ class GwpEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: GwpColors.textMuted),
+            Icon(icon, size: 48, color: CofferColors.textMuted),
             const SizedBox(height: 16),
             Text(
               title,
@@ -64,7 +64,7 @@ class GwpEmptyState extends StatelessWidget {
   }
 }
 
-class _ErrorState extends GwpEmptyState {
+class _ErrorState extends CofferEmptyState {
   const _ErrorState({
     super.key,
     required String message,

@@ -28,7 +28,7 @@
 2. `KeyDerivation.derive(purpose: 'db.sqlcipher')` 派生 32 字节子密钥（HKDF-SHA256）
 3. `NativeDatabase(file, setup: ...)` 中作为第一条语句执行 `PRAGMA key = "x'<hex>'";`
 4. 随后 `SELECT count(*) FROM sqlite_master` 做轻量自检，密钥错误立即抛异常
-5. 首次启用时（无 `gwp.db.encrypted` 标记文件）删除旧明文 `gwp.db` + 其 WAL/SHM，落地密库后写入标记
+5. 首次启用时（无 `coffer.db.encrypted` 标记文件）删除旧明文 `coffer.db` + 其 WAL/SHM，落地密库后写入标记
 
 ### 验证
 - [x] 独立集成测试 `test/data/sqlcipher_integration_test.dart`：
@@ -46,4 +46,4 @@ freezed 自动生成的 `toString()` 会暴露 `cardNoCiphertext` / `cvvCipherte
 已在 `card.dart` 源文件添加显式 `toString()` 重写掩码这些敏感字段；新增敏感字段需同步更新重写方法。
 
 ### 数据迁移说明
-用户在切换前已明确表示**不保留**切换前的明文业务数据。首次启动加密版会自动清掉旧 `gwp.db`（含 WAL/SHM），用户体验等同于全新安装。
+用户在切换前已明确表示**不保留**切换前的明文业务数据。首次启动加密版会自动清掉旧 `coffer.db`（含 WAL/SHM），用户体验等同于全新安装。

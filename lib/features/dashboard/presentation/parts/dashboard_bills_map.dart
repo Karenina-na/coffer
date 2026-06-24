@@ -23,9 +23,9 @@ class _UpcomingBillsSection extends ConsumerWidget {
               children: [
                 Text('全部',
                     style: TextStyle(
-                        fontSize: 11, color: GwpColors.actionPrimary)),
+                        fontSize: 11, color: CofferColors.actionPrimary)),
                 Icon(Icons.chevron_right,
-                    size: 14, color: GwpColors.actionPrimary),
+                    size: 14, color: CofferColors.actionPrimary),
               ],
             ),
           ),
@@ -37,12 +37,12 @@ class _UpcomingBillsSection extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               itemCount: list.length,
               separatorBuilder: (_, _) =>
-                  const SizedBox(width: GwpSpacing.sm),
+                  const SizedBox(width: CofferSpacing.sm),
               itemBuilder: (_, i) => _BillCard(bill: list[i]),
             ),
           ),
         ),
-        const SizedBox(height: GwpSpacing.xl),
+        const SizedBox(height: CofferSpacing.xl),
       ],
     );
   }
@@ -58,15 +58,15 @@ class _BillCard extends StatelessWidget {
     final isPayment = bill.kind == BillKind.paymentDue;
     final urgent = bill.daysFromNow <= 3;
     final accent = isPayment
-        ? (urgent ? GwpColors.negative : GwpColors.warning)
-        : GwpColors.info;
+        ? (urgent ? CofferColors.negative : CofferColors.warning)
+        : CofferColors.info;
     return Container(
       width: 190,
-      padding: const EdgeInsets.all(GwpSpacing.md),
+      padding: const EdgeInsets.all(CofferSpacing.md),
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,18 +99,18 @@ class _BillCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: urgent ? GwpColors.negative : GwpColors.textSecondary,
+                  color: urgent ? CofferColors.negative : CofferColors.textSecondary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           Text(
             card.issuerName,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -119,9 +119,9 @@ class _BillCard extends StatelessWidget {
           Text(
             card.cardNoMasked,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
+              fontFamily: CofferTypo.monoFont,
               fontSize: 11,
-              color: GwpColors.textMuted,
+              color: CofferColors.textMuted,
             ),
           ),
         ],

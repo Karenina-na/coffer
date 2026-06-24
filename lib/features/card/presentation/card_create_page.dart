@@ -373,13 +373,16 @@ class _CardCreatePageState extends ConsumerState<CardCreatePage> {
                 (v == null || v.isEmpty) ? '必选' : null,
           ),
           const SizedBox(height: 12),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text('支持全币种'),
-            subtitle: const Text('勾选后该卡可消费任意币种，下方多选失效'),
-            value: _supportsAll,
-            onChanged: (v) => setState(() => _supportsAll = v),
+          Material(
+            type: MaterialType.transparency,
+            child: SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('支持全币种'),
+              subtitle: const Text('勾选后该卡可消费任意币种，下方多选失效'),
+              value: _supportsAll,
+              onChanged: (v) => setState(() => _supportsAll = v),
+            ),
           ),
           if (!_supportsAll) ...[
             const SizedBox(height: 4),

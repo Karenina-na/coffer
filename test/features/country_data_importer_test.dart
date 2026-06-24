@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/providers/country_data_importer.dart';
-import 'package:gwp/domain/entities/dict_entry.dart';
-import 'package:gwp/domain/entities/dict_type.dart';
-import 'package:gwp/domain/repositories/dict_repository.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/providers/country_data_importer.dart';
+import 'package:coffer/domain/entities/dict_entry.dart';
+import 'package:coffer/domain/entities/dict_type.dart';
+import 'package:coffer/domain/repositories/dict_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

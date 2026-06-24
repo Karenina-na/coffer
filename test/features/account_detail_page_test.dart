@@ -4,71 +4,72 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/account.dart';
-import 'package:gwp/domain/entities/account_channel.dart';
-import 'package:gwp/domain/entities/account_enums.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/entities/channel.dart';
-import 'package:gwp/domain/entities/channel_enums.dart';
-import 'package:gwp/domain/entities/dict_entry.dart';
-import 'package:gwp/domain/entities/dict_type.dart';
-import 'package:gwp/domain/repositories/account_channel_repository.dart';
-import 'package:gwp/domain/repositories/account_repository.dart';
-import 'package:gwp/domain/repositories/channel_repository.dart';
-import 'package:gwp/domain/repositories/dict_repository.dart';
-import 'package:gwp/domain/usecases/save_account_channel_config.dart';
-import 'package:gwp/domain/usecases/value_assets_in_currency.dart';
-import 'package:gwp/features/account/presentation/account_detail_page.dart';
-import 'package:gwp/features/account/presentation/account_providers.dart';
-import 'package:gwp/features/asset/presentation/asset_providers.dart';
-import 'package:gwp/features/card/presentation/card_by_account_providers.dart';
-import 'package:gwp/features/channel/presentation/channel_providers.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/account.dart';
+import 'package:coffer/domain/entities/account_channel.dart';
+import 'package:coffer/domain/entities/account_enums.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/entities/channel.dart';
+import 'package:coffer/domain/entities/channel_enums.dart';
+import 'package:coffer/domain/entities/dict_entry.dart';
+import 'package:coffer/domain/entities/dict_type.dart';
+import 'package:coffer/domain/repositories/account_channel_repository.dart';
+import 'package:coffer/domain/repositories/account_repository.dart';
+import 'package:coffer/domain/repositories/channel_repository.dart';
+import 'package:coffer/domain/repositories/dict_repository.dart';
+import 'package:coffer/domain/usecases/save_account_channel_config.dart';
+import 'package:coffer/domain/usecases/value_assets_in_currency.dart';
+import 'package:coffer/features/account/presentation/account_detail_page.dart';
+import 'package:coffer/features/account/presentation/account_providers.dart';
+import 'package:coffer/features/asset/presentation/asset_providers.dart';
+import 'package:coffer/features/card/presentation/card_by_account_providers.dart';
+import 'package:coffer/features/channel/presentation/channel_providers.dart';
 
 GoRouter _router() => GoRouter(
-      initialLocation: '/accounts/acc-1',
-      routes: [
-        GoRoute(
-          path: '/accounts/:id',
-          builder: (_, state) =>
-              AccountDetailPage(accountId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: '/channels/new',
-          builder: (context, state) => const Scaffold(body: Center(child: Text('CHANNEL_NEW'))),
-        ),
-        GoRoute(
-          path: '/channels/:id',
-          builder: (_, state) => Scaffold(
-            body: Center(child: Text('CHANNEL:${state.pathParameters['id']}')),
+  initialLocation: '/accounts/acc-1',
+  routes: [
+    GoRoute(
+      path: '/accounts/:id',
+      builder: (_, state) =>
+          AccountDetailPage(accountId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/channels/new',
+      builder: (context, state) =>
+          const Scaffold(body: Center(child: Text('CHANNEL_NEW'))),
+    ),
+    GoRoute(
+      path: '/channels/:id',
+      builder: (_, state) => Scaffold(
+        body: Center(child: Text('CHANNEL:${state.pathParameters['id']}')),
+      ),
+    ),
+    GoRoute(
+      path: '/assets/new',
+      builder: (_, state) => Scaffold(
+        body: Center(
+          child: Text(
+            'ASSET_NEW:${state.uri.queryParameters['accountId']}:${state.uri.queryParameters['lockAccount']}',
           ),
         ),
-        GoRoute(
-          path: '/assets/new',
-          builder: (_, state) => Scaffold(
-            body: Center(
-              child: Text(
-                'ASSET_NEW:${state.uri.queryParameters['accountId']}:${state.uri.queryParameters['lockAccount']}',
-              ),
-            ),
+      ),
+    ),
+    GoRoute(
+      path: '/cards/new',
+      builder: (_, state) => Scaffold(
+        body: Center(
+          child: Text(
+            'CARD_NEW:${state.uri.queryParameters['accountId']}:${state.uri.queryParameters['lockAccount']}',
           ),
         ),
-        GoRoute(
-          path: '/cards/new',
-          builder: (_, state) => Scaffold(
-            body: Center(
-              child: Text(
-                'CARD_NEW:${state.uri.queryParameters['accountId']}:${state.uri.queryParameters['lockAccount']}',
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+      ),
+    ),
+  ],
+);
 
 Future<void> _pumpPage(
   WidgetTester tester, {
@@ -91,6 +92,7 @@ Future<void> _pumpPage(
     sovereigntyRegion: 'CN',
     institutionName: 'ICBC',
     status: AccountStatus.active,
+    fxSpreadPercent: Decimal.zero,
     createdAt: now,
     updatedAt: now,
   );
@@ -147,9 +149,9 @@ Future<void> _pumpPage(
     ProviderScope(
       overrides: [
         accountListProvider.overrideWith((ref) => Stream.value([account])),
-        assetsByAccountProvider('acc-1').overrideWith(
-          (ref) => Stream.value(assets ?? const []),
-        ),
+        assetsByAccountProvider(
+          'acc-1',
+        ).overrideWith((ref) => Stream.value(assets ?? const [])),
         valuedAssetsByAccountProvider('acc-1').overrideWith(
           (ref) async => ValuedAssets(
             valuationCurrency: 'CNY',
@@ -158,29 +160,33 @@ Future<void> _pumpPage(
             missingAssetIds: [],
           ),
         ),
-        cardsByAccountProvider('acc-1').overrideWith((ref) => Stream.value(const [])),
-        accountChannelsByAccountProvider('acc-1').overrideWith(
-          (ref) => Stream.value(links ?? [link]),
-        ),
+        cardsByAccountProvider(
+          'acc-1',
+        ).overrideWith((ref) => Stream.value(const [])),
+        accountChannelsByAccountProvider(
+          'acc-1',
+        ).overrideWith((ref) => Stream.value(links ?? [link])),
         channelListProvider.overrideWith(
           (ref) => Stream.value(channels ?? [channel]),
         ),
-        dictEntriesProvider(DictType.currency).overrideWith(
-          (ref) => Stream.value(currencyEntries),
-        ),
-        dictEntriesProvider(DictType.transferProtocol).overrideWith(
-          (ref) => Stream.value(protocolEntries),
-        ),
-        dictEntriesProvider(DictType.sovereigntyRegion).overrideWith(
-          (ref) => Stream.value(regionEntries),
-        ),
+        dictEntriesProvider(
+          DictType.currency,
+        ).overrideWith((ref) => Stream.value(currencyEntries)),
+        dictEntriesProvider(
+          DictType.transferProtocol,
+        ).overrideWith((ref) => Stream.value(protocolEntries)),
+        dictEntriesProvider(
+          DictType.sovereigntyRegion,
+        ).overrideWith((ref) => Stream.value(regionEntries)),
         regionMetaIndexProvider.overrideWith(
           (ref) => Stream.value({
             'CN': const RegionMeta(code: 'CN', displayName: '中国大陆'),
           }),
         ),
         if (saveConfigUseCase != null)
-          saveAccountChannelConfigUseCaseProvider.overrideWithValue(saveConfigUseCase),
+          saveAccountChannelConfigUseCaseProvider.overrideWithValue(
+            saveConfigUseCase,
+          ),
       ],
       child: MaterialApp.router(routerConfig: _router()),
     ),
@@ -242,11 +248,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('费用币种覆盖（可空）'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('account-channel-fee-currency-field')));
+    await tester.tap(
+      find.byKey(const Key('account-channel-fee-currency-field')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('沿用通道默认值').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('account-channel-config-save-button')));
+    await tester.tap(
+      find.byKey(const Key('account-channel-config-save-button')),
+    );
     await tester.pumpAndSettle();
 
     expect(recorder.invocations, hasLength(1));
@@ -320,11 +330,7 @@ void main() {
       createdAt: now,
     );
 
-    await _pumpPage(
-      tester,
-      links: [link],
-      channels: [channel],
-    );
+    await _pumpPage(tester, links: [link], channels: [channel]);
 
     await _scrollToText(tester, '新建通道');
     await tester.tap(find.text('新建通道'));
@@ -336,12 +342,12 @@ void main() {
 class _RecordingSaveAccountChannelConfigUseCase
     extends SaveAccountChannelConfigUseCase {
   _RecordingSaveAccountChannelConfigUseCase()
-      : super(
-          _NoopAccountChannelRepository(),
-          _NoopAccountRepository(),
-          _NoopChannelRepository(),
-          _FakeDictRepository(),
-        );
+    : super(
+        _NoopAccountChannelRepository(),
+        _NoopAccountRepository(),
+        _NoopChannelRepository(),
+        _FakeDictRepository(),
+      );
 
   final invocations = <_SaveConfigInvocation>[];
 
@@ -405,7 +411,9 @@ class _NoopAccountChannelRepository implements AccountChannelRepository {
   }
 
   @override
-  Future<Result<List<AccountChannel>, AppError>> listByChannel(String channelId) {
+  Future<Result<List<AccountChannel>, AppError>> listByChannel(
+    String channelId,
+  ) {
     throw UnimplementedError();
   }
 
@@ -505,7 +513,21 @@ class _NoopChannelRepository implements ChannelRepository {
 
 class _FakeDictRepository implements DictRepository {
   @override
-  Future<Result<DictEntry, AppError>> addCustom({required DictType type, required String code, required String name, String? nameEn, int sortOrder = 1000, String? flagEmoji, String? continent, String? colorHex, double? mapLon, double? mapLat, double? anchorLon, double? anchorLat, String? parentRegion}) {
+  Future<Result<DictEntry, AppError>> addCustom({
+    required DictType type,
+    required String code,
+    required String name,
+    String? nameEn,
+    int sortOrder = 1000,
+    String? flagEmoji,
+    String? continent,
+    String? colorHex,
+    double? mapLon,
+    double? mapLat,
+    double? anchorLon,
+    double? anchorLat,
+    String? parentRegion,
+  }) {
     throw UnimplementedError();
   }
 
@@ -535,7 +557,20 @@ class _FakeDictRepository implements DictRepository {
   Future<List<DictEntry>> listByType(DictType type) async => const [];
 
   @override
-  Future<Result<DictEntry, AppError>> updateEntry({required int id, String? name, String? nameEn, int? sortOrder, Object? flagEmoji = const _Absent(), Object? continent = const _Absent(), Object? colorHex = const _Absent(), Object? mapLon = const _Absent(), Object? mapLat = const _Absent(), Object? anchorLon = const _Absent(), Object? anchorLat = const _Absent(), Object? parentRegion = const _Absent()}) {
+  Future<Result<DictEntry, AppError>> updateEntry({
+    required int id,
+    String? name,
+    String? nameEn,
+    int? sortOrder,
+    Object? flagEmoji = const _Absent(),
+    Object? continent = const _Absent(),
+    Object? colorHex = const _Absent(),
+    Object? mapLon = const _Absent(),
+    Object? mapLat = const _Absent(),
+    Object? anchorLon = const _Absent(),
+    Object? anchorLat = const _Absent(),
+    Object? parentRegion = const _Absent(),
+  }) {
     throw UnimplementedError();
   }
 
@@ -543,7 +578,10 @@ class _FakeDictRepository implements DictRepository {
   Stream<List<DictEntry>> watchByType(DictType type) => const Stream.empty();
 
   @override
-  Future<Result<void, AppError>> reorderByType(DictType type, List<int> entryIds) {
+  Future<Result<void, AppError>> reorderByType(
+    DictType type,
+    List<int> entryIds,
+  ) {
     throw UnimplementedError();
   }
 }

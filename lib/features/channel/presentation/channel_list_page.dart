@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/ui/app_top_bar.dart';
+import '../../../core/ui/async_value_view.dart';
+import '../../../app/widgets/app_top_bar.dart';
 import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
-import '../../../core/ui/error_localizer.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_status_badge.dart';
 import '../../../core/ui/protocol_display.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../data/providers/dict_providers.dart';
@@ -37,36 +37,37 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
   Widget build(BuildContext context) {
     final channels = ref.watch(channelListProvider);
     final regionIndexAsync = ref.watch(regionMetaIndexProvider);
-    final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
+    final protocolEntriesAsync = ref.watch(
+      dictEntriesProvider(DictType.transferProtocol),
+    );
     return Scaffold(
       appBar: const AppTopBar(title: Text('转账通道')),
-      body: channels.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+      body: CofferAsyncValueView<List<Channel>>(
+        value: channels,
+        onRetry: () => ref.invalidate(channelListProvider),
+        isEmpty: (list) => list.isEmpty,
+        empty: (_, _) => const CofferEmptyState(
+          icon: Icons.swap_horiz_outlined,
+          title: '还没有通道',
+          subtitle: '从右上「更多 → 新建」添加转账通道策略',
         ),
-        error: (e, _) => GwpEmptyState.error(
-          message: '加载失败: ${errorToMessage(e)}',
-          onRetry: () => ref.invalidate(channelListProvider),
-        ),
-        data: (list) {
-          final regionIndex = regionIndexAsync.value ?? const <String, RegionMeta>{};
+        data: (_, list) {
+          final regionIndex =
+              regionIndexAsync.value ?? const <String, RegionMeta>{};
           final ProtocolIndex protocolIndex = {
-            for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
+            for (final entry
+                in protocolEntriesAsync.value ?? const <DictEntry>[])
+              entry.code: entry,
           };
-          if (list.isEmpty) {
-            return const GwpEmptyState(
-              icon: Icons.swap_horiz_outlined,
-              title: '还没有通道',
-              subtitle: '从右上「更多 → 新建」添加转账通道策略',
-            );
-          }
-          final enabled = list.where((c) => c.status == ChannelStatus.enabled).length;
+          final enabled = list
+              .where((c) => c.status == ChannelStatus.enabled)
+              .length;
           final protocols = list.map((c) => c.transferProtocol).toSet().length;
           return ReorderableListView.builder(
             padding: const EdgeInsets.only(
-              left: GwpSpacing.base,
-              right: GwpSpacing.base,
-              top: GwpSpacing.md,
+              left: CofferSpacing.base,
+              right: CofferSpacing.base,
+              top: CofferSpacing.md,
               bottom: 16,
             ),
             buildDefaultDragHandles: false,
@@ -77,12 +78,11 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
                   enabled: enabled,
                   protocols: protocols,
                 ),
-                const SizedBox(height: GwpSpacing.md),
+                const SizedBox(height: CofferSpacing.md),
               ],
             ),
             itemCount: list.length,
-            onReorder: (oldIndex, newIndex) async {
-              if (newIndex > oldIndex) newIndex -= 1;
+            onReorderItem: (oldIndex, newIndex) async {
               final reordered = [...list];
               final moved = reordered.removeAt(oldIndex);
               reordered.insert(newIndex, moved);
@@ -92,14 +92,18 @@ class _ChannelListPageState extends ConsumerState<ChannelListPage> {
               if (result.isErr && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('重排失败：${result.errorOrNull?.message ?? '未知错误'}'),
+                    content: Text(
+                      '重排失败：${result.errorOrNull?.message ?? '未知错误'}',
+                    ),
                   ),
                 );
               }
             },
             itemBuilder: (_, i) => Padding(
               key: ValueKey('channel-${list[i].id}'),
-              padding: EdgeInsets.only(bottom: i < list.length - 1 ? GwpSpacing.sm : 0),
+              padding: EdgeInsets.only(
+                bottom: i < list.length - 1 ? CofferSpacing.sm : 0,
+              ),
               child: _ChannelCard(
                 channel: list[i],
                 regionIndex: regionIndex,
@@ -132,30 +136,38 @@ class _SummaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Row(
         children: [
-          _KpiCell(label: '总通道', value: '$total', color: GwpColors.textPrimary),
+          _KpiCell(
+            label: '总通道',
+            value: '$total',
+            color: CofferColors.textPrimary,
+          ),
           _divider(),
-          _KpiCell(label: '已启用', value: '$enabled', color: GwpColors.positive),
+          _KpiCell(
+            label: '已启用',
+            value: '$enabled',
+            color: CofferColors.positive,
+          ),
           _divider(),
-          _KpiCell(label: '协议数', value: '$protocols', color: GwpColors.info),
+          _KpiCell(label: '协议数', value: '$protocols', color: CofferColors.info),
         ],
       ),
     );
   }
 
   Widget _divider() => Container(
-        width: 0.5,
-        height: 28,
-        color: GwpColors.border,
-        margin: const EdgeInsets.symmetric(horizontal: GwpSpacing.sm),
-      );
+    width: 0.5,
+    height: 28,
+    color: CofferColors.border,
+    margin: const EdgeInsets.symmetric(horizontal: CofferSpacing.sm),
+  );
 }
 
 class _KpiCell extends StatelessWidget {
@@ -177,8 +189,8 @@ class _KpiCell extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: color,
@@ -187,10 +199,7 @@ class _KpiCell extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: GwpColors.textMuted,
-            ),
+            style: const TextStyle(fontSize: 11, color: CofferColors.textMuted),
           ),
         ],
       ),
@@ -235,11 +244,16 @@ class _ChannelCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = _protocolColors[channel.transferProtocol] ?? GwpColors.actionPrimary;
-    final icon = _protocolIcons[channel.transferProtocol] ?? Icons.swap_horiz_outlined;
+    final color =
+        _protocolColors[channel.transferProtocol] ?? CofferColors.actionPrimary;
+    final icon =
+        _protocolIcons[channel.transferProtocol] ?? Icons.swap_horiz_outlined;
     final enabled = channel.status == ChannelStatus.enabled;
     final isMaintenance = channel.status == ChannelStatus.maintenance;
-    final protocolLabel = protocolDisplayLabel(protocolIndex, channel.transferProtocol);
+    final protocolLabel = protocolDisplayLabel(
+      protocolIndex,
+      channel.transferProtocol,
+    );
     final regionSuffix = _channelRegionSuffix(channel, regionIndex);
 
     final limits = <String>[
@@ -266,120 +280,126 @@ class _ChannelCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             decoration: BoxDecoration(
-              color: GwpColors.surface1,
+              color: CofferColors.surface1,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: GwpColors.border, width: 0.5),
+              border: Border.all(color: CofferColors.border, width: 0.5),
             ),
             child: Row(
               children: [
-              // Left color bar
-              Container(
-                width: 4,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    bottomLeft: Radius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: GwpSpacing.md),
-              // Protocol icon badge
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 18, color: color),
-              ),
-              const SizedBox(width: GwpSpacing.md),
-              // Content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: GwpSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${channel.name}$regionSuffix',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: GwpColors.textPrimary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (channel.isBuiltin) ...[
-                            const SizedBox(width: GwpSpacing.xs),
-                            const BuiltinBadge(),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        meta,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: GwpColors.textMuted,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: GwpSpacing.sm),
-              // Status + Switch
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GwpStatusBadge(
-                    label: isMaintenance
-                        ? 'MAINT'
-                        : (enabled ? 'ON' : 'OFF'),
-                    variant: isMaintenance
-                        ? StatusVariant.warning
-                        : (enabled ? StatusVariant.positive : StatusVariant.muted),
-                  ),
-                  const SizedBox(height: 2),
-                  SizedBox(
-                    height: 28,
-                    child: Switch.adaptive(
-                      value: enabled,
-                      onChanged: isMaintenance
-                          ? null
-                          : (v) async {
-                              final result = await ref
-                                  .read(channelRepositoryProvider)
-                                  .setStatus(
-                                    channel.id,
-                                    v
-                                        ? ChannelStatus.enabled
-                                        : ChannelStatus.disabled,
-                                  );
-                              if (result.isErr && ref.context.mounted) {
-                                ScaffoldMessenger.of(ref.context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('状态更新失败：${result.errorOrNull?.message ?? '未知错误'}'),
-                                  ),
-                                );
-                              }
-                            },
+                // Left color bar
+                Container(
+                  width: 4,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(width: GwpSpacing.md),
+                ),
+                const SizedBox(width: CofferSpacing.md),
+                // Protocol icon badge
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 18, color: color),
+                ),
+                const SizedBox(width: CofferSpacing.md),
+                // Content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: CofferSpacing.md,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${channel.name}$regionSuffix',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: CofferColors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (channel.isBuiltin) ...[
+                              const SizedBox(width: CofferSpacing.xs),
+                              const BuiltinBadge(),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          meta,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: CofferColors.textMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: CofferSpacing.sm),
+                // Status + Switch
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CofferStatusBadge(
+                      label: isMaintenance ? 'MAINT' : (enabled ? 'ON' : 'OFF'),
+                      variant: isMaintenance
+                          ? StatusVariant.warning
+                          : (enabled
+                                ? StatusVariant.positive
+                                : StatusVariant.muted),
+                    ),
+                    const SizedBox(height: 2),
+                    SizedBox(
+                      height: 28,
+                      child: Switch.adaptive(
+                        value: enabled,
+                        onChanged: isMaintenance
+                            ? null
+                            : (v) async {
+                                final result = await ref
+                                    .read(channelRepositoryProvider)
+                                    .setStatus(
+                                      channel.id,
+                                      v
+                                          ? ChannelStatus.enabled
+                                          : ChannelStatus.disabled,
+                                    );
+                                if (result.isErr && ref.context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    ref.context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '状态更新失败：${result.errorOrNull?.message ?? '未知错误'}',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: CofferSpacing.md),
               ],
             ),
           ),

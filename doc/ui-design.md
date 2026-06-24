@@ -1,4 +1,4 @@
-# GWP 前端 UI / 导航设计
+# Coffer 前端 UI / 导航设计
 
 ## 1. 说明
 
@@ -79,12 +79,12 @@ ShellRoute                 // 底部导航壳，保持 NavigationBar 常驻
 数据流：
 
 ```
-dashboardSummaryProvider (FutureProvider.autoDispose)
+wealthSummaryProvider (FutureProvider.autoDispose)
   ├── accountListProvider
   ├── assetListProvider
-  ├── dashboardBaseCurrencyProvider (NotifierProvider<String>)
-  └── AggregateAccountValueUseCase
-       → DashboardSummary { baseCurrency, total, accountCount, assetCount, missingAssetIds }
+  ├── valuationCurrencyProvider (NotifierProvider<String>)
+  └── valuedAssetsProvider / ValueAssetsInCurrencyUseCase
+       → WealthSummary { baseCurrency, total, accountCount, assetCount, missingAssetIds }
 ```
 
 ### 4.2 资金 `/holdings`
@@ -101,11 +101,13 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 > **「转账」语义说明**：此处转账**不涉及账务变动**，仅用于基于 Channel 拓扑与费率模型**规划最优转移路径**（Route Planning）。用户选定源/目标账户及金额后，调用 `PlanTransferRouteUseCase`（`lib/domain/usecases/plan_transfer_route.dart`）在扩展状态空间 `(accountId, currency)` 上跑 Dijkstra：
 >
 > - **通道边** `(A, C) → (B, C)`：同币种通过共享通道转移，权重 = `amount × feeRate + fixedFee`
-> - **换汇边** `(A, C1) → (A, C2)`：账户内部货币兑换，仅当 `Account.fxSpreadPercent > 0` 且 FX rate 存在时创建，权重 = `amount × (fxSpreadPercent / 100)`
+> - **换汇边** `(A, C1) → (A, C2)`：账户内部货币兑换，仅当 `Account.fxSpreadPercent > Decimal.zero` 且 FX rate 存在时创建，权重 = `amount × (fxSpreadPercent / 100) + fxFixedFee`
 >
 > 支持三种模式：**最低费用（minFee）**、**最少跳数（minHops）**、**对比（compare 同时展示两条）**。规则引擎按每条边的 `(from, to)` 双方有效地区过滤违规边——有效地区由 `_effectiveRegion()` 运行时推断（`regionOverride` > 通道 `allowedRegions` 匹配 > 账户自身地区）。
 >
 > 返回的 `TransferRoute` 包含 `legs`（每跳含通道/起止账户/单段手续费/币种/汇率）、`alternatives`（DFS 枚举的替代路径，最多 4 条）、`violations`（无合法路径时的拦截原因）。UI 以**管道流动**可视化呈现：账户节点 → 通道管道（含协议名 + 全称 + 费用）→ 箭头流向，换汇跳左侧缩进以区分子资金流动。金额统一保留两位小数。
+>
+> 汇率输入与账户换汇损耗在 provider 与 use case 之间保持 `Decimal`，包括反向汇率和百分比损耗推导；仅在短标签、图形比例等最终渲染步骤转换为 `double`。若请求的目标币种不可达，UI 展示无可用路径，不接受算法返回其他币种路径。
 >
 > **账户 ↔ 通道绑定**：账户详情页 `支持的转账通道` 区块维护当前账户声明支持的通道集合（添加 / 移除）；通道详情页 `成员账户` 区块只读展示所有已绑定该通道的账户，入口可跳转至账户详情。
 >
@@ -189,7 +191,7 @@ dashboardSummaryProvider (FutureProvider.autoDispose)
 
 ### 4.7 全局搜索
 
-统一由 `GlobalSearchDelegate` + `openGlobalSearch(context, ref, current:)` 驱动，覆盖所有底部 Tab 的 AppBar 搜索按钮。
+统一由 `features/search/presentation/GlobalSearchDelegate` + `openGlobalSearch(context, ref, current:)` 驱动，覆盖所有底部 Tab 的 AppBar 搜索按钮。`core/search` 仅保留高亮、排序等纯搜索工具，跨模块数据源、命令面板与历史持久化归属搜索 feature。
 
 - **入口**：`AppTopBar` 通过 `TopSearchAction`（读取 `topSearchOpenerProvider`）渲染 🔍；每个页面在 `initState` 注册自己的 `opener`，`dispose` 时 `set(null)`。不注册 opener 的页面不会显示按钮。
 - **两段式结果**：
@@ -232,6 +234,7 @@ FeaturePage              // 含 Scaffold 与 AppBar，作为独立路由节点
 ## 7. 主题与 Material 3
 
 - `ColorScheme.fromSeed` 统一取色。
+- 顶部栏 `AppTopBar` 属于 App shell 组合组件，位于 `app/widgets/`；`core/ui` 仅保留可跨上下文复用的纯 UI 原子组件。
 - 使用自定义 `_FloatingNavBar`：底栏在视觉上保持悬浮胶囊与液态玻璃效果，但在布局上由 Shell 统一预留底部空间，避免正文或局部弹层被导航栏覆盖。主 Tab 页面不再依赖零散的 `bottom: 88` 一类魔法数字手工避让；需要脱离壳层视觉叠加的弹层/子页面应优先走 root navigator。
 - 避免已弃用 API：如 `RadioListTile` 的 `groupValue/onChanged` 在新版本被 `RadioGroup` 替代，当前采用 `ListTile + Icon(radio_button_*)` 模拟。
 - 空状态统一使用引导图标 + 说明文字 + 主操作按钮三段式。
@@ -282,15 +285,15 @@ FeaturePage              // 含 Scaffold 与 AppBar，作为独立路由节点
 **技术选型**
 
 - 图表库：`fl_chart`（折线 / 柱状 / 饼图 / 雷达图，纯 Flutter 渲染，无 WebView 开销）
-- 拓扑图：通道拓扑使用卡片式列表布局；全局关系全景图使用 `graphview` 力导向布局；`GwpNodeMap`（CustomPainter 全球地图）
+- 拓扑图：通道拓扑使用卡片式列表布局；全局关系全景图使用 `graphview` 力导向布局；`CofferNodeMap`（CustomPainter 全球地图）
 - 动画：Material 3 `AnimatedSwitcher` / `Hero` / `ImplicitlyAnimatedWidget` 系列
 - 数据层：所有聚合指标通过新增 `Provider` 组合已有 Repository 数据，**不新增 Drift 表**；历史趋势依赖已有 `ExchangeRate.asOfTime` + `AssetPriceHistory.triggerTime` 时间序列
 
 **信息密度原则**
 
 - 首屏（仪表盘）在不滚动的情况下展示 ≥ 8 个独立数据维度
-- 所有数字使用 `GwpTypo.monoFont` + `GwpTypo.tabularFigures` 保证对齐
-- 涨跌色统一 `GwpColors.positive` / `GwpColors.negative`
+- 所有数字使用 `CofferTypo.monoFont` + `CofferTypo.tabularFigures` 保证对齐
+- 涨跌色统一 `CofferColors.positive` / `CofferColors.negative`
 - 所有卡片支持点击下钻到对应详情页
 
 ---
@@ -349,7 +352,7 @@ Future<DashboardKpi> dashboardKpi(Ref ref) async {
   final channels = await ref.watch(channelListProvider.future);
   final cards = await ref.watch(cardListProvider.future);
   final events = await ref.watch(pendingAckEventsProvider.future);
-  final summary = await ref.watch(dashboardSummaryProvider.future);
+  final summary = await ref.watch(wealthSummaryProvider.future);
   // ... 聚合计算
 }
 ```
@@ -630,7 +633,7 @@ Widget: GlobalNodeMap extends StatelessWidget
 ├── CustomPainter (连线层)
 │   └── 遍历所有 Channel 的成员账户对
 │       → 若两个账户在不同 region，画贝塞尔曲线连接
-│       → 线条颜色: enabled=GwpColors.actionPrimary, disabled=GwpColors.muted
+│       → 线条颜色: enabled=CofferColors.actionPrimary, disabled=CofferColors.muted
 │       → 线条粗细 ∝ 通道数量
 └── GestureDetector
     ├── 点击节点 → 展开该地区账户列表 BottomSheet
@@ -752,16 +755,16 @@ for (final channel in enabledChannels) {
 
 | 组件名 | 用途 | 关键属性 |
 |---|---|---|
-| `GwpMiniChart` | 行内迷你折线/面积图 | `data: List<double>`, `width`, `height`, `color`, `showArea` |
-| `GwpDonutChart` | 环形饼图（带中心标签） | `segments: List<ChartSegment>`, `centerLabel`, `onSegmentTap` |
-| `GwpBarRank` | 水平排名柱状图 | `items: List<RankItem>`, `maxBars`, `onTap` |
-| `GwpRadarChart` | 多维度雷达图 | `dimensions: List<RadarDimension>`, `values: List<double>` |
-| `GwpHeatStrip` | 单行热力条 | `value: double`, `range: (min, max)`, `label` |
-| `GwpNodeMap` | 全球节点地图 | `nodes: List<MapNode>`, `edges: List<MapEdge>`, `onNodeTap`, `onEdgeTap` |
-| `GwpTopologyGraph` | 通道拓扑图（卡片式） | 已实现为 `ChannelTopologyView`，使用通道卡片列表替代力导向图 |
-| `GwpKpiTile` | KPI 指标格 | `title`, `value`, `subtitle`, `icon`, `onTap`, `trend` |
-| `GwpProgressRing` | 进度环（信用额度等） | （暂未实现，由 `GwpDonutChart` 单弧模式替代） |
-| `GwpCollapsibleSection` | 可折叠分区 | （暂未实现，账户详情页使用自定义 SectionCard） |
+| `CofferMiniChart` | 行内迷你折线/面积图 | `data: List<double>`, `width`, `height`, `color`, `showArea` |
+| `CofferDonutChart` | 环形饼图（带中心标签） | `segments: List<ChartSegment>`, `centerLabel`, `onSegmentTap` |
+| `CofferBarRank` | 水平排名柱状图 | `items: List<RankItem>`, `maxBars`, `onTap` |
+| `CofferRadarChart` | 多维度雷达图 | `dimensions: List<RadarDimension>`, `values: List<double>` |
+| `CofferHeatStrip` | 单行热力条 | `value: double`, `range: (min, max)`, `label` |
+| `CofferNodeMap` | 全球节点地图 | `nodes: List<MapNode>`, `edges: List<MapEdge>`, `onNodeTap`, `onEdgeTap` |
+| `CofferTopologyGraph` | 通道拓扑图（卡片式） | 已实现为 `ChannelTopologyView`，使用通道卡片列表替代力导向图 |
+| `CofferKpiTile` | KPI 指标格 | `title`, `value`, `subtitle`, `icon`, `onTap`, `trend` |
+| `CofferProgressRing` | 进度环（信用额度等） | （暂未实现，由 `CofferDonutChart` 单弧模式替代） |
+| `CofferCollapsibleSection` | 可折叠分区 | （暂未实现，账户详情页使用自定义 SectionCard） |
 | `_RouteFlow` / `_CompareFlow` | 转账路径管道可视化 | 已实现于 `transfer_simulate_page.dart`，管道流动隐喻展示多跳多币种路径 |
 
 #### 10.5.2 依赖包新增
@@ -779,12 +782,12 @@ dependencies:
 
 **Phase 1 — 仪表盘 KPI 看板 + 基础图表** ✅ 已落地
 - `dashboardKpiProvider` 聚合逻辑
-- `GwpKpiTile` 组件 + 2×3 网格
+- `CofferKpiTile` 组件 + 2×3 网格
 - 英雄卡片带微型面积图
 - 资产配置三视图（饼图 × 3）
 
 **Phase 2 — 全球节点地图 + 趋势图表** ✅ 已落地
-- `GwpNodeMap` 全球地图组件
+- `CofferNodeMap` 全球地图组件
 - 净资产折线图（全功能版带触摸交互）
 - 汇率热力条 + 增强型汇率列表行
 - 资产详情页 `_PriceChart` 升级

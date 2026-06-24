@@ -132,9 +132,9 @@ String regionAggregateKey(RegionIndex index, String code) {
   return meta?.parentCode ?? code;
 }
 
-/// Accent [Color] for [code]; falls back to [GwpColors.textMuted].
+/// Accent [Color] for [code]; falls back to [CofferColors.textMuted].
 Color regionColor(RegionIndex index, String code) =>
-    index[code]?.color ?? GwpColors.textMuted;
+    index[code]?.color ?? CofferColors.textMuted;
 
 /// Accent [Color] for aggregate region display; falls back to child color.
 Color regionAggregateColor(RegionIndex index, String code) =>

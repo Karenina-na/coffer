@@ -35,7 +35,7 @@ import 'daos/watched_pair_dao.dart';
 
 part 'database.g.dart';
 
-/// GWP 本地数据库。
+/// Coffer 本地数据库。
 ///
 /// 表定义严格对齐 doc/data-definitions.md。
 /// 金额/数量列以 TEXT 存储十进制字符串，应用层以 [Decimal] 解析。
@@ -846,13 +846,13 @@ Future<void> _backfillRegionAnchors(AppDatabase db) async {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(dir.path, 'gwp.db');
+    final dbPath = p.join(dir.path, 'coffer.db');
     final file = File(dbPath);
 
     // 加密启用标记：与密库一起落盘，证明当前文件由加密流程写入。
     // 用户已明确声明不保留切换前的明文数据：检测到本地只有明文 DB（无
     // 标记文件）时，直接删除明文 DB 与 WAL/SHM 副本，让加密流程新建密库。
-    final marker = File(p.join(dir.path, 'gwp.db.encrypted'));
+    final marker = File(p.join(dir.path, 'coffer.db.encrypted'));
     if (await file.exists() && !await marker.exists()) {
       if (await isPlaintextSqliteDatabase(file)) {
         await _deleteDatabaseFiles(dbPath);

@@ -1,13 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/auth/pin_store.dart';
-import 'package:gwp/core/crypto/password_kdf.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/data/backup/db_snapshot.dart';
-import 'package:gwp/data/crypto_service.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/domain/usecases/reset_all_data.dart';
+import 'package:coffer/core/auth/pin_store.dart';
+import 'package:coffer/core/crypto/password_kdf.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/data/backup/db_snapshot.dart';
+import 'package:coffer/data/crypto_service.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/domain/usecases/reset_all_data.dart';
 
 /// 会在 reset 中被清空的业务表。
 const _clearedTables = <String>[

@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gwp/data/providers/account_providers.dart';
-import 'package:gwp/features/auth/presentation/auth_gate.dart';
-import 'package:gwp/features/settings/presentation/settings_page.dart';
+import 'package:coffer/data/providers/account_providers.dart';
+import 'package:coffer/features/auth/presentation/auth_gate.dart';
+import 'package:coffer/features/settings/presentation/settings_page.dart';
 
 /// 仅暴露 /settings 与 /backup 两个节点，用于断言 context.push('/backup')。
 GoRouter _buildRouter() {

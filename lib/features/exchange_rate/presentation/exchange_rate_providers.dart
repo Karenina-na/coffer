@@ -14,8 +14,6 @@ import '../../event/presentation/event_providers.dart';
 
 export '../../../data/providers/exchange_rate_providers.dart'
     show
-        exchangeRateDaoProvider,
-        watchedPairDaoProvider,
         exchangeRateRepositoryProvider,
         priceProviderProvider,
         watchedPairRepositoryProvider,
@@ -29,14 +27,15 @@ final watchedPairListProvider = StreamProvider<List<WatchedPair>>((ref) {
   return ref.watch(watchedPairRepositoryProvider).watchAll();
 });
 
-final refreshWatchedRatesUseCaseProvider =
-    Provider<RefreshWatchedRatesUseCase>((ref) {
-  return RefreshWatchedRatesUseCase(
-    watchedRepo: ref.watch(watchedPairRepositoryProvider),
-    rateRepo: ref.watch(exchangeRateRepositoryProvider),
-    provider: ref.watch(frankfurterProviderProvider),
-  );
-});
+final refreshWatchedRatesUseCaseProvider = Provider<RefreshWatchedRatesUseCase>(
+  (ref) {
+    return RefreshWatchedRatesUseCase(
+      watchedRepo: ref.watch(watchedPairRepositoryProvider),
+      rateRepo: ref.watch(exchangeRateRepositoryProvider),
+      provider: ref.watch(frankfurterProviderProvider),
+    );
+  },
+);
 
 final refreshPairRateUseCaseProvider = Provider<RefreshPairRateUseCase>((ref) {
   return RefreshPairRateUseCase(
@@ -45,8 +44,9 @@ final refreshPairRateUseCaseProvider = Provider<RefreshPairRateUseCase>((ref) {
   );
 });
 
-final manageWatchedPairUseCaseProvider =
-    Provider<ManageWatchedPairUseCase>((ref) {
+final manageWatchedPairUseCaseProvider = Provider<ManageWatchedPairUseCase>((
+  ref,
+) {
   return ManageWatchedPairUseCase(
     ref.watch(watchedPairRepositoryProvider),
     ref.watch(dictRepositoryProvider),
@@ -63,8 +63,7 @@ final saveManualRateUseCaseProvider = Provider<SaveManualRateUseCase>((ref) {
   );
 });
 
-final checkRateAlertsUseCaseProvider =
-    Provider<CheckRateAlertsUseCase>((ref) {
+final checkRateAlertsUseCaseProvider = Provider<CheckRateAlertsUseCase>((ref) {
   return CheckRateAlertsUseCase(
     watched: ref.watch(watchedPairRepositoryProvider),
     rates: ref.watch(exchangeRateRepositoryProvider),
@@ -115,10 +114,9 @@ const Map<String, String> _currencyToRegionCode = {
 
 /// 币种代码 → 国旗 emoji，读取地区字典的预置旗标。
 final currencyFlagProvider = Provider<Map<String, String>>((ref) {
-  final index = ref.watch(regionMetaIndexProvider).maybeWhen(
-        data: (d) => d,
-        orElse: () => <String, RegionMeta>{},
-      );
+  final index = ref
+      .watch(regionMetaIndexProvider)
+      .maybeWhen(data: (d) => d, orElse: () => <String, RegionMeta>{});
   final result = <String, String>{};
   _currencyToRegionCode.forEach((currency, regionCode) {
     final flag = index[regionCode]?.flag;
@@ -128,17 +126,18 @@ final currencyFlagProvider = Provider<Map<String, String>>((ref) {
 });
 
 /// 某币对在最近 7 天窗口内的快照序列（升序，供 sparkline 使用）。
-final pairRateSeriesProvider =
-    StreamProvider.autoDispose.family<List<ExchangeRate>, String>(
-  (ref, pairKey) {
-    final now = DateTime.now();
-    final since = DateTime(now.year, now.month, now.day)
-        .subtract(const Duration(days: 7));
-    return ref
-        .watch(exchangeRateRepositoryProvider)
-        .watchSeriesForPair(pairKey: pairKey, since: since);
-  },
-);
+final pairRateSeriesProvider = StreamProvider.autoDispose
+    .family<List<ExchangeRate>, String>((ref, pairKey) {
+      final now = DateTime.now();
+      final since = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(const Duration(days: 7));
+      return ref
+          .watch(exchangeRateRepositoryProvider)
+          .watchSeriesForPair(pairKey: pairKey, since: since);
+    });
 
 /// 详情页用：按 `(pairKey, rangeDays)` 取 DB 中窗口内序列。
 ///
@@ -160,11 +159,14 @@ class PairSeriesQuery {
 
 final pairSeriesByRangeProvider = StreamProvider.autoDispose
     .family<List<ExchangeRate>, PairSeriesQuery>((ref, q) {
-  final since = q.rangeDays <= 0
-      ? DateTime.fromMillisecondsSinceEpoch(0)
-      : DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
-          .subtract(Duration(days: q.rangeDays));
-  return ref
-      .watch(exchangeRateRepositoryProvider)
-      .watchSeriesForPair(pairKey: q.pairKey, since: since);
-});
+      final since = q.rangeDays <= 0
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : DateTime(
+              DateTime.now().year,
+              DateTime.now().month,
+              DateTime.now().day,
+            ).subtract(Duration(days: q.rangeDays));
+      return ref
+          .watch(exchangeRateRepositoryProvider)
+          .watchSeriesForPair(pairKey: q.pairKey, since: since);
+    });

@@ -12,12 +12,12 @@ class BuiltinBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: GwpColors.surface3,
+        color: CofferColors.surface3,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+        style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
       ),
     );
   }

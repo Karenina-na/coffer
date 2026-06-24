@@ -1,4 +1,4 @@
-package com.gwp.gwp
+package com.coffer.coffer
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

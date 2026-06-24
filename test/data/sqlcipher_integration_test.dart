@@ -5,7 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/data/db/database.dart';
+import 'package:coffer/data/db/database.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
@@ -20,7 +20,7 @@ void main() {
   late Directory tmpDir;
 
   setUp(() {
-    tmpDir = Directory.systemTemp.createTempSync('gwp_cipher_test_');
+    tmpDir = Directory.systemTemp.createTempSync('coffer_cipher_test_');
   });
 
   tearDown(() {

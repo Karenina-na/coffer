@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/valuation/strategies/market_quote_valuator.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/valuation/strategies/market_quote_valuator.dart';
 
 import 'asset_valuator_test_helpers.dart';
 

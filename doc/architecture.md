@@ -1,8 +1,8 @@
-# GWP 架构设计
+# Coffer 架构设计
 
 ## 1. 说明
 
-本文件定义 GWP 的应用形态、分层架构、技术选型与工程结构，作为后续开发的基线。
+本文件定义 Coffer 的应用形态、分层架构、技术选型与工程结构，作为后续开发的基线。
 
 - 应用形态：**Flutter 跨端 App（iOS / Android）**
 - 部署形态：**纯本地，不引入远端服务**
@@ -23,7 +23,7 @@
 
 | 领域 | 选型 | 说明 |
 |---|---|---|
-| UI | Flutter (stable channel) + Material 3 | Dart SDK ^3.11.5，跨端一套代码 |
+| UI | Flutter 3.44.2 (stable channel, FVM 固定) + Material 3 | Dart SDK ^3.11.5，跨端一套代码 |
 | 状态管理 | Riverpod 3 | 编译期安全、天然 DI |
 | 路由 | go_router | 声明式路由 |
 | 本地数据库 | Drift | 类型安全 SQL，支持 SQLCipher |
@@ -46,12 +46,13 @@ lib/
 ├── main.dart
 ├── app/                         # 应用壳：路由、主题、入口
 │   ├── router.dart
-│   └── theme.dart
+│   ├── theme.dart
+│   └── widgets/                 # App shell 组合组件（如 AppTopBar）
 ├── core/                        # 横切基础设施
 │   ├── auth/                    # BiometricAuth
 │   ├── crypto/                  # AES-GCM、KeyStore、PasswordKDF
 │   ├── money/                   # Decimal、Currency 工具
-│   ├── ui/                      # EntitySearchDelegate 等跨 feature UI
+│   ├── ui/                      # 纯共享 UI（EntitySearchDelegate、图表、状态组件等）
 │   ├── notifications/           # NotificationService（本地通知封装）
 │   ├── result.dart              # Result<T, E>
 │   └── errors.dart
@@ -82,18 +83,22 @@ lib/
     ├── topology/                # 全景关系图
     ├── backup/                  # 备份 / 恢复页
     ├── settings/                # App 级全局设置
+    ├── search/                  # 全局搜索编排（跨 feature 数据源、命令、历史）
     └── auth/                    # 生物识别解锁 Gate
 ```
 
 **依赖约束**
 
-- `features/*/presentation` 只依赖 `domain`
+- `features/*/presentation` 页面只消费领域实体、UseCase 与只读视图状态；局部 provider 可通过 `data/providers/*` 装配 domain repository/usecase，但不得直接消费 Drift DAO、Drift 行对象或 data repository 实现类
 - `data` 只实现 `domain/repositories` 中的接口
 - UI 永远消费 freezed 领域实体，不直接持有 Drift 行对象
+- Presentation 层的 feature provider 只能暴露领域仓储、UseCase 与只读视图状态；Drift DAO Provider 保留在 `lib/data/providers/` 作为数据层 DI 细节，不从 `features/*/presentation` 再导出。
+- `core/ui` 只放纯组件与设计基线；需要读取 feature/data provider 的 App shell 或跨模块编排放入 `app/widgets/` 或对应 `features/*/presentation/`。
+- 搜索历史等跨会话 UI 状态若需要落 Drift，也通过 repository 接口访问；presentation 不直接读取 `SearchHistoryDao`。
 
 ## 5. 数据层规范
 
-- 一个 Drift `Database`（当前 `schemaVersion = 28`），13 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs / SearchHistoryEntries / RegionGroupOrders`；字段约束对齐 `doc/data-definitions.md`
+- 一个 Drift `Database`（当前 `schemaVersion = 29`），13 张表：`Accounts / Assets / AssetPriceHistory / AssetCostHistory / Cards / Channels / AccountChannels / DictEntries / Events / ExchangeRates / WatchedPairs / SearchHistoryEntries / RegionGroupOrders`；字段约束对齐 `doc/data-definitions.md`
 - JSON 字段（`ext_info`、`sovereignty_region_rule`、`raw_payload`）以 `TEXT` 存储，DAO 层负责 `fromJson/toJson`
 - `DECIMAL(28,8)` / `DECIMAL(28,10)` 及阈值类字段（含 `watched_pairs.threshold_high / threshold_low / alert_change_pct`，v12 起）在 SQLite 无原生支持，统一以 `TEXT` 存储，应用层使用 `Decimal`，**禁止使用 `REAL`**
 - 软删除：带 `is_deleted` 的表建立 partial index，查询统一 `where is_deleted = 0`
@@ -102,7 +107,8 @@ lib/
 - 敏感列（`card_no_ciphertext`、`cvv_ciphertext`）在库级加密之外再做字段级 AES-GCM，密钥独立派生
 - 迁移：Drift `MigrationStrategy`，schema 版本号与 DDL 一同入库提交
 - 新增关键字段：
-  - `accounts.fx_spread_percent`（REAL, default 0）：账户内部换汇的百分比损耗，0 表示该账户不支持内部货币兑换
+  - `accounts.fx_spread_percent`（REAL, default 0）：账户内部换汇的百分比损耗，0 表示该账户不支持内部货币兑换；领域模型使用 `Decimal`，仅在 Drift mapper 边界转换到 SQLite `REAL`
+  - `accounts.fx_fixed_fee`（TEXT, default '0'）：账户内部换汇的固定费用，应用层使用 `Decimal`，0 表示不收固定费
   - `account_channels.region_override`（TEXT, nullable）：算法层运行时地区覆盖，不写入账户自身地区字段
 
 ## 6. 领域层规范
@@ -116,8 +122,10 @@ lib/
 - **Channel 规则引擎**：`sovereignty_region_rule` 采用 JSON Schema + 谓词列表实现（`allowedRegions` / `blockedRegions` / `requireSameRegion`），避免 if-else 蔓延。规则评估按边进行，`TransferContext` 携带边特定的 currency
 - **多币种多跳路径规划**：`PlanTransferRouteUseCase` 使用 Dijkstra 在扩展状态空间 `(accountId, currency)` 上搜索（而非仅 Account.id）。两类边：
   1. **通道边** `(A, C) → (B, C)`：同币种通过共享通道转移，权重 = fee
-  2. **换汇边** `(A, C1) → (A, C2)`：账户内部货币兑换，仅当 `Account.fxSpreadPercent > 0` 且 FX rate 存在时创建，权重 = `amount × (fxSpreadPercent / 100)`
+  2. **换汇边** `(A, C1) → (A, C2)`：账户内部货币兑换，仅当 `Account.fxSpreadPercent > Decimal.zero` 且 FX rate 存在时创建，权重 = `amount × (fxSpreadPercent / 100) + fxFixedFee`
   支持 minFee / minHops 两种目标。费用优先读取源账户在 `AccountChannel` 上的 override（完全覆盖通道默认值），否则回退 `Channel.feeRate / fixedFee`。DFS `_allPaths()` 枚举替代路径供对比展示
+- **路径规划精度约束**：`PlanTransferRouteUseCase` 输入的 `fxRates` 与账户 `fxSpreadPercent` 使用 `Decimal`，反向汇率和百分比除法在 Decimal/Rational 域内显式转换；UI 仅在最终图表或短文本格式化时允许 `toDouble()`。目标币种不可达时必须返回 `NotFoundError`，不得退化为目标账户任意币种路径。
+- **财富摘要 Provider**：跨 Dashboard / Holdings / Account Detail 的净值摘要与趋势状态位于 `features/wealth/presentation`；Dashboard 和 Holdings 不相互引用 presentation provider。
 - **运行时地区推断**：`_effectiveRegion()` 在算法层运行时解析账户在某通道上的有效地区——优先 `AccountChannel.regionOverride`，其次从通道 `allowedRegions` 匹配账户自身地区，最后回退账户 `sovereigntyRegion`。此逻辑不持久化到数据库，属于算法层拼装
 - **ExchangeRate 抽象**：定义 `AssetPriceProvider`（行情源）和 `PriceProvider`（汇率源）接口，REALTIME / HOURLY / DAILY 三种快照类型对应不同实现，便于替换与离线兜底
 - **全局计价货币**：Presentation 层通过统一的 `valuationCurrencyProvider` 管理当前计价货币；金额统计不直接横向累加 `Asset.market_value`，而是先经 `ValueAssetsInCurrencyUseCase` 换算到当前计价货币，再驱动仪表盘、分析页、账户/资产列表与详情展示

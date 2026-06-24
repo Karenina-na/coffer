@@ -233,7 +233,7 @@ class EastmoneyProvider implements AssetPriceProvider {
   // ── helpers ──────────────────────────────────────────────────────────────
 
   static const _headers = {
-    'User-Agent': 'Mozilla/5.0 (GWP)',
+    'User-Agent': 'Mozilla/5.0 (Coffer)',
     'Referer': 'https://quote.eastmoney.com/',
   };
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/search/search_ranking.dart';
+import 'package:coffer/core/search/search_ranking.dart';
 
 void main() {
   group('scoreText', () {

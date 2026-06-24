@@ -45,8 +45,8 @@ class MapEdge {
 ///
 /// Used in the dashboard to visualise the global distribution of accounts
 /// and cross-region transfer channels.
-class GwpNodeMap extends StatelessWidget {
-  const GwpNodeMap({
+class CofferNodeMap extends StatelessWidget {
+  const CofferNodeMap({
     super.key,
     required this.nodes,
     required this.regionIndex,
@@ -70,7 +70,7 @@ class GwpNodeMap extends StatelessWidget {
           child: Text(
             '暂无账户数据',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                 ),
           ),
         ),
@@ -195,9 +195,9 @@ class GwpNodeMap extends StatelessWidget {
           height: visual.radius * 2,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: GwpColors.actionPrimary.withValues(alpha: 0.16 + visual.depth * 0.10),
+            color: CofferColors.actionPrimary.withValues(alpha: 0.16 + visual.depth * 0.10),
             border: Border.all(
-              color: GwpColors.actionPrimary.withValues(alpha: 0.48 + visual.depth * 0.20),
+              color: CofferColors.actionPrimary.withValues(alpha: 0.48 + visual.depth * 0.20),
               width: 1.5,
             ),
           ),
@@ -223,17 +223,17 @@ class GwpNodeMap extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
           decoration: BoxDecoration(
-            color: GwpColors.surface2.withValues(alpha: 0.80 + depth * 0.10),
+            color: CofferColors.surface2.withValues(alpha: 0.80 + depth * 0.10),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
             node.label,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 9,
               fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
         ),
@@ -319,7 +319,7 @@ class _MapPainter extends CustomPainter {
           projected,
           isHot ? 1.2 : 1.0,
           Paint()
-            ..color = (isHot ? GwpColors.actionPrimary : GwpColors.border)
+            ..color = (isHot ? CofferColors.actionPrimary : CofferColors.border)
                 .withValues(alpha: isHot ? 0.22 : 0.16)
             ..style = PaintingStyle.fill,
         );
@@ -335,7 +335,7 @@ class _MapPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = (edge.enabled ? GwpColors.actionPrimary : GwpColors.textMuted)
+          ..color = (edge.enabled ? CofferColors.actionPrimary : CofferColors.textMuted)
               .withValues(alpha: edge.enabled ? 0.18 + depth * 0.18 : 0.12 + depth * 0.10)
           ..style = PaintingStyle.stroke
           ..strokeWidth = edge.geometry.recommendedStrokeWidth(
@@ -359,7 +359,7 @@ class _MapPainter extends CustomPainter {
         leader.center,
         placement.attachPoint,
         Paint()
-          ..color = GwpColors.textMuted.withValues(alpha: 0.28)
+          ..color = CofferColors.textMuted.withValues(alpha: 0.28)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 0.7,
       );
@@ -397,11 +397,11 @@ Size _measureNodePill(String label) {
     text: TextSpan(
       text: label,
       style: const TextStyle(
-        fontFamily: GwpTypo.monoFont,
-        fontFeatures: GwpTypo.tabularFigures,
+        fontFamily: CofferTypo.monoFont,
+        fontFeatures: CofferTypo.tabularFigures,
         fontSize: 9,
         fontWeight: FontWeight.w600,
-        color: GwpColors.textPrimary,
+        color: CofferColors.textPrimary,
       ),
     ),
     textDirection: TextDirection.ltr,

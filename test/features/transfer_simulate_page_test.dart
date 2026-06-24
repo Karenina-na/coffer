@@ -1,37 +1,35 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/account.dart';
-import 'package:gwp/domain/entities/account_channel.dart';
-import 'package:gwp/domain/entities/account_enums.dart';
-import 'package:gwp/domain/entities/channel.dart';
-import 'package:gwp/domain/entities/channel_enums.dart';
-import 'package:gwp/domain/entities/dict_entry.dart';
-import 'package:gwp/domain/entities/dict_type.dart';
-import 'package:gwp/features/account/presentation/account_providers.dart';
-import 'package:gwp/features/asset/presentation/asset_providers.dart';
-import 'package:gwp/features/channel/presentation/channel_list_page.dart';
-import 'package:gwp/features/channel/presentation/channel_providers.dart';
-import 'package:gwp/features/channel/presentation/transfer_simulate_page.dart';
-import 'package:gwp/features/exchange_rate/presentation/exchange_rate_providers.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/account.dart';
+import 'package:coffer/domain/entities/account_channel.dart';
+import 'package:coffer/domain/entities/account_enums.dart';
+import 'package:coffer/domain/entities/channel.dart';
+import 'package:coffer/domain/entities/channel_enums.dart';
+import 'package:coffer/domain/entities/dict_entry.dart';
+import 'package:coffer/domain/entities/dict_type.dart';
+import 'package:coffer/features/account/presentation/account_providers.dart';
+import 'package:coffer/features/asset/presentation/asset_providers.dart';
+import 'package:coffer/features/channel/presentation/channel_list_page.dart';
+import 'package:coffer/features/channel/presentation/channel_providers.dart';
+import 'package:coffer/features/channel/presentation/transfer_simulate_page.dart';
+import 'package:coffer/features/exchange_rate/presentation/exchange_rate_providers.dart';
 
 GoRouter _router() => GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, _) => const Scaffold(body: TransferSimulateBody()),
-        ),
-        GoRoute(
-          path: '/channels',
-          builder: (_, _) => const ChannelListPage(),
-        ),
-      ],
-    );
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (_, _) => const Scaffold(body: TransferSimulateBody()),
+    ),
+    GoRoute(path: '/channels', builder: (_, _) => const ChannelListPage()),
+  ],
+);
 
 Future<void> _pumpTransfer(WidgetTester tester) async {
   tester.view.physicalSize = const Size(1080, 2400);
@@ -47,6 +45,7 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
       sovereigntyRegion: 'CN',
       institutionName: 'ICBC',
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     ),
@@ -56,6 +55,7 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
       sovereigntyRegion: 'US',
       institutionName: 'Fidelity',
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     ),
@@ -65,6 +65,7 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
       sovereigntyRegion: 'SG',
       institutionName: 'Unlinked Wallet',
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     ),
@@ -101,11 +102,13 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
         assetListProvider.overrideWith((ref) => Stream.value(const [])),
         accountChannelListProvider.overrideWith((ref) => Stream.value(links)),
         channelListProvider.overrideWith((ref) => Stream.value(channels)),
-        regionMetaIndexProvider.overrideWith((ref) => Stream.value(<String, RegionMeta>{})),
-        exchangeRateListProvider.overrideWith((ref) => Stream.value(const [])),
-        dictEntriesProvider(DictType.currency).overrideWith(
-          (ref) => Stream.value(<DictEntry>[]),
+        regionMetaIndexProvider.overrideWith(
+          (ref) => Stream.value(<String, RegionMeta>{}),
         ),
+        exchangeRateListProvider.overrideWith((ref) => Stream.value(const [])),
+        dictEntriesProvider(
+          DictType.currency,
+        ).overrideWith((ref) => Stream.value(<DictEntry>[])),
         dictEntriesProvider(DictType.transferProtocol).overrideWith(
           (ref) => Stream.value([
             DictEntry(
@@ -113,7 +116,8 @@ Future<void> _pumpTransfer(WidgetTester tester) async {
               type: DictType.transferProtocol,
               code: 'SWIFT',
               name: '环球银行金融电信协会',
-              nameEn: 'Society for Worldwide Interbank Financial Telecommunication',
+              nameEn:
+                  'Society for Worldwide Interbank Financial Telecommunication',
               isBuiltin: true,
               createdAt: now,
               updatedAt: now,

@@ -4,61 +4,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-- This repository is a Flutter app named **Coffer**; the Dart package name and some internal identifiers still use the older codename `gwp`.
+- This repository is a Flutter app named **Coffer**; the Dart package name is `coffer`.
 - The app is **local-first**: user financial data stays on-device. Network access is only for public metadata and market data (Frankfurter FX, Eastmoney, Yahoo, OKX, REST Countries), and should never send account or holdings data outward.
 - Android is the primary validation target; iOS is kept build-compatible.
 
 ## Common commands
 
 ```bash
-flutter pub get
+fvm flutter pub get
 ```
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+fvm dart run build_runner build --delete-conflicting-outputs
 ```
 
 ```bash
-dart run build_runner watch --delete-conflicting-outputs
+fvm dart run build_runner watch --delete-conflicting-outputs
 ```
 
 ```bash
-flutter analyze
+fvm flutter analyze
 ```
 
 ```bash
-flutter test
+fvm flutter test
 ```
 
 Run a single test file:
 
 ```bash
-flutter test test/features/account_repository_test.dart
+fvm flutter test test/features/account_repository_test.dart
 ```
 
 Run a single test by name:
 
 ```bash
-flutter test --plain-name "updates market value" test/features/valuate_asset_test.dart
+fvm flutter test --plain-name "updates market value" test/features/valuate_asset_test.dart
 ```
 
 Run the app locally:
 
 ```bash
-flutter run
+fvm flutter run
 ```
 
 Build Android APKs:
 
 ```bash
-flutter build apk --debug
-flutter build apk --release
+fvm flutter build apk --debug
+fvm flutter build apk --release
 ```
 
 Install Android builds:
 
 ```bash
-flutter install -d emulator-5554 --use-application-binary "build/app/outputs/flutter-apk/app-debug.apk"
+fvm flutter install -d emulator-5554 --use-application-binary "build/app/outputs/flutter-apk/app-debug.apk"
 ```
 
 For a physical Android phone, prefer `adb install -r` with the release APK so local app data is preserved when possible. Avoid `flutter install` for the phone because it may uninstall the old app first.
@@ -74,8 +74,8 @@ After a code change passes its required verification, default to installing auto
 Regenerate app assets when branding config changes:
 
 ```bash
-dart run flutter_launcher_icons
-dart run flutter_native_splash:create
+fvm dart run flutter_launcher_icons
+fvm dart run flutter_native_splash:create
 ```
 
 ## When code generation is required

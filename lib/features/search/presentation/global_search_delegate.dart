@@ -2,47 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../domain/entities/account.dart';
-import '../../domain/entities/asset.dart';
-import '../../domain/entities/card.dart';
-import '../../domain/entities/domain_event.dart';
-import '../../domain/entities/watched_pair.dart';
-import '../../features/account/presentation/account_providers.dart';
-import '../../data/providers/dict_providers.dart';
-import 'region_meta.dart';
-import '../../features/asset/presentation/asset_providers.dart';
-import '../../features/card/presentation/card_detail_sheet.dart';
-import '../../features/card/presentation/card_providers.dart';
-import '../../features/event/presentation/event_providers.dart';
-import '../../features/exchange_rate/presentation/exchange_rate_providers.dart';
-import '../../features/exchange_rate/presentation/pair_detail_page.dart';
-import '../money/money.dart';
-import '../search/highlighted_text.dart';
-import '../search/search_commands.dart';
-import '../search/search_history_store.dart';
-import '../search/search_ranking.dart';
-import 'entity_search_delegate.dart';
+import '../../../core/money/money.dart';
+import '../../../core/search/highlighted_text.dart';
+import '../../../core/search/search_ranking.dart';
+import '../../../core/ui/entity_search_delegate.dart';
+import '../../../core/ui/region_meta.dart';
+import '../../../data/providers/dict_providers.dart';
+import '../../../domain/entities/account.dart';
+import '../../../domain/entities/asset.dart';
+import '../../../domain/entities/card.dart';
+import '../../../domain/entities/domain_event.dart';
+import '../../../domain/entities/watched_pair.dart';
+import '../../account/presentation/account_providers.dart';
+import '../../asset/presentation/asset_providers.dart';
+import '../../card/presentation/card_detail_sheet.dart';
+import '../../card/presentation/card_providers.dart';
+import '../../event/presentation/event_providers.dart';
+import '../../exchange_rate/presentation/exchange_rate_providers.dart';
+import '../../exchange_rate/presentation/pair_detail_page.dart';
+import 'search_commands.dart';
+import 'search_history_store.dart';
 
 /// 全局搜索覆盖的业务模块。
 enum SearchFeature { dashboard, accounts, assets, cards, rates, events }
 
 String _labelOf(SearchFeature f) => switch (f) {
-      SearchFeature.dashboard => '仪表盘',
-      SearchFeature.accounts => '账户',
-      SearchFeature.assets => '资产',
-      SearchFeature.cards => '卡片',
-      SearchFeature.rates => '汇率',
-      SearchFeature.events => '事件',
-    };
+  SearchFeature.dashboard => '仪表盘',
+  SearchFeature.accounts => '账户',
+  SearchFeature.assets => '资产',
+  SearchFeature.cards => '卡片',
+  SearchFeature.rates => '汇率',
+  SearchFeature.events => '事件',
+};
 
 IconData _iconOf(SearchFeature f) => switch (f) {
-      SearchFeature.dashboard => Icons.dashboard_outlined,
-      SearchFeature.accounts => Icons.account_balance_outlined,
-      SearchFeature.assets => Icons.savings_outlined,
-      SearchFeature.cards => Icons.credit_card_outlined,
-      SearchFeature.rates => Icons.sync_alt_outlined,
-      SearchFeature.events => Icons.event_note_outlined,
-    };
+  SearchFeature.dashboard => Icons.dashboard_outlined,
+  SearchFeature.accounts => Icons.account_balance_outlined,
+  SearchFeature.assets => Icons.savings_outlined,
+  SearchFeature.cards => Icons.credit_card_outlined,
+  SearchFeature.rates => Icons.sync_alt_outlined,
+  SearchFeature.events => Icons.event_note_outlined,
+};
 
 /// 某个业务模块的搜索配置：提供数据源 + 字段抽取 + 跳转。
 ///
@@ -61,33 +61,33 @@ class FeatureSearchConfig<T> {
     List<String> Function(T item)? extraFields,
     required void Function(BuildContext ctx, T item) onTap,
     List<SearchFilterGroup<T>> filterGroups = const [],
-  })  : items = List<dynamic>.from(items),
-        titleOf = ((dynamic x) => titleOf(x as T)),
-        subtitleOf = ((dynamic x) =>
-            subtitleOf == null ? null : subtitleOf(x as T)),
-        identityOf = ((dynamic x) => identityOf(x as T)),
-        trailingBuilder = trailingBuilder == null
-            ? null
-            : ((ctx, dynamic x) => trailingBuilder(ctx, x as T)),
-        isThreeLine = isThreeLine == null
-            ? null
-            : ((dynamic x) => isThreeLine(x as T)),
-        extraFields = ((dynamic x) =>
-            extraFields == null ? const <String>[] : extraFields(x as T)),
-        onTap = ((ctx, dynamic x) => onTap(ctx, x as T)),
-        filterGroups = [
-          for (final g in filterGroups)
-            SearchFilterGroup<dynamic>(
-              title: g.title,
-              chips: [
-                for (final c in g.chips)
-                  SearchFilterChipSpec<dynamic>(
-                    label: c.label,
-                    predicate: (dynamic x) => c.predicate(x as T),
-                  ),
-              ],
-            ),
-        ];
+  }) : items = List<dynamic>.from(items),
+       titleOf = ((dynamic x) => titleOf(x as T)),
+       subtitleOf = ((dynamic x) =>
+           subtitleOf == null ? null : subtitleOf(x as T)),
+       identityOf = ((dynamic x) => identityOf(x as T)),
+       trailingBuilder = trailingBuilder == null
+           ? null
+           : ((ctx, dynamic x) => trailingBuilder(ctx, x as T)),
+       isThreeLine = isThreeLine == null
+           ? null
+           : ((dynamic x) => isThreeLine(x as T)),
+       extraFields = ((dynamic x) =>
+           extraFields == null ? const <String>[] : extraFields(x as T)),
+       onTap = ((ctx, dynamic x) => onTap(ctx, x as T)),
+       filterGroups = [
+         for (final g in filterGroups)
+           SearchFilterGroup<dynamic>(
+             title: g.title,
+             chips: [
+               for (final c in g.chips)
+                 SearchFilterChipSpec<dynamic>(
+                   label: c.label,
+                   predicate: (dynamic x) => c.predicate(x as T),
+                 ),
+             ],
+           ),
+       ];
 
   final SearchFeature feature;
   final List<dynamic> items;
@@ -114,14 +114,11 @@ class FeatureSearchConfig<T> {
   }
 
   int score(dynamic item, String q) {
-    return scoreMax(
-      <String?>[
-        titleOf(item),
-        subtitleOf(item),
-        ...extraFields(item),
-      ],
-      q,
-    );
+    return scoreMax(<String?>[
+      titleOf(item),
+      subtitleOf(item),
+      ...extraFields(item),
+    ], q);
   }
 }
 
@@ -173,9 +170,7 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
     required this.configs,
     required this.ref,
     required this.commands,
-  }) : super(
-          searchFieldLabel: '搜索：账户 / 资产 / 卡片 / 汇率 / 事件（> 执行命令）',
-        );
+  }) : super(searchFieldLabel: '搜索：账户 / 资产 / 卡片 / 汇率 / 事件（> 执行命令）');
 
   final SearchFeature current;
   final List<FeatureSearchConfig> configs;
@@ -193,20 +188,20 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
-        if (query.isNotEmpty)
-          IconButton(
-            tooltip: '清空',
-            icon: const Icon(Icons.clear),
-            onPressed: () => query = '',
-          ),
-      ];
+    if (query.isNotEmpty)
+      IconButton(
+        tooltip: '清空',
+        icon: const Icon(Icons.clear),
+        onPressed: () => query = '',
+      ),
+  ];
 
   @override
   Widget? buildLeading(BuildContext context) => IconButton(
-        tooltip: '返回',
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => close(context, null),
-      );
+    tooltip: '返回',
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () => close(context, null),
+  );
 
   String _lastRecordedQuery = '';
 
@@ -248,9 +243,11 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        _sectionHeader(ctx,
-            title: '搜索小贴士',
-            subtitle: '输入关键词跨模块检索 · 以 `>` 开头进入命令模式'),
+        _sectionHeader(
+          ctx,
+          title: '搜索小贴士',
+          subtitle: '输入关键词跨模块检索 · 以 `>` 开头进入命令模式',
+        ),
         if (history.queries.isNotEmpty) ...[
           _sectionHeader(
             ctx,
@@ -323,11 +320,11 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        _sectionHeader(ctx,
-            title: '命令面板',
-            subtitle: scored.isEmpty
-                ? '无匹配命令'
-                : '${scored.length} 条命令'),
+        _sectionHeader(
+          ctx,
+          title: '命令面板',
+          subtitle: scored.isEmpty ? '无匹配命令' : '${scored.length} 条命令',
+        ),
         for (final (cmd, _) in scored)
           ListTile(
             leading: Icon(cmd.icon),
@@ -445,9 +442,7 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
             child: _sectionHeader(
               ctx,
               title: '${curr.label} · 精筛',
-              subtitle: curr.filterGroups.isEmpty
-                  ? null
-                  : '在当前模块内结合标签组合过滤',
+              subtitle: curr.filterGroups.isEmpty ? null : '在当前模块内结合标签组合过滤',
             ),
           ),
           if (curr.filterGroups.isNotEmpty)
@@ -458,14 +453,11 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
                 onToggle: (chip) => setInner(() {
                   if (!_active.remove(chip)) _active.add(chip);
                 }),
-                onClear:
-                    _active.isEmpty ? null : () => setInner(_active.clear),
+                onClear: _active.isEmpty ? null : () => setInner(_active.clear),
               ),
             ),
           if (currList.isEmpty)
-            SliverToBoxAdapter(
-              child: _emptyHint(theme, '无匹配结果'),
-            )
+            SliverToBoxAdapter(child: _emptyHint(theme, '无匹配结果'))
           else
             SliverToBoxAdapter(
               child: Column(
@@ -492,28 +484,50 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('未找到「$q」',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.hintColor)),
+          Text(
+            '未找到「$q」',
+            style: theme.textTheme.titleSmall?.copyWith(color: theme.hintColor),
+          ),
           const SizedBox(height: 8),
-          Text('是否新建 ——',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.hintColor)),
+          Text(
+            '是否新建 ——',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 6,
             children: [
-              _ctaChip(ctx, '新建账户', Icons.account_balance_outlined,
-                  () => ctx.push('/accounts/new')),
-              _ctaChip(ctx, '新建资产', Icons.savings_outlined,
-                  () => ctx.push('/assets/new')),
-              _ctaChip(ctx, '新建卡片', Icons.credit_card_outlined,
-                  () => ctx.push('/cards/new')),
-              _ctaChip(ctx, '新建事件', Icons.event_note_outlined,
-                  () => ctx.push('/events/new')),
-              _ctaChip(ctx, '新建渠道', Icons.hub_outlined,
-                  () => ctx.push('/channels/new')),
+              _ctaChip(
+                ctx,
+                '新建账户',
+                Icons.account_balance_outlined,
+                () => ctx.push('/accounts/new'),
+              ),
+              _ctaChip(
+                ctx,
+                '新建资产',
+                Icons.savings_outlined,
+                () => ctx.push('/assets/new'),
+              ),
+              _ctaChip(
+                ctx,
+                '新建卡片',
+                Icons.credit_card_outlined,
+                () => ctx.push('/cards/new'),
+              ),
+              _ctaChip(
+                ctx,
+                '新建事件',
+                Icons.event_note_outlined,
+                () => ctx.push('/events/new'),
+              ),
+              _ctaChip(
+                ctx,
+                '新建渠道',
+                Icons.hub_outlined,
+                () => ctx.push('/channels/new'),
+              ),
             ],
           ),
         ],
@@ -522,7 +536,11 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
   }
 
   Widget _ctaChip(
-      BuildContext ctx, String label, IconData icon, VoidCallback go) {
+    BuildContext ctx,
+    String label,
+    IconData icon,
+    VoidCallback go,
+  ) {
     return ActionChip(
       avatar: Icon(icon, size: 16),
       label: Text(label),
@@ -567,7 +585,9 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
       isThreeLine: isThree,
       onTap: () {
         // 记录历史
-        ref.read(searchHistoryProvider.notifier).recordVisit(
+        ref
+            .read(searchHistoryProvider.notifier)
+            .recordVisit(
               SearchVisit(
                 feature: c.feature.name,
                 targetId: c.identityOf(item),
@@ -606,15 +626,17 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.hintColor),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.hintColor,
+                    ),
                   ),
                 ],
               ],
@@ -668,13 +690,14 @@ class GlobalSearchDelegate extends SearchDelegate<void> {
   }
 
   Widget _emptyHint(ThemeData theme, String text) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Text(text,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.hintColor)),
-        ),
-      );
+    padding: const EdgeInsets.all(24),
+    child: Center(
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+      ),
+    ),
+  );
 
   // ─── 最近访问跳转 ─────────────────────────────────────────────
 
@@ -786,13 +809,8 @@ FeatureSearchConfig<Asset> _buildAssetsConfig(WidgetRef ref) {
     items: assets,
     identityOf: (a) => a.id,
     titleOf: (a) => a.assetCode ?? a.assetType.code,
-    subtitleOf: (a) =>
-        '${a.assetType.code} · 数量 ${a.quantity} · ${a.currency}',
-    extraFields: (a) => [
-      a.assetCode ?? '',
-      a.assetType.code,
-      a.currency,
-    ],
+    subtitleOf: (a) => '${a.assetType.code} · 数量 ${a.quantity} · ${a.currency}',
+    extraFields: (a) => [a.assetCode ?? '', a.assetType.code, a.currency],
     trailingBuilder: (ctx, a) {
       final mv = a.marketValue;
       return Text(
@@ -914,7 +932,8 @@ FeatureSearchConfig<BankCard> _buildCardsConfig(WidgetRef ref) {
 }
 
 FeatureSearchConfig<WatchedPair> _buildRatesConfig(WidgetRef ref) {
-  final pairs = ref.read(watchedPairListProvider).value ?? const <WatchedPair>[];
+  final pairs =
+      ref.read(watchedPairListProvider).value ?? const <WatchedPair>[];
   final bases = pairs.map((p) => p.baseCurrency).toSet().toList()..sort();
   final quotes = pairs.map((p) => p.quoteCurrency).toSet().toList()..sort();
   return FeatureSearchConfig<WatchedPair>(

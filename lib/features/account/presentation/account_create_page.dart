@@ -71,12 +71,14 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
     _region = a?.sovereigntyRegion ?? 'CN';
     _accountNoCtrl = TextEditingController(text: a?.accountNo ?? '');
     _fxSpreadCtrl = TextEditingController(
-        text: ((a?.fxSpreadPercent ?? 0) > 0
-            ? a!.fxSpreadPercent.toStringAsFixed(2)
-            : '0.30'));
+      text: ((a?.fxSpreadPercent ?? Decimal.zero) > Decimal.zero
+          ? a!.fxSpreadPercent.toStringAsFixed(2)
+          : '0.30'),
+    );
     _fxFixedFeeCtrl = TextEditingController(
-        text: ((a?.fxFixedFee) != null ? a!.fxFixedFee.toString() : ''));
-    _supportsFx = (a?.fxSpreadPercent ?? 0) > 0;
+      text: ((a?.fxFixedFee) != null ? a!.fxFixedFee.toString() : ''),
+    );
+    _supportsFx = (a?.fxSpreadPercent ?? Decimal.zero) > Decimal.zero;
     _type = a?.accountType ?? AccountType.bank;
     _status = a?.status ?? AccountStatus.active;
     _openedAt = a?.openedAt;
@@ -130,8 +132,9 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
           swiftBic: _bankSwiftCtrl.text.trim().isEmpty
               ? null
               : _bankSwiftCtrl.text.trim(),
-          iban:
-              _bankIbanCtrl.text.trim().isEmpty ? null : _bankIbanCtrl.text.trim(),
+          iban: _bankIbanCtrl.text.trim().isEmpty
+              ? null
+              : _bankIbanCtrl.text.trim(),
           branchName: _bankBranchCtrl.text.trim().isEmpty
               ? null
               : _bankBranchCtrl.text.trim(),
@@ -206,34 +209,38 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
-    final accountNo =
-        _accountNoCtrl.text.trim().isEmpty ? null : _accountNoCtrl.text.trim();
+    final accountNo = _accountNoCtrl.text.trim().isEmpty
+        ? null
+        : _accountNoCtrl.text.trim();
     final typeInfo = _collectTypeInfo();
+    final fxSpreadPercent = _supportsFx
+        ? Decimal.parse(_fxSpreadCtrl.text.trim())
+        : Decimal.zero;
     if (_isEdit) {
       final now = DateTime.now();
-      final updated = widget.initial!.copyWith(
-        accountType: _type,
-        sovereigntyRegion: _region,
-        institutionName: _institutionCtrl.text.trim(),
-        accountNo: accountNo,
-        status: _status,
-        openedAt: _openedAt,
-        fxSpreadPercent:
-            _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
-        fxFixedFee: _supportsFx
-            ? Decimal.tryParse(_fxFixedFeeCtrl.text)
-            : null,
-        updatedAt: now,
-      ).copyWithTypeInfo(typeInfo);
-      final result =
-          await ref.read(accountRepositoryProvider).update(updated);
+      final updated = widget.initial!
+          .copyWith(
+            accountType: _type,
+            sovereigntyRegion: _region,
+            institutionName: _institutionCtrl.text.trim(),
+            accountNo: accountNo,
+            status: _status,
+            openedAt: _openedAt,
+            fxSpreadPercent: fxSpreadPercent,
+            fxFixedFee: _supportsFx
+                ? Decimal.tryParse(_fxFixedFeeCtrl.text)
+                : null,
+            updatedAt: now,
+          )
+          .copyWithTypeInfo(typeInfo);
+      final result = await ref.read(updateAccountUseCaseProvider)(updated);
       if (!mounted) return;
       setState(() => _submitting = false);
       result.when(
         ok: (_) => context.pop(),
-        err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('更新失败: ${errorToMessage(e)}')),
-        ),
+        err: (e) => ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('更新失败: ${errorToMessage(e)}'))),
       );
     } else {
       final usecase = ref.read(createAccountUseCaseProvider);
@@ -244,20 +251,17 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
         accountNo: accountNo,
         status: _status,
         openedAt: _openedAt,
-        fxSpreadPercent:
-            _supportsFx ? (double.tryParse(_fxSpreadCtrl.text) ?? 0.3) : 0,
-        fxFixedFee: _supportsFx
-            ? Decimal.tryParse(_fxFixedFeeCtrl.text)
-            : null,
+        fxSpreadPercent: fxSpreadPercent,
+        fxFixedFee: _supportsFx ? Decimal.tryParse(_fxFixedFeeCtrl.text) : null,
         typeInfo: typeInfo,
       );
       if (!mounted) return;
       setState(() => _submitting = false);
       result.when(
         ok: (_) => context.pop(),
-        err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败: ${errorToMessage(e)}')),
-        ),
+        err: (e) => ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('创建失败: ${errorToMessage(e)}'))),
       );
     }
   }
@@ -275,8 +279,12 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               initialValue: _type,
               decoration: const InputDecoration(labelText: '账户类型'),
               items: AccountType.values
-                  .map((t) =>
-                      DropdownMenuItem(value: t, child: Text(t.labelBilingual)))
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(t.labelBilingual),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() {
                 _type = v ?? _type;
@@ -287,8 +295,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
             TextFormField(
               controller: _institutionCtrl,
               decoration: const InputDecoration(labelText: '开户机构'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? '必填' : null,
+              validator: (v) => (v == null || v.trim().isEmpty) ? '必填' : null,
             ),
             const SizedBox(height: 12),
             DictPickerField(
@@ -299,8 +306,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               onChanged: (v) => setState(() {
                 if (v != null) _region = v;
               }),
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? '必选' : null,
+              validator: (v) => (v == null || v.isEmpty) ? '必选' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -312,8 +318,12 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               initialValue: _status,
               decoration: const InputDecoration(labelText: '账户状态'),
               items: AccountStatus.values
-                  .map((s) =>
-                      DropdownMenuItem(value: s, child: Text(s.labelBilingual)))
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s.labelBilingual),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _status = v ?? _status),
             ),
@@ -339,28 +349,33 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _bankIbanCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'IBAN（可选）',
-                ),
+                decoration: const InputDecoration(labelText: 'IBAN（可选）'),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _bankBranchCtrl,
-                decoration: const InputDecoration(
-                  labelText: '分行名称（可选）',
-                ),
+                decoration: const InputDecoration(labelText: '分行名称（可选）'),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _bankSubtype,
                 decoration: const InputDecoration(labelText: '账户子类型'),
                 items: const [
-                  DropdownMenuItem(value: 'checking', child: Text('活期 (Checking)')),
-                  DropdownMenuItem(value: 'savings', child: Text('储蓄 (Savings)')),
                   DropdownMenuItem(
-                      value: 'timeDeposit', child: Text('定期 (Time Deposit)')),
+                    value: 'checking',
+                    child: Text('活期 (Checking)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'savings',
+                    child: Text('储蓄 (Savings)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'timeDeposit',
+                    child: Text('定期 (Time Deposit)'),
+                  ),
                 ],
-                onChanged: (v) => setState(() => _bankSubtype = v ?? 'checking'),
+                onChanged: (v) =>
+                    setState(() => _bankSubtype = v ?? 'checking'),
               ),
             ],
 
@@ -374,11 +389,18 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                 decoration: const InputDecoration(labelText: '账户子类型'),
                 items: const [
                   DropdownMenuItem(value: 'cash', child: Text('现金账户 (Cash)')),
-                  DropdownMenuItem(value: 'margin', child: Text('保证金账户 (Margin)')),
                   DropdownMenuItem(
-                      value: 'retirement', child: Text('退休账户 (Retirement)')),
+                    value: 'margin',
+                    child: Text('保证金账户 (Margin)'),
+                  ),
                   DropdownMenuItem(
-                      value: 'education', child: Text('教育账户 (Education)')),
+                    value: 'retirement',
+                    child: Text('退休账户 (Retirement)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'education',
+                    child: Text('教育账户 (Education)'),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _brokerSubtype = v ?? 'cash'),
               ),
@@ -419,9 +441,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _insRegNoCtrl,
-                decoration: const InputDecoration(
-                  labelText: '保险机构注册号（可选）',
-                ),
+                decoration: const InputDecoration(labelText: '保险机构注册号（可选）'),
               ),
             ],
 
@@ -446,9 +466,7 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _custCustodianCtrl,
-                decoration: const InputDecoration(
-                  labelText: '托管机构名（可选）',
-                ),
+                decoration: const InputDecoration(labelText: '托管机构名（可选）'),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
@@ -456,9 +474,13 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                 decoration: const InputDecoration(labelText: '账户结构'),
                 items: const [
                   DropdownMenuItem(
-                      value: 'segregated', child: Text('分离账户 (Segregated)')),
+                    value: 'segregated',
+                    child: Text('分离账户 (Segregated)'),
+                  ),
                   DropdownMenuItem(
-                      value: 'omnibus', child: Text('综合账户 (Omnibus)')),
+                    value: 'omnibus',
+                    child: Text('综合账户 (Omnibus)'),
+                  ),
                 ],
                 onChanged: (v) =>
                     setState(() => _custStructure = v ?? 'segregated'),
@@ -500,9 +522,13 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                   DropdownMenuItem(value: 'hot', child: Text('热钱包 (Hot)')),
                   DropdownMenuItem(value: 'cold', child: Text('冷钱包 (Cold)')),
                   DropdownMenuItem(
-                      value: 'hardware', child: Text('硬件钱包 (Hardware)')),
+                    value: 'hardware',
+                    child: Text('硬件钱包 (Hardware)'),
+                  ),
                   DropdownMenuItem(
-                      value: 'multisig', child: Text('多签钱包 (Multisig)')),
+                    value: 'multisig',
+                    child: Text('多签钱包 (Multisig)'),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _walletType = v ?? 'hot'),
               ),
@@ -534,11 +560,18 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                   labelText: '换汇损耗 (%)',
                   helperText: '例如 0.3 表示内部换汇时有 0.3% 的摩擦损耗',
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                 ],
+                validator: (value) {
+                  final parsed = Decimal.tryParse((value ?? '').trim());
+                  if (parsed == null) return '请输入有效损耗比例';
+                  if (parsed < Decimal.zero) return '损耗比例不能为负数';
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -547,8 +580,9 @@ class _AccountCreatePageState extends ConsumerState<AccountCreatePage> {
                   labelText: '换汇固定费用（可选）',
                   helperText: '每笔换汇额外收取的固定金额',
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                 ],
@@ -643,18 +677,22 @@ class _SectionHeader extends StatelessWidget {
   final String title;
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      const Expanded(child: Divider()),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(title,
+    return Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            title,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: Color(0xFF64748B),
-            )),
-      ),
-      const Expanded(child: Divider()),
-    ]);
+            ),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    );
   }
 }

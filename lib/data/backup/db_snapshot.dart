@@ -68,6 +68,14 @@ class DbSnapshotService implements DbSnapshotRepository {
     return copy;
   }
 
+  Map<String, dynamic> _restoreAccount(Map<String, dynamic> json) {
+    final copy = Map<String, dynamic>.of(json);
+    copy.putIfAbsent('fxSpreadPercent', () => 0.0);
+    copy.putIfAbsent('fxFixedFee', () => '0');
+    copy.putIfAbsent('isDeleted', () => false);
+    return copy;
+  }
+
   /// 表名到 `List<Row JSON>` 的映射；顺序稳定（遵循外键依赖）。
   @override
   Future<Map<String, List<Map<String, dynamic>>>> export() async {
@@ -225,6 +233,9 @@ class DbSnapshotService implements DbSnapshotRepository {
   /// events 与 asset_price_history 最后写入。
   @override
   Future<void> restore(Map<String, List<Map<String, dynamic>>> snap) async {
+    final restoredAccounts = (snap['accounts'] ?? const [])
+        .map(_restoreAccount)
+        .toList(growable: false);
     final restoredCards = await Future.wait(
       (snap['cards'] ?? const []).map(_restoreCard),
     );
@@ -245,7 +256,7 @@ class DbSnapshotService implements DbSnapshotRepository {
 
       await _batchInsert(
         _db.accounts,
-        snap['accounts'] ?? const [],
+        restoredAccounts,
         AccountRow.fromJson,
       );
       await _batchInsert(

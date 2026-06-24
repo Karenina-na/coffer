@@ -7,14 +7,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/ui/app_top_bar.dart';
+import '../../../app/widgets/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
-import '../../../core/ui/global_search_delegate.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../search/presentation/global_search_delegate.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_status_badge.dart';
 import '../../../core/ui/horizontal_gesture_guard.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
@@ -89,10 +89,7 @@ class _EventListPageState extends ConsumerState<EventListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppTopBar(
-        title: const Text('事件'),
-        showAppIcon: true,
-      ),
+      appBar: AppTopBar(title: const Text('事件'), showAppIcon: true),
       body: RepaintBoundary(child: _CalendarTab(key: _calendarKey)),
     );
   }

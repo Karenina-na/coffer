@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/channel.dart';
-import 'package:gwp/domain/entities/channel_enums.dart';
-import 'package:gwp/domain/entities/dict_entry.dart';
-import 'package:gwp/domain/entities/dict_type.dart';
-import 'package:gwp/domain/repositories/channel_repository.dart';
-import 'package:gwp/domain/repositories/dict_repository.dart';
-import 'package:gwp/domain/usecases/save_channel.dart';
-import 'package:gwp/features/channel/presentation/channel_form.dart';
-import 'package:gwp/features/channel/presentation/channel_providers.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/channel.dart';
+import 'package:coffer/domain/entities/channel_enums.dart';
+import 'package:coffer/domain/entities/dict_entry.dart';
+import 'package:coffer/domain/entities/dict_type.dart';
+import 'package:coffer/domain/repositories/channel_repository.dart';
+import 'package:coffer/domain/repositories/dict_repository.dart';
+import 'package:coffer/domain/usecases/save_channel.dart';
+import 'package:coffer/features/channel/presentation/channel_form.dart';
+import 'package:coffer/features/channel/presentation/channel_providers.dart';
 
 void main() {
   testWidgets('通道表单使用字典多选保存地区规则', (tester) async {

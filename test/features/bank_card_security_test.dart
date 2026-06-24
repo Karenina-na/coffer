@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/domain/entities/card.dart';
-import 'package:gwp/domain/entities/card_enums.dart';
+import 'package:coffer/domain/entities/card.dart';
+import 'package:coffer/domain/entities/card_enums.dart';
 
 void main() {
   test('BankCard.toString does not expose ciphertext fields', () {

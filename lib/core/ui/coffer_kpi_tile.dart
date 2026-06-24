@@ -6,8 +6,8 @@ import 'design_tokens.dart';
 ///
 /// Displays: icon, label, large value, optional subtitle, optional trend widget.
 /// Tappable with InkWell for drill-down navigation.
-class GwpKpiTile extends StatelessWidget {
-  const GwpKpiTile({
+class CofferKpiTile extends StatelessWidget {
+  const CofferKpiTile({
     super.key,
     required this.icon,
     required this.label,
@@ -25,36 +25,36 @@ class GwpKpiTile extends StatelessWidget {
   final Color? iconColor;
   final VoidCallback? onTap;
 
-  /// Optional trailing widget — e.g. a GwpMiniChart or GwpProgressRing.
+  /// Optional trailing widget — e.g. a CofferMiniChart or CofferProgressRing.
   final Widget? trend;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: GwpColors.surface1,
+      color: CofferColors.surface1,
       borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(GwpSpacing.md),
+          padding: const EdgeInsets.all(CofferSpacing.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: GwpColors.border, width: 0.5),
+            border: Border.all(color: CofferColors.border, width: 0.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(icon, size: 16, color: iconColor ?? GwpColors.actionPrimary),
-                  const SizedBox(width: GwpSpacing.xs),
+                  Icon(icon, size: 16, color: iconColor ?? CofferColors.actionPrimary),
+                  const SizedBox(width: CofferSpacing.xs),
                   Expanded(
                     child: Text(
                       label,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                         fontSize: 11,
                       ),
                       maxLines: 1,
@@ -63,7 +63,7 @@ class GwpKpiTile extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.sm),
+              const SizedBox(height: CofferSpacing.sm),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -74,8 +74,8 @@ class GwpKpiTile extends StatelessWidget {
                         Text(
                           value,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            fontFamily: GwpTypo.monoFont,
-                            fontFeatures: GwpTypo.tabularFigures,
+                            fontFamily: CofferTypo.monoFont,
+                            fontFeatures: CofferTypo.tabularFigures,
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
                           ),
@@ -87,7 +87,7 @@ class GwpKpiTile extends StatelessWidget {
                           Text(
                             subtitle!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: GwpColors.textMuted,
+                              color: CofferColors.textMuted,
                               fontSize: 10,
                             ),
                             maxLines: 1,

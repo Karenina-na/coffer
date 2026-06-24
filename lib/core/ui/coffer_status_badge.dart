@@ -4,8 +4,8 @@ import 'design_tokens.dart';
 
 /// Unified status badge used across accounts, events, channels, etc.
 /// Renders a compact pill with semantic background color.
-class GwpStatusBadge extends StatelessWidget {
-  const GwpStatusBadge({
+class CofferStatusBadge extends StatelessWidget {
+  const CofferStatusBadge({
     super.key,
     required this.label,
     this.variant = StatusVariant.neutral,
@@ -39,10 +39,10 @@ class GwpStatusBadge extends StatelessWidget {
 enum StatusVariant { positive, negative, warning, info, neutral, muted }
 
 (Color, Color) _colors(StatusVariant v) => switch (v) {
-      StatusVariant.positive => (GwpColors.positiveBg, GwpColors.positive),
-      StatusVariant.negative => (GwpColors.negativeBg, GwpColors.negative),
-      StatusVariant.warning => (GwpColors.warningBg, GwpColors.warning),
-      StatusVariant.info => (GwpColors.infoBg, GwpColors.info),
-      StatusVariant.neutral => (GwpColors.surface3, GwpColors.textPrimary),
-      StatusVariant.muted => (GwpColors.surface2, GwpColors.textMuted),
+      StatusVariant.positive => (CofferColors.positiveBg, CofferColors.positive),
+      StatusVariant.negative => (CofferColors.negativeBg, CofferColors.negative),
+      StatusVariant.warning => (CofferColors.warningBg, CofferColors.warning),
+      StatusVariant.info => (CofferColors.infoBg, CofferColors.info),
+      StatusVariant.neutral => (CofferColors.surface3, CofferColors.textPrimary),
+      StatusVariant.muted => (CofferColors.surface2, CofferColors.textMuted),
     };

@@ -28,7 +28,7 @@ class SecureKeyStore {
           ),
       _random = random ?? Random.secure();
 
-  static const _masterKeyAlias = 'gwp.master_key.v1';
+  static const _masterKeyAlias = 'coffer.master_key.v1';
   static const _masterKeyBytes = 32;
 
   final FlutterSecureStorage _storage;
@@ -78,7 +78,7 @@ class SecureKeyStore {
   Future<bool> _databaseFileExists() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      return File(p.join(dir.path, 'gwp.db')).exists();
+      return File(p.join(dir.path, 'coffer.db')).exists();
     } catch (_) {
       return false;
     }

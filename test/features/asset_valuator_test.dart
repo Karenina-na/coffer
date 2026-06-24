@@ -1,13 +1,13 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/valuation/strategies/fixed_income_valuator.dart';
-import 'package:gwp/domain/valuation/strategies/manual_valuator.dart';
-import 'package:gwp/domain/valuation/strategies/market_quote_valuator.dart';
-import 'package:gwp/domain/valuation/valuation_router.dart';
-import 'package:gwp/domain/providers/asset_price_provider.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/valuation/strategies/fixed_income_valuator.dart';
+import 'package:coffer/domain/valuation/strategies/manual_valuator.dart';
+import 'package:coffer/domain/valuation/strategies/market_quote_valuator.dart';
+import 'package:coffer/domain/valuation/valuation_router.dart';
+import 'package:coffer/domain/providers/asset_price_provider.dart';
 
 import 'asset_valuator_test_helpers.dart';
 
@@ -187,13 +187,13 @@ void main() {
     });
 
     test('复利指数超上限时返回 ValidationError', () async {
-      DateTime oneDayClock() => start.add(const Duration(days: 1));
-      final v = FixedIncomeValuator(clock: oneDayClock);
+      DateTime oversizedClock() => start.add(const Duration(days: 101));
+      final v = FixedIncomeValuator(clock: oversizedClock);
       final a = mkAsset(
         type: AssetType.bond,
         ext: {
           'annualRate': '0.05',
-          'dayCount': '0.000001',
+          'dayCount': 1,
           'startDate': start.toIso8601String(),
           'compounding': 'daily',
         },

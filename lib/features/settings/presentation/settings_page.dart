@@ -68,13 +68,13 @@ class SettingsPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.base,
-          vertical: GwpSpacing.md,
+          horizontal: CofferSpacing.base,
+          vertical: CofferSpacing.md,
         ),
         children: [
           _SectionCard(
             icon: Icons.storage_outlined,
-            iconColor: GwpColors.actionPrimary,
+            iconColor: CofferColors.actionPrimary,
             title: '数据',
             children: [
               _EntryRow(
@@ -85,10 +85,10 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           _SectionCard(
             icon: Icons.lock_outline,
-            iconColor: GwpColors.info,
+            iconColor: CofferColors.info,
             title: '安全',
             children: [
               _EntryRow(
@@ -113,10 +113,10 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           _SectionCard(
             icon: Icons.menu_book_outlined,
-            iconColor: GwpColors.actionPrimary,
+            iconColor: CofferColors.actionPrimary,
             title: '字典',
             children: [
               _EntryRow(
@@ -145,10 +145,10 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           _SectionCard(
             icon: Icons.warning_amber_rounded,
-            iconColor: GwpColors.negative,
+            iconColor: CofferColors.negative,
             title: '危险区',
             children: [
               Consumer(
@@ -171,10 +171,10 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           _SectionCard(
             icon: Icons.info_outline,
-            iconColor: GwpColors.info,
+            iconColor: CofferColors.info,
             title: '关于',
             children: [
               _EntryRow(
@@ -185,7 +185,7 @@ class SettingsPage extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: GwpColors.textSecondary,
+                    color: CofferColors.textSecondary,
                   ),
                 ),
               ),
@@ -196,10 +196,10 @@ class SettingsPage extends ConsumerWidget {
                 trailing: const Text(
                   'v0.1.0 (1)',
                   style: TextStyle(
-                    fontFamily: GwpTypo.monoFont,
+                    fontFamily: CofferTypo.monoFont,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: GwpColors.textSecondary,
+                    color: CofferColors.textSecondary,
                   ),
                 ),
               ),
@@ -209,10 +209,10 @@ class SettingsPage extends ConsumerWidget {
                 trailing: Text(
                   'v$schemaVersion',
                   style: const TextStyle(
-                    fontFamily: GwpTypo.monoFont,
+                    fontFamily: CofferTypo.monoFont,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: GwpColors.textSecondary,
+                    color: CofferColors.textSecondary,
                   ),
                 ),
               ),
@@ -231,7 +231,7 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           const _ApiDiagSection(),
         ],
       ),
@@ -246,7 +246,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
     builder: (ctx) => AlertDialog(
       icon: const Icon(
         Icons.warning_amber_rounded,
-        color: GwpColors.warning,
+        color: CofferColors.warning,
         size: 32,
       ),
       title: const Text('注入演示数据？'),
@@ -263,7 +263,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
           child: const Text('取消'),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: GwpColors.warning),
+          style: FilledButton.styleFrom(backgroundColor: CofferColors.warning),
           onPressed: () => Navigator.of(ctx).pop(true),
           child: const Text('注入'),
         ),
@@ -310,7 +310,7 @@ Future<void> _seedMockData(BuildContext context, WidgetRef ref) async {
               child: const Text('取消'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: GwpColors.warning),
+              style: FilledButton.styleFrom(backgroundColor: CofferColors.warning),
               onPressed: () => Navigator.of(ctx).pop(true),
               child: const Text('强制注入'),
             ),
@@ -428,7 +428,7 @@ class _ResetConfirmDialogState extends State<_ResetConfirmDialog> {
     return AlertDialog(
       icon: const Icon(
         Icons.delete_forever_outlined,
-        color: GwpColors.negative,
+        color: CofferColors.negative,
         size: 32,
       ),
       title: const Text('清除所有数据'),
@@ -437,7 +437,7 @@ class _ResetConfirmDialogState extends State<_ResetConfirmDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('输入"CLEAR"以确认：'),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           TextField(
             controller: _controller,
             autofocus: true,
@@ -456,7 +456,7 @@ class _ResetConfirmDialogState extends State<_ResetConfirmDialog> {
           child: const Text('取消'),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: GwpColors.negative),
+          style: FilledButton.styleFrom(backgroundColor: CofferColors.negative),
           onPressed: canConfirm ? () => Navigator.of(context).pop(true) : null,
           child: const Text('清除'),
         ),
@@ -612,7 +612,7 @@ class _ApiDiagSectionState extends ConsumerState<_ApiDiagSection> {
   Widget build(BuildContext context) {
     return _SectionCard(
       icon: Icons.wifi_tethering_outlined,
-      iconColor: GwpColors.info,
+      iconColor: CofferColors.info,
       title: '网络连通性',
       children: [
         for (var i = 0; i < _kApiEndpoints.length; i++)
@@ -629,8 +629,8 @@ class _ApiDiagSectionState extends ConsumerState<_ApiDiagSection> {
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: GwpSpacing.base,
-              vertical: GwpSpacing.md,
+              horizontal: CofferSpacing.base,
+              vertical: CofferSpacing.md,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -645,7 +645,7 @@ class _ApiDiagSectionState extends ConsumerState<_ApiDiagSection> {
                   const Icon(
                     Icons.play_circle_outline,
                     size: 16,
-                    color: GwpColors.actionPrimary,
+                    color: CofferColors.actionPrimary,
                   ),
                 const SizedBox(width: 6),
                 Text(
@@ -653,7 +653,7 @@ class _ApiDiagSectionState extends ConsumerState<_ApiDiagSection> {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.actionPrimary,
+                    color: CofferColors.actionPrimary,
                   ),
                 ),
               ],
@@ -687,8 +687,8 @@ class _ApiTestRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.base,
-          vertical: GwpSpacing.md,
+          horizontal: CofferSpacing.base,
+          vertical: CofferSpacing.md,
         ),
         child: Row(
           children: [
@@ -696,17 +696,17 @@ class _ApiTestRow extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: GwpColors.surface3,
+                color: CofferColors.surface3,
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
               child: Icon(
                 endpoint.icon,
                 size: 16,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
-            const SizedBox(width: GwpSpacing.md),
+            const SizedBox(width: CofferSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,7 +716,7 @@ class _ApiTestRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -724,13 +724,13 @@ class _ApiTestRow extends StatelessWidget {
                     endpoint.description,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             _StatusChip(
               status: status,
               message: message,
@@ -761,12 +761,12 @@ class _StatusChip extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: GwpColors.surface3,
+            color: CofferColors.surface3,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text(
             '点击测试',
-            style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
+            style: TextStyle(fontSize: 11, color: CofferColors.textMuted),
           ),
         );
       case _TestStatus.testing:
@@ -779,24 +779,24 @@ class _StatusChip extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: GwpColors.positive.withAlpha(26),
+            color: CofferColors.positive.withAlpha(26),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             latency != null ? '✓ ${latency}ms' : '✓ 连通',
-            style: const TextStyle(fontSize: 11, color: GwpColors.positive),
+            style: const TextStyle(fontSize: 11, color: CofferColors.positive),
           ),
         );
       case _TestStatus.error:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: GwpColors.negative.withAlpha(26),
+            color: CofferColors.negative.withAlpha(26),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             message != null ? '✗ $message' : '✗ 失败',
-            style: const TextStyle(fontSize: 11, color: GwpColors.negative),
+            style: const TextStyle(fontSize: 11, color: CofferColors.negative),
             overflow: TextOverflow.ellipsis,
           ),
         );
@@ -823,24 +823,24 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              GwpSpacing.base,
-              GwpSpacing.md,
-              GwpSpacing.base,
-              GwpSpacing.sm,
+              CofferSpacing.base,
+              CofferSpacing.md,
+              CofferSpacing.base,
+              CofferSpacing.sm,
             ),
             child: Row(
               children: [
                 Icon(icon, size: 16, color: iconColor),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Text(
                   title,
                   style: TextStyle(
@@ -853,14 +853,14 @@ class _SectionCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: GwpColors.border),
+          const Divider(height: 1, color: CofferColors.border),
           for (var i = 0; i < children.length; i++) ...[
             children[i],
             if (i < children.length - 1)
               const Divider(
                 height: 1,
-                indent: GwpSpacing.base + 24 + GwpSpacing.md,
-                color: GwpColors.border,
+                indent: CofferSpacing.base + 24 + CofferSpacing.md,
+                color: CofferColors.border,
               ),
           ],
         ],
@@ -892,8 +892,8 @@ class _EntryRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.base,
-          vertical: GwpSpacing.md,
+          horizontal: CofferSpacing.base,
+          vertical: CofferSpacing.md,
         ),
         child: Row(
           children: [
@@ -901,13 +901,13 @@ class _EntryRow extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: GwpColors.surface3,
+                color: CofferColors.surface3,
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 16, color: GwpColors.textSecondary),
+              child: Icon(icon, size: 16, color: CofferColors.textSecondary),
             ),
-            const SizedBox(width: GwpSpacing.md),
+            const SizedBox(width: CofferSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -917,7 +917,7 @@ class _EntryRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -926,7 +926,7 @@ class _EntryRow extends StatelessWidget {
                       subtitle!,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                   ],
@@ -935,11 +935,11 @@ class _EntryRow extends StatelessWidget {
             ),
             ?trailing,
             if (onTap != null) ...[
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               const Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
             ],
           ],

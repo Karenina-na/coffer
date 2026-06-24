@@ -7,8 +7,8 @@ import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_status_badge.dart';
 import '../../../core/ui/protocol_display.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../data/providers/dict_providers.dart';
@@ -33,16 +33,16 @@ class ChannelDetailPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('通道详情')),
       body: channels.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+          child: CircularProgressIndicator(color: CofferColors.actionPrimary),
         ),
-        error: (e, _) => GwpEmptyState.error(
+        error: (e, _) => CofferEmptyState.error(
           message: '加载失败: ${errorToMessage(e)}',
           onRetry: () => ref.invalidate(channelListProvider),
         ),
         data: (list) {
           final c = list.where((x) => x.id == channelId).firstOrNull;
           if (c == null) {
-            return const GwpEmptyState(
+            return const CofferEmptyState(
               icon: Icons.swap_horiz_outlined,
               title: '通道不存在或已删除',
               subtitle: '该通道可能已被移除',
@@ -70,10 +70,15 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   @override
   Widget build(BuildContext context) {
     final c = widget.channel;
-    final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
-    final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const <String, RegionMeta>{};
+    final protocolEntriesAsync = ref.watch(
+      dictEntriesProvider(DictType.transferProtocol),
+    );
+    final regionIndex =
+        ref.watch(regionMetaIndexProvider).value ??
+        const <String, RegionMeta>{};
     final ProtocolIndex protocolIndex = {
-      for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
+      for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[])
+        entry.code: entry,
     };
     if (_editing) {
       return ChannelForm(
@@ -90,26 +95,29 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         const SizedBox(height: 16),
         _MembersCard(channel: c, regionIndex: regionIndex),
         const SizedBox(height: 16),
-        Row(children: [
-          Expanded(
-            child: FilledButton.tonalIcon(
-              onPressed: () => setState(() => _editing = true),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('编辑'),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: () => setState(() => _editing = true),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('编辑'),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: () => _toggleStatus(c),
-              icon: Icon(c.status == ChannelStatus.enabled
-                  ? Icons.block_outlined
-                  : Icons.play_arrow_outlined),
-              label: Text(
-                  c.status == ChannelStatus.enabled ? '禁用' : '启用'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => _toggleStatus(c),
+                icon: Icon(
+                  c.status == ChannelStatus.enabled
+                      ? Icons.block_outlined
+                      : Icons.play_arrow_outlined,
+                ),
+                label: Text(c.status == ChannelStatus.enabled ? '禁用' : '启用'),
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ],
     );
   }
@@ -142,10 +150,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 4),
-            Text(
-              'id: ${c.id}',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
+            Text('id: ${c.id}', style: Theme.of(context).textTheme.labelSmall),
           ],
         ),
       ),
@@ -244,28 +249,34 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         .join(', ');
     final sameRegion = rule['requireSameRegion'] == true;
     if (allowed != null && allowed.isNotEmpty) {
-      items.add(_RuleItem(
-        icon: Icons.verified_outlined,
-        title: '仅允许区域',
-        value: allowed,
-        ok: true,
-      ));
+      items.add(
+        _RuleItem(
+          icon: Icons.verified_outlined,
+          title: '仅允许区域',
+          value: allowed,
+          ok: true,
+        ),
+      );
     }
     if (blocked != null && blocked.isNotEmpty) {
-      items.add(_RuleItem(
-        icon: Icons.block_outlined,
-        title: '禁止区域',
-        value: blocked,
-        ok: true,
-      ));
+      items.add(
+        _RuleItem(
+          icon: Icons.block_outlined,
+          title: '禁止区域',
+          value: blocked,
+          ok: true,
+        ),
+      );
     }
     if (sameRegion) {
-      items.add(const _RuleItem(
-        icon: Icons.sync_alt_outlined,
-        title: '要求同一区域',
-        value: '源与目的必须一致',
-        ok: true,
-      ));
+      items.add(
+        const _RuleItem(
+          icon: Icons.sync_alt_outlined,
+          title: '要求同一区域',
+          value: '源与目的必须一致',
+          ok: true,
+        ),
+      );
     }
     return items.isEmpty
         ? [
@@ -283,10 +294,12 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final next = c.status == ChannelStatus.enabled
         ? ChannelStatus.disabled
         : ChannelStatus.enabled;
-    final result = await ref.read(channelRepositoryProvider).setStatus(c.id, next);
+    final result = await ref.read(setChannelStatusUseCaseProvider)(c.id, next);
     if (result.isErr && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('状态更新失败：${result.errorOrNull?.message ?? '未知错误'}')),
+        SnackBar(
+          content: Text('状态更新失败：${result.errorOrNull?.message ?? '未知错误'}'),
+        ),
       );
     }
   }
@@ -317,19 +330,25 @@ class _MembersCard extends ConsumerWidget {
     final linksAsync = ref.watch(accountChannelListProvider);
     final accountsAsync = ref.watch(accountListProvider);
     return linksAsync.when(
-      loading: () => const Card(child: Padding(
-        padding: EdgeInsets.all(16),
-        child: LinearProgressIndicator(color: GwpColors.actionPrimary),
-      )),
-      error: (e, _) => Card(child: ListTile(title: Text('加载关联失败: ${errorToMessage(e)}'))),
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: LinearProgressIndicator(color: CofferColors.actionPrimary),
+        ),
+      ),
+      error: (e, _) =>
+          Card(child: ListTile(title: Text('加载关联失败: ${errorToMessage(e)}'))),
       data: (links) {
         return accountsAsync.when(
-          loading: () => const Card(child: Padding(
-            padding: EdgeInsets.all(16),
-            child: LinearProgressIndicator(color: GwpColors.actionPrimary),
-          )),
-          error: (e, _) =>
-              Card(child: ListTile(title: Text('加载账户失败: ${errorToMessage(e)}'))),
+          loading: () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: LinearProgressIndicator(color: CofferColors.actionPrimary),
+            ),
+          ),
+          error: (e, _) => Card(
+            child: ListTile(title: Text('加载账户失败: ${errorToMessage(e)}')),
+          ),
           data: (accounts) {
             final accById = {for (final a in accounts) a.id: a};
             final members = [
@@ -343,13 +362,16 @@ class _MembersCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      const Icon(Icons.account_balance_wallet_outlined),
-                      const SizedBox(width: 8),
-                      Text('接入账户 (${members.length})',
-                          style:
-                              Theme.of(context).textTheme.titleSmall),
-                    ]),
+                    Row(
+                      children: [
+                        const Icon(Icons.account_balance_wallet_outlined),
+                        const SizedBox(width: 8),
+                        Text(
+                          '接入账户 (${members.length})',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     if (members.isEmpty)
                       const Padding(
@@ -376,8 +398,8 @@ class _MembersCard extends ConsumerWidget {
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: _hasFeeOverride(member.link)
-                                      ? GwpColors.info
-                                      : GwpColors.textMuted,
+                                      ? CofferColors.info
+                                      : CofferColors.textMuted,
                                   fontWeight: _hasFeeOverride(member.link)
                                       ? FontWeight.w500
                                       : FontWeight.w400,
@@ -386,15 +408,16 @@ class _MembersCard extends ConsumerWidget {
                             ],
                           ),
                           trailing: _hasFeeOverride(member.link)
-                              ? const GwpStatusBadge(
+                              ? const CofferStatusBadge(
                                   label: '已覆盖',
                                   variant: StatusVariant.info,
                                 )
-                              : const GwpStatusBadge(
+                              : const CofferStatusBadge(
                                   label: '默认',
                                   variant: StatusVariant.muted,
                                 ),
-                          onTap: () => context.push('/accounts/${member.account.id}'),
+                          onTap: () =>
+                              context.push('/accounts/${member.account.id}'),
                         ),
                   ],
                 ),

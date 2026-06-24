@@ -19,8 +19,8 @@ class ChartSegment {
 }
 
 /// Donut/ring chart with center label, built on fl_chart PieChart.
-class GwpDonutChart extends StatelessWidget {
-  const GwpDonutChart({
+class CofferDonutChart extends StatelessWidget {
+  const CofferDonutChart({
     super.key,
     required this.segments,
     this.centerLabel,
@@ -85,11 +85,11 @@ class GwpDonutChart extends StatelessWidget {
                   Text(
                     centerLabel!,
                     style: TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
+                      fontFamily: CofferTypo.monoFont,
+                      fontFeatures: CofferTypo.tabularFigures,
                       fontSize: math.min(size / 8, 18),
                       fontWeight: FontWeight.w700,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                   ),
                 if (centerSubLabel != null)
@@ -97,7 +97,7 @@ class GwpDonutChart extends StatelessWidget {
                     centerSubLabel!,
                     style: TextStyle(
                       fontSize: math.min(size / 12, 11),
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
               ],

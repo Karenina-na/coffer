@@ -10,12 +10,12 @@ import '../../../core/money/money.dart';
 import '../../../core/valuation/valuation_currency_provider.dart';
 import '../../../core/ui/builtin_badge.dart';
 import '../../../core/ui/format_utils.dart';
-import '../../../core/ui/gwp_donut_chart.dart';
+import '../../../core/ui/coffer_donut_chart.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/enum_labels.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_status_badge.dart';
 import '../../../core/ui/protocol_display.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../domain/entities/account_type_info.dart';
@@ -41,7 +41,7 @@ import '../../asset/presentation/asset_providers.dart';
 import '../../card/presentation/card_by_account_providers.dart';
 import '../../card/presentation/card_detail_sheet.dart';
 import '../../channel/presentation/channel_providers.dart';
-import '../../dashboard/presentation/dashboard_providers.dart';
+import '../../wealth/presentation/wealth_trend_provider.dart';
 import '../../exchange_rate/presentation/rate_sparkline.dart';
 import 'account_providers.dart';
 
@@ -140,8 +140,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
   bool _syncing = false;
 
   void _onMoreAction(String action, List<Account>? list) {
-    final account =
-        list?.where((a) => a.id == widget.accountId).firstOrNull;
+    final account = list?.where((a) => a.id == widget.accountId).firstOrNull;
     if (account == null) return;
     switch (action) {
       case 'edit':
@@ -177,23 +176,26 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final r =
-        await ref.read(accountRepositoryProvider).softDelete(account.id);
+    final r = await ref.read(deleteAccountUseCaseProvider)(account.id);
     if (!mounted) return;
     r.when(
       ok: (_) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('账户已删除')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('账户已删除')));
         context.pop();
       },
-      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('删除失败: ${errorToMessage(e)}')),
-      ),
+      err: (e) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除失败: ${errorToMessage(e)}'))),
     );
   }
 
   Future<void> _syncAllPrices(
-      BuildContext context, List<Asset> assets, SyncWindow window) async {
+    BuildContext context,
+    List<Asset> assets,
+    SyncWindow window,
+  ) async {
     if (assets.isEmpty || _syncing) return;
     setState(() => _syncing = true);
     final useCase = ref.read(refreshAssetPriceUseCaseProvider);
@@ -217,7 +219,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     if (!context.mounted) return;
 
     // Yahoo Finance 在中国大陆被屏蔽时弹窗提示
-    if (r.isErr && (r.errorOrNull?.message.contains('yahoo blocked') ?? false)) {
+    if (r.isErr &&
+        (r.errorOrNull?.message.contains('yahoo blocked') ?? false)) {
       await showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
@@ -302,7 +305,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: GwpColors.actionPrimary,
+                        color: CofferColors.actionPrimary,
                       ),
                     )
                   : const Icon(Icons.sync),
@@ -336,17 +339,18 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
       ),
       body: accounts.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+          child: CircularProgressIndicator(color: CofferColors.actionPrimary),
         ),
-        error: (e, _) => GwpEmptyState.error(
+        error: (e, _) => CofferEmptyState.error(
           message: '加载失败: ${errorToMessage(e)}',
           onRetry: () => ref.invalidate(accountListProvider),
         ),
         data: (list) {
-          final account =
-              list.where((a) => a.id == widget.accountId).firstOrNull;
+          final account = list
+              .where((a) => a.id == widget.accountId)
+              .firstOrNull;
           if (account == null) {
-            return const GwpEmptyState(
+            return const CofferEmptyState(
               icon: Icons.account_balance_outlined,
               title: '账户不存在或已删除',
               subtitle: '该账户可能已被移除',
@@ -354,32 +358,37 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           }
           return assetsAsync.when(
             loading: () => const Center(
-              child: CircularProgressIndicator(color: GwpColors.actionPrimary),
-            ),
-            error: (e, _) => GwpEmptyState.error(
-              message: '加载资产失败: ${errorToMessage(e)}',
-              onRetry: () => ref.invalidate(
-                assetsByAccountProvider(widget.accountId),
+              child: CircularProgressIndicator(
+                color: CofferColors.actionPrimary,
               ),
+            ),
+            error: (e, _) => CofferEmptyState.error(
+              message: '加载资产失败: ${errorToMessage(e)}',
+              onRetry: () =>
+                  ref.invalidate(assetsByAccountProvider(widget.accountId)),
             ),
             data: (assets) {
               return valuedAssetsAsync.when(
                 loading: () => const Center(
                   child: CircularProgressIndicator(
-                    color: GwpColors.actionPrimary,
+                    color: CofferColors.actionPrimary,
                   ),
                 ),
-                error: (e, _) => GwpEmptyState.error(
+                error: (e, _) => CofferEmptyState.error(
                   message: '加载计价值失败: ${errorToMessage(e)}',
                   onRetry: () => ref.invalidate(
                     valuedAssetsByAccountProvider(widget.accountId),
                   ),
                 ),
                 data: (valued) {
-                  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+                  final regionIndex =
+                      ref.watch(regionMetaIndexProvider).value ?? const {};
                   return _Body(
                     account: account,
-                    accountRegionLabel: regionLabel(regionIndex, account.sovereigntyRegion),
+                    accountRegionLabel: regionLabel(
+                      regionIndex,
+                      account.sovereigntyRegion,
+                    ),
                     assets: assets,
                     valuedAssets: valued.assets,
                     cardsAsync: cardsAsync,
@@ -426,8 +435,8 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.md,
+        horizontal: CofferSpacing.base,
+        vertical: CofferSpacing.md,
       ),
       children: [
         _AccountHero(
@@ -439,32 +448,26 @@ class _Body extends StatelessWidget {
           valuationCurrency: valuationCurrency,
           missingRateCount: missingRateCount,
         ),
-        const SizedBox(height: GwpSpacing.base),
+        const SizedBox(height: CofferSpacing.base),
         _AccountInfoCard(account: account),
-        const SizedBox(height: GwpSpacing.base),
+        const SizedBox(height: CofferSpacing.base),
         if (assets.isNotEmpty) ...[
           _AssetComposition(valuedAssets: valuedAssets),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
           _CostBasisSection(
             valuedAssets: valuedAssets,
             valuationCurrency: valuationCurrency,
           ),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
           _NetWorthTrendSection(accountId: accountId),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
         ],
-        _AssetListSection(
-          accountId: accountId,
-          valuedAssets: valuedAssets,
-        ),
-        const SizedBox(height: GwpSpacing.base),
-        _CardGallerySection(
-          cardsAsync: cardsAsync,
-          account: account,
-        ),
-        const SizedBox(height: GwpSpacing.base),
+        _AssetListSection(accountId: accountId, valuedAssets: valuedAssets),
+        const SizedBox(height: CofferSpacing.base),
+        _CardGallerySection(cardsAsync: cardsAsync, account: account),
+        const SizedBox(height: CofferSpacing.base),
         _ChannelNetworkSection(accountId: accountId),
-        const SizedBox(height: GwpSpacing.xxl),
+        const SizedBox(height: CofferSpacing.xxl),
       ],
     );
   }
@@ -495,7 +498,8 @@ class _AccountHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typeColor = _typeColors[account.accountType] ?? GwpColors.actionPrimary;
+    final typeColor =
+        _typeColors[account.accountType] ?? CofferColors.actionPrimary;
     final typeIcon = _typeIcons[account.accountType] ?? Icons.account_balance;
     final cardCount = cardsAsync.value?.length ?? 0;
     final currencies = assets.map((a) => a.currency).toSet();
@@ -505,15 +509,12 @@ class _AccountHero extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            typeColor.withValues(alpha: 0.15),
-            GwpColors.surface1,
-          ],
+          colors: [typeColor.withValues(alpha: 0.15), CofferColors.surface1],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GwpColors.borderStrong, width: 0.5),
+        border: Border.all(color: CofferColors.borderStrong, width: 0.5),
       ),
-      padding: const EdgeInsets.all(GwpSpacing.lg),
+      padding: const EdgeInsets.all(CofferSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -529,7 +530,7 @@ class _AccountHero extends StatelessWidget {
                 ),
                 child: Icon(typeIcon, size: 22, color: typeColor),
               ),
-              const SizedBox(width: GwpSpacing.md),
+              const SizedBox(width: CofferSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,7 +540,7 @@ class _AccountHero extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -548,26 +549,29 @@ class _AccountHero extends StatelessWidget {
                       '${account.accountNo != null ? ' · ${account.accountNo}' : ''}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              GwpStatusBadge(
-                 label: account.status.labelZh,
+              CofferStatusBadge(
+                label: account.status.labelZh,
                 variant: _statusVariant(account.status),
               ),
             ],
           ),
           if (account.openedAt != null) ...[
-            const SizedBox(height: GwpSpacing.xs),
+            const SizedBox(height: CofferSpacing.xs),
             Text(
               '开户 ${_formatDate(account.openedAt!)}',
-              style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+              style: const TextStyle(
+                fontSize: 10,
+                color: CofferColors.textMuted,
+              ),
             ),
           ],
-          const SizedBox(height: GwpSpacing.lg),
+          const SizedBox(height: CofferSpacing.lg),
           // Total value
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -580,11 +584,11 @@ class _AccountHero extends StatelessWidget {
                   ),
                 ),
                 style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
@@ -594,7 +598,7 @@ class _AccountHero extends StatelessWidget {
                     '总市值 · $valuationCurrency',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                   if (missingRateCount > 0) ...[
@@ -603,7 +607,7 @@ class _AccountHero extends StatelessWidget {
                       '$missingRateCount 项缺汇率',
                       style: const TextStyle(
                         fontSize: 10,
-                        color: GwpColors.warning,
+                        color: CofferColors.warning,
                       ),
                     ),
                   ],
@@ -611,7 +615,7 @@ class _AccountHero extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.lg),
+          const SizedBox(height: CofferSpacing.lg),
           // KPI chips
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -678,146 +682,180 @@ class _AccountInfoCardState extends State<_AccountInfoCard> {
   @override
   Widget build(BuildContext context) {
     final info = account.typeInfo;
-    final hasDetails = info is! AccountNoExtraInfo ||
+    final hasDetails =
+        info is! AccountNoExtraInfo ||
         account.openedAt != null ||
-        account.fxSpreadPercent > 0 ||
+        account.fxSpreadPercent > Decimal.zero ||
         account.fxFixedFee != null;
 
     return _SectionCard(
       icon: Icons.info_outline,
-      iconColor: GwpColors.actionPrimary,
+      iconColor: CofferColors.actionPrimary,
       title: '账户信息',
-      child: Column(children: [
-        _KvRow(k: '类型', v: account.accountType.labelZh),
-        const Divider(height: 1, color: GwpColors.border),
-        _KvRow(k: '状态', v: account.status.labelZh),
-        if (account.accountNo != null) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '编号', v: account.accountNo!),
+      child: Column(
+        children: [
+          _KvRow(k: '类型', v: account.accountType.labelZh),
+          const Divider(height: 1, color: CofferColors.border),
+          _KvRow(k: '状态', v: account.status.labelZh),
+          if (account.accountNo != null) ...[
+            const Divider(height: 1, color: CofferColors.border),
+            _KvRow(k: '编号', v: account.accountNo!),
+          ],
+          if (_expanded) ...[
+            const Divider(height: 1, color: CofferColors.border),
+            _KvRow(k: '地区', v: account.sovereigntyRegion),
+            if (account.openedAt != null) ...[
+              const Divider(height: 1, color: CofferColors.border),
+              _KvRow(k: '开户时间', v: _fmtDate(account.openedAt!)),
+            ],
+            if (account.fxSpreadPercent > Decimal.zero) ...[
+              const Divider(height: 1, color: CofferColors.border),
+              _KvRow(
+                k: '换汇损耗',
+                v: '${account.fxSpreadPercent.toStringAsFixed(2)}%',
+              ),
+            ],
+            if (account.fxFixedFee != null) ...[
+              const Divider(height: 1, color: CofferColors.border),
+              _KvRow(k: '换汇固定费', v: account.fxFixedFee.toString()),
+            ],
+            if (info is BankAccountInfo) ...[
+              if (info.swiftBic != null && info.swiftBic!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: 'SWIFT/BIC', v: info.swiftBic!),
+              ],
+              if (info.iban != null && info.iban!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: 'IBAN', v: info.iban!),
+              ],
+              if (info.branchName != null && info.branchName!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '分行', v: info.branchName!),
+              ],
+              if (info.accountSubtype != null) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '账户子类型', v: _bankSubtype(info.accountSubtype!)),
+              ],
+            ],
+            if (info is BrokerAccountInfo) ...[
+              if (info.accountSubtype != null) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '账户子类型', v: _brokerSubtype(info.accountSubtype!)),
+              ],
+              if (info.baseCurrency != null) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '基础币种', v: info.baseCurrency!),
+              ],
+              const Divider(height: 1, color: CofferColors.border),
+              _KvRow(k: '保证金', v: info.marginEnabled ? '已开通' : '未开通'),
+            ],
+            if (info is CryptoWalletInfo) ...[
+              if (info.walletType != null) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '钱包类型', v: _walletType(info.walletType!)),
+              ],
+              if (info.chain != null && info.chain!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '链网络', v: info.chain!),
+              ],
+            ],
+            if (info is CryptoExchangeInfo) ...[
+              const Divider(height: 1, color: CofferColors.border),
+              _KvRow(k: 'API Key', v: info.hasApiKey ? '已配置' : '未配置'),
+              if (info.supportedNetworks != null &&
+                  info.supportedNetworks!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '支持网络', v: info.supportedNetworks!),
+              ],
+            ],
+            if (info is InsuranceAccountInfo) ...[
+              if (info.policyType != null) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '保单类型', v: _policyType(info.policyType!)),
+              ],
+              if (info.registrationNo != null &&
+                  info.registrationNo!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '注册号', v: info.registrationNo!),
+              ],
+            ],
+            if (info is PaymentAccountInfo) ...[
+              if (info.platform != null && info.platform!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '平台', v: info.platform!),
+              ],
+            ],
+            if (info is CustodyAccountInfo) ...[
+              if (info.custodianName != null &&
+                  info.custodianName!.isNotEmpty) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(k: '托管机构', v: info.custodianName!),
+              ],
+              if (info.accountStructure != null) ...[
+                const Divider(height: 1, color: CofferColors.border),
+                _KvRow(
+                  k: '账户结构',
+                  v: info.accountStructure == 'omnibus' ? '综合账户' : '分离账户',
+                ),
+              ],
+            ],
+          ],
+          if (hasDetails) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 16,
+                    color: CofferColors.textMuted,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _expanded ? '收起' : '展开详情',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: CofferColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
-        if (_expanded) ...[
-          const Divider(height: 1, color: GwpColors.border),
-          _KvRow(k: '地区', v: account.sovereigntyRegion),
-          if (account.openedAt != null) ...[
-            const Divider(height: 1, color: GwpColors.border),
-            _KvRow(k: '开户时间', v: _fmtDate(account.openedAt!)),
-          ],
-          if (account.fxSpreadPercent > 0) ...[
-            const Divider(height: 1, color: GwpColors.border),
-            _KvRow(k: '换汇损耗',
-                v: '${account.fxSpreadPercent.toStringAsFixed(2)}%'),
-          ],
-          if (account.fxFixedFee != null) ...[
-            const Divider(height: 1, color: GwpColors.border),
-            _KvRow(k: '换汇固定费', v: account.fxFixedFee.toString()),
-          ],
-          if (info is BankAccountInfo) ...[
-            if (info.swiftBic != null && info.swiftBic!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: 'SWIFT/BIC', v: info.swiftBic!)],
-            if (info.iban != null && info.iban!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: 'IBAN', v: info.iban!)],
-            if (info.branchName != null && info.branchName!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '分行', v: info.branchName!)],
-            if (info.accountSubtype != null)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '账户子类型',
-                      v: _bankSubtype(info.accountSubtype!))],
-          ],
-          if (info is BrokerAccountInfo) ...[
-            if (info.accountSubtype != null)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(
-                      k: '账户子类型',
-                      v: _brokerSubtype(info.accountSubtype!))],
-            if (info.baseCurrency != null)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '基础币种', v: info.baseCurrency!)],
-            const Divider(height: 1, color: GwpColors.border),
-            _KvRow(k: '保证金', v: info.marginEnabled ? '已开通' : '未开通'),
-          ],
-          if (info is CryptoWalletInfo) ...[
-            if (info.walletType != null)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(
-                      k: '钱包类型', v: _walletType(info.walletType!))],
-            if (info.chain != null && info.chain!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '链网络', v: info.chain!)],
-          ],
-          if (info is CryptoExchangeInfo) ...[
-            const Divider(height: 1, color: GwpColors.border),
-            _KvRow(k: 'API Key', v: info.hasApiKey ? '已配置' : '未配置'),
-            if (info.supportedNetworks != null &&
-                info.supportedNetworks!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '支持网络', v: info.supportedNetworks!)],
-          ],
-          if (info is InsuranceAccountInfo) ...[
-            if (info.policyType != null)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(
-                      k: '保单类型', v: _policyType(info.policyType!))],
-            if (info.registrationNo != null &&
-                info.registrationNo!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '注册号', v: info.registrationNo!)],
-          ],
-          if (info is PaymentAccountInfo) ...[
-            if (info.platform != null && info.platform!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '平台', v: info.platform!)],
-          ],
-          if (info is CustodyAccountInfo) ...[
-            if (info.custodianName != null &&
-                info.custodianName!.isNotEmpty)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(k: '托管机构', v: info.custodianName!)],
-            if (info.accountStructure != null)
-              ...[const Divider(height: 1, color: GwpColors.border),
-                  _KvRow(
-                      k: '账户结构',
-                      v: info.accountStructure == 'omnibus'
-                          ? '综合账户'
-                          : '分离账户')],
-          ],
-        ],
-        if (hasDetails) ...[
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(_expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 16, color: GwpColors.textMuted),
-              const SizedBox(width: 4),
-              Text(_expanded ? '收起' : '展开详情',
-                  style: const TextStyle(
-                      fontSize: 11, color: GwpColors.textMuted)),
-            ]),
-          ),
-        ],
-      ]),
+      ),
     );
   }
 
   static String _bankSubtype(String v) => switch (v) {
-        'checking' => '活期', 'savings' => '储蓄',
-        'timeDeposit' => '定期', _ => v,
-      };
+    'checking' => '活期',
+    'savings' => '储蓄',
+    'timeDeposit' => '定期',
+    _ => v,
+  };
   static String _brokerSubtype(String v) => switch (v) {
-        'cash' => '现金账户', 'margin' => '保证金账户',
-        'retirement' => '退休账户', 'education' => '教育账户', _ => v,
-      };
+    'cash' => '现金账户',
+    'margin' => '保证金账户',
+    'retirement' => '退休账户',
+    'education' => '教育账户',
+    _ => v,
+  };
   static String _walletType(String v) => switch (v) {
-        'hot' => '热钱包', 'cold' => '冷钱包',
-        'hardware' => '硬件钱包', 'multisig' => '多签钱包', _ => v,
-      };
+    'hot' => '热钱包',
+    'cold' => '冷钱包',
+    'hardware' => '硬件钱包',
+    'multisig' => '多签钱包',
+    _ => v,
+  };
   static String _policyType(String v) => switch (v) {
-        'life' => '寿险', 'health' => '健康险',
-        'property' => '财产险', 'annuity' => '年金', _ => v,
-      };
+    'life' => '寿险',
+    'health' => '健康险',
+    'property' => '财产险',
+    'annuity' => '年金',
+    _ => v,
+  };
 }
 
 class _KvRow extends StatelessWidget {
@@ -836,16 +874,19 @@ class _KvRow extends StatelessWidget {
             width: 72,
             child: Text(
               k,
-              style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+              style: const TextStyle(
+                fontSize: 12,
+                color: CofferColors.textMuted,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               v,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
+                fontFamily: CofferTypo.monoFont,
                 fontSize: 12,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               textAlign: TextAlign.right,
             ),
@@ -875,22 +916,22 @@ class _MiniKpi extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: GwpColors.actionPrimary.withValues(alpha: 0.08),
+            color: CofferColors.actionPrimary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 14, color: GwpColors.actionPrimary),
+              Icon(icon, size: 14, color: CofferColors.actionPrimary),
               const SizedBox(height: 2),
               Text(
                 value,
                 style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                 ),
               ),
             ],
@@ -899,7 +940,7 @@ class _MiniKpi extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
         ),
       ],
     );
@@ -934,24 +975,26 @@ class _AssetComposition extends StatelessWidget {
       );
     }
 
-    final segments = typeTotals.entries
-        .where((e) => e.value > 0)
-        .map((e) => ChartSegment(
-              label: e.key,
-              value: e.value,
-              color: _assetTypeColors[e.key] ?? GwpColors.textMuted,
-            ))
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final segments =
+        typeTotals.entries
+            .where((e) => e.value > 0)
+            .map(
+              (e) => ChartSegment(
+                label: e.key,
+                value: e.value,
+                color: _assetTypeColors[e.key] ?? CofferColors.textMuted,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     final currencyEntries = currencyTotals.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final currTotal =
-        currencyEntries.fold<double>(0, (s, e) => s + e.value);
+    final currTotal = currencyEntries.fold<double>(0, (s, e) => s + e.value);
 
     return _SectionCard(
       icon: Icons.donut_large_outlined,
-      iconColor: GwpColors.actionPrimary,
+      iconColor: CofferColors.actionPrimary,
       title: '资产构成',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -960,14 +1003,14 @@ class _AssetComposition extends StatelessWidget {
           if (segments.isNotEmpty) ...[
             Row(
               children: [
-                GwpDonutChart(
+                CofferDonutChart(
                   segments: segments,
                   size: 110,
                   strokeWidth: 18,
                   centerLabel: '${valuedAssets.length}',
                   centerSubLabel: '项资产',
                 ),
-                const SizedBox(width: GwpSpacing.base),
+                const SizedBox(width: CofferSpacing.base),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -981,7 +1024,7 @@ class _AssetComposition extends StatelessWidget {
                             '+${segments.length - 6} 类型',
                             style: const TextStyle(
                               fontSize: 10,
-                              color: GwpColors.textMuted,
+                              color: CofferColors.textMuted,
                             ),
                           ),
                         ),
@@ -993,9 +1036,9 @@ class _AssetComposition extends StatelessWidget {
           ],
           // Currency breakdown
           if (currencyEntries.isNotEmpty) ...[
-            const SizedBox(height: GwpSpacing.lg),
+            const SizedBox(height: CofferSpacing.lg),
             const _SubLabel('币种分布'),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             for (var i = 0; i < currencyEntries.length; i++) ...[
               _CurrencyRow(
                 currency: currencyEntries[i].key,
@@ -1004,7 +1047,7 @@ class _AssetComposition extends StatelessWidget {
                 index: i,
               ),
               if (i < currencyEntries.length - 1)
-                const SizedBox(height: GwpSpacing.xs),
+                const SizedBox(height: CofferSpacing.xs),
             ],
           ],
         ],
@@ -1037,7 +1080,7 @@ class _TypeLegendRow extends StatelessWidget {
               segment.label,
               style: const TextStyle(
                 fontSize: 11,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -1045,10 +1088,10 @@ class _TypeLegendRow extends StatelessWidget {
           Text(
             compactValue(segment.value),
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 10,
-              color: GwpColors.textMuted,
+              color: CofferColors.textMuted,
             ),
           ),
         ],
@@ -1084,7 +1127,7 @@ class _CurrencyRow extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ),
@@ -1095,7 +1138,7 @@ class _CurrencyRow extends StatelessWidget {
               height: 12,
               child: LinearProgressIndicator(
                 value: pct.clamp(0, 1),
-                backgroundColor: GwpColors.surface3,
+                backgroundColor: CofferColors.surface3,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
@@ -1108,9 +1151,9 @@ class _CurrencyRow extends StatelessWidget {
             displayPercentDouble(pct * 100),
             textAlign: TextAlign.end,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
+              fontFamily: CofferTypo.monoFont,
               fontSize: 10,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ),
@@ -1121,10 +1164,10 @@ class _CurrencyRow extends StatelessWidget {
             compactValue(value),
             textAlign: TextAlign.end,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
+              fontFamily: CofferTypo.monoFont,
               fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
         ),
@@ -1169,7 +1212,7 @@ class _CostBasisSection extends StatelessWidget {
         ? Money.percent(pnl, totalCost)
         : Decimal.zero;
     final isProfit = pnl >= Decimal.zero;
-    final pnlColor = isProfit ? GwpColors.positive : GwpColors.negative;
+    final pnlColor = isProfit ? CofferColors.positive : CofferColors.negative;
 
     return _SectionCard(
       icon: Icons.trending_up_outlined,
@@ -1184,8 +1227,8 @@ class _CostBasisSection extends StatelessWidget {
               Text(
                 '${isProfit ? '+' : ''}${heroFormat(pnl)}',
                 style: TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: pnlColor,
@@ -1195,7 +1238,7 @@ class _CostBasisSection extends StatelessWidget {
               Text(
                 displayPercent(pnlPct, alwaysShowSign: true),
                 style: TextStyle(
-                  fontFamily: GwpTypo.monoFont,
+                  fontFamily: CofferTypo.monoFont,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: pnlColor,
@@ -1203,24 +1246,21 @@ class _CostBasisSection extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // Cost vs Market bar
           _CompareBar(
             label1: '总成本',
             value1: totalCost.toDouble(),
             label2: '总市值 · $valuationCurrency',
             value2: totalMarket.toDouble(),
-            color1: GwpColors.textMuted,
+            color1: CofferColors.textMuted,
             color2: pnlColor,
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           // Coverage note
           Text(
             '$withCost / ${valuedAssets.length} 项资产有成本价',
-            style: const TextStyle(
-              fontSize: 10,
-              color: GwpColors.textMuted,
-            ),
+            style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
           ),
         ],
       ),
@@ -1269,7 +1309,7 @@ class _CompareBar extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ),
@@ -1280,8 +1320,10 @@ class _CompareBar extends StatelessWidget {
               height: 16,
               child: LinearProgressIndicator(
                 value: frac,
-                backgroundColor: GwpColors.surface3,
-                valueColor: AlwaysStoppedAnimation(color.withValues(alpha: 0.7)),
+                backgroundColor: CofferColors.surface3,
+                valueColor: AlwaysStoppedAnimation(
+                  color.withValues(alpha: 0.7),
+                ),
               ),
             ),
           ),
@@ -1290,11 +1332,11 @@ class _CompareBar extends StatelessWidget {
         Text(
           compactValue(value),
           style: const TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontFeatures: GwpTypo.tabularFigures,
+            fontFamily: CofferTypo.monoFont,
+            fontFeatures: CofferTypo.tabularFigures,
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: GwpColors.textPrimary,
+            color: CofferColors.textPrimary,
           ),
         ),
       ],
@@ -1326,7 +1368,7 @@ class _NetWorthTrendSectionState extends ConsumerState<_NetWorthTrendSection> {
 
     return _SectionCard(
       icon: Icons.show_chart,
-      iconColor: GwpColors.actionPrimary,
+      iconColor: CofferColors.actionPrimary,
       title: '净值趋势',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1338,13 +1380,13 @@ class _NetWorthTrendSectionState extends ConsumerState<_NetWorthTrendSection> {
               onSelected: (v) => setState(() => _range = v),
             ),
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           deltaAsync.when(
             loading: () => const SizedBox(
               height: 200,
               child: Center(
                 child: CircularProgressIndicator(
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                   strokeWidth: 2,
                 ),
               ),
@@ -1352,7 +1394,7 @@ class _NetWorthTrendSectionState extends ConsumerState<_NetWorthTrendSection> {
             error: (_, _) => const SizedBox(
               height: 200,
               child: Center(
-                child: Icon(Icons.error_outline, color: GwpColors.textMuted),
+                child: Icon(Icons.error_outline, color: CofferColors.textMuted),
               ),
             ),
             data: (delta) {
@@ -1363,8 +1405,8 @@ class _NetWorthTrendSectionState extends ConsumerState<_NetWorthTrendSection> {
                     child: Text(
                       '数据不足，估值更新后将显示趋势',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: GwpColors.textMuted,
-                          ),
+                        color: CofferColors.textMuted,
+                      ),
                     ),
                   ),
                 );
@@ -1373,8 +1415,11 @@ class _NetWorthTrendSectionState extends ConsumerState<_NetWorthTrendSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _TrendStats(delta: delta),
-                  const SizedBox(height: GwpSpacing.md),
-                  SizedBox(height: 160, child: _AccountTrendChart(delta: delta)),
+                  const SizedBox(height: CofferSpacing.md),
+                  SizedBox(
+                    height: 160,
+                    child: _AccountTrendChart(delta: delta),
+                  ),
                 ],
               );
             },
@@ -1410,11 +1455,10 @@ class _TrendRangeChips extends StatelessWidget {
               onTap: () => onSelected(days),
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: selected == days
-                      ? GwpColors.actionPrimary.withValues(alpha: 0.2)
+                      ? CofferColors.actionPrimary.withValues(alpha: 0.2)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -1422,11 +1466,12 @@ class _TrendRangeChips extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight:
-                        selected == days ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected == days
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                     color: selected == days
-                        ? GwpColors.actionPrimary
-                        : GwpColors.textMuted,
+                        ? CofferColors.actionPrimary
+                        : CofferColors.textMuted,
                   ),
                 ),
               ),
@@ -1446,7 +1491,9 @@ class _TrendStats extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _TrendKv(label: '期初', value: compactValue(delta.startValue))),
+        Expanded(
+          child: _TrendKv(label: '期初', value: compactValue(delta.startValue)),
+        ),
         Expanded(
           child: _TrendKv(
             label: '期末',
@@ -1458,15 +1505,17 @@ class _TrendStats extends StatelessWidget {
           child: _TrendKv(
             label: delta.isUp ? '区间最高' : '区间最低',
             value: compactValue(delta.isUp ? delta.maxValue : delta.minValue),
-            color: delta.isUp ? GwpColors.positive : GwpColors.negative,
+            color: delta.isUp ? CofferColors.positive : CofferColors.negative,
           ),
         ),
         Expanded(
           child: _TrendKv(
             label: '区间变动',
-            value:
-                displayPercentDouble(delta.deltaPct * 100, alwaysShowSign: true),
-            color: delta.isUp ? GwpColors.positive : GwpColors.negative,
+            value: displayPercentDouble(
+              delta.deltaPct * 100,
+              alwaysShowSign: true,
+            ),
+            color: delta.isUp ? CofferColors.positive : CofferColors.negative,
           ),
         ),
       ],
@@ -1493,17 +1542,17 @@ class _TrendKv extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
         ),
         const SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontFeatures: GwpTypo.tabularFigures,
+            fontFamily: CofferTypo.monoFont,
+            fontFeatures: CofferTypo.tabularFigures,
             fontSize: emphasize ? 15 : 13,
             fontWeight: FontWeight.w700,
-            color: color ?? GwpColors.textPrimary,
+            color: color ?? CofferColors.textPrimary,
           ),
         ),
       ],
@@ -1519,7 +1568,7 @@ class _AccountTrendChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final points = delta.points;
     final isUp = delta.isUp;
-    final lineColor = isUp ? GwpColors.positive : GwpColors.negative;
+    final lineColor = isUp ? CofferColors.positive : CofferColors.negative;
     final spots = <FlSpot>[
       for (var i = 0; i < points.length; i++)
         FlSpot(i.toDouble(), points[i].value),
@@ -1538,7 +1587,7 @@ class _AccountTrendChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: range > 0 ? range / 3 : 1,
           getDrawingHorizontalLine: (_) => FlLine(
-            color: GwpColors.border.withValues(alpha: 0.3),
+            color: CofferColors.border.withValues(alpha: 0.3),
             strokeWidth: 0.5,
           ),
         ),
@@ -1556,28 +1605,31 @@ class _AccountTrendChart extends StatelessWidget {
                   child: Text(
                     compactValue(value),
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 9,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                 );
               },
             ),
           ),
-          bottomTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         borderData: FlBorderData(show: false),
         extraLinesData: ExtraLinesData(
           horizontalLines: [
             HorizontalLine(
               y: refValue,
-              color: GwpColors.textMuted.withValues(alpha: 0.4),
+              color: CofferColors.textMuted.withValues(alpha: 0.4),
               strokeWidth: 0.5,
               dashArray: [4, 4],
             ),
@@ -1585,7 +1637,7 @@ class _AccountTrendChart extends StatelessWidget {
         ),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => GwpColors.surface3,
+            getTooltipColor: (_) => CofferColors.surface3,
             tooltipRoundedRadius: 6,
             getTooltipItems: (spots) => spots.map((s) {
               final p = points[s.x.toInt()];
@@ -1594,8 +1646,8 @@ class _AccountTrendChart extends StatelessWidget {
               return LineTooltipItem(
                 '$dateStr\n${compactValue(p.value)}',
                 const TextStyle(
-                  color: GwpColors.textPrimary,
-                  fontFamily: GwpTypo.monoFont,
+                  color: CofferColors.textPrimary,
+                  fontFamily: CofferTypo.monoFont,
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1658,7 +1710,7 @@ class _AssetListSectionState extends State<_AssetListSection> {
 
     return _SectionCard(
       icon: Icons.view_list_outlined,
-      iconColor: GwpColors.info,
+      iconColor: CofferColors.info,
       title: '资产明细 (${assets.length})',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1671,7 +1723,7 @@ class _AssetListSectionState extends State<_AssetListSection> {
                 for (var i = 0; i < visible.length; i++) ...[
                   _AssetRow(asset: visible[i]),
                   if (i < visible.length - 1)
-                    const Divider(height: 1, color: GwpColors.border),
+                    const Divider(height: 1, color: CofferColors.border),
                 ],
                 if (!_showAll && assets.length > _previewLimit)
                   _ShowMoreBtn(
@@ -1680,7 +1732,7 @@ class _AssetListSectionState extends State<_AssetListSection> {
                   ),
               ],
             ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           _SectionAddButton(
             label: '添加资产',
             onPressed: () => context.push(
@@ -1713,18 +1765,18 @@ class _AssetRow extends ConsumerWidget {
     }
     final isUp = changePct == null || changePct >= Decimal.zero;
     final changeColor = changePct == null
-        ? GwpColors.textMuted
-        : (isUp ? GwpColors.positive : GwpColors.negative);
+        ? CofferColors.textMuted
+        : (isUp ? CofferColors.positive : CofferColors.negative);
     final typeColor =
-        _assetTypeColors[rawAsset.assetType.name] ?? GwpColors.actionPrimary;
+        _assetTypeColors[rawAsset.assetType.name] ?? CofferColors.actionPrimary;
 
     return InkWell(
       onTap: () => context.push('/assets/${rawAsset.id}'),
       borderRadius: BorderRadius.circular(6),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.xs,
-          vertical: GwpSpacing.sm,
+          horizontal: CofferSpacing.xs,
+          vertical: CofferSpacing.sm,
         ),
         child: Row(
           children: [
@@ -1737,7 +1789,7 @@ class _AssetRow extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             // Left: code + type · qty
             Expanded(
               flex: 3,
@@ -1745,20 +1797,20 @@ class _AssetRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                     rawAsset.assetCode ?? rawAsset.assetType.labelZh,
+                    rawAsset.assetCode ?? rawAsset.assetType.labelZh,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                     '${rawAsset.assetType.labelZh} · ${rawAsset.quantity}',
+                    '${rawAsset.assetType.labelZh} · ${rawAsset.quantity}',
                     style: const TextStyle(
                       fontSize: 10,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1789,11 +1841,11 @@ class _AssetRow extends ConsumerWidget {
                             currency: rawAsset.currency,
                           ),
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
+                      fontFamily: CofferTypo.monoFont,
+                      fontFeatures: CofferTypo.tabularFigures,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1801,13 +1853,13 @@ class _AssetRow extends ConsumerWidget {
                     changePct == null && !asset.isConvertible
                         ? '缺汇率'
                         : changePct == null
-                            ? rawAsset.currency
+                        ? rawAsset.currency
                         : displayPercent(changePct, alwaysShowSign: true),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                       color: changePct == null && !asset.isConvertible
-                          ? GwpColors.warning
+                          ? CofferColors.warning
                           : changeColor,
                     ),
                   ),
@@ -1826,10 +1878,7 @@ class _AssetRow extends ConsumerWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _CardGallerySection extends StatelessWidget {
-  const _CardGallerySection({
-    required this.cardsAsync,
-    required this.account,
-  });
+  const _CardGallerySection({required this.cardsAsync, required this.account});
 
   final AsyncValue<List<BankCard>> cardsAsync;
   final Account account;
@@ -1850,7 +1899,10 @@ class _CardGallerySection extends StatelessWidget {
             ),
             error: (e, _) => Text(
               '加载卡片失败: ${errorToMessage(e)}',
-              style: const TextStyle(color: GwpColors.negative, fontSize: 12),
+              style: const TextStyle(
+                color: CofferColors.negative,
+                fontSize: 12,
+              ),
             ),
             data: (cards) {
               if (cards.isEmpty) return const _EmptyHint('账户下暂无卡片');
@@ -1859,13 +1911,15 @@ class _CardGallerySection extends StatelessWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: cards.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: GwpSpacing.sm),
-                  itemBuilder: (_, i) => _VisualCard(card: cards[i], account: account),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: CofferSpacing.sm),
+                  itemBuilder: (_, i) =>
+                      _VisualCard(card: cards[i], account: account),
                 ),
               );
             },
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           _SectionAddButton(
             label: '添加卡片',
             onPressed: () => context.push(
@@ -1902,18 +1956,15 @@ class _VisualCard extends StatelessWidget {
       onTap: () => CardDetailSheet.show(context, card: card, account: account),
       child: Container(
         width: 156,
-        padding: const EdgeInsets.all(GwpSpacing.sm),
+        padding: const EdgeInsets.all(CofferSpacing.sm),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              orgColor.withValues(alpha: 0.15),
-              GwpColors.surface2,
-            ],
+            colors: [orgColor.withValues(alpha: 0.15), CofferColors.surface2],
           ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: GwpColors.border, width: 0.5),
+          border: Border.all(color: CofferColors.border, width: 0.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1930,49 +1981,49 @@ class _VisualCard extends StatelessWidget {
                     color: orgColor,
                   ),
                 ),
-                GwpStatusBadge(
-                   label: card.status.labelZh,
+                CofferStatusBadge(
+                  label: card.status.labelZh,
                   variant: _cardStatusVariant(card.status),
                 ),
               ],
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             // Masked number
             Text(
               card.cardNoMasked,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
             ),
             const SizedBox(height: 4),
             // Type + expiry
             Text(
-               '${card.cardType.labelZh} · ${card.expireMonth.toString().padLeft(2, '0')}/${card.expireYear}',
+              '${card.cardType.labelZh} · ${card.expireMonth.toString().padLeft(2, '0')}/${card.expireYear}',
               style: const TextStyle(
                 fontSize: 10,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
             // Credit utilization bar
             if (utilization != null) ...[
-              const SizedBox(height: GwpSpacing.sm),
+              const SizedBox(height: CofferSpacing.sm),
               ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: SizedBox(
                   height: 4,
                   child: LinearProgressIndicator(
                     value: utilization,
-                    backgroundColor: GwpColors.surface3,
+                    backgroundColor: CofferColors.surface3,
                     valueColor: AlwaysStoppedAnimation(
                       utilization > 0.8
-                          ? GwpColors.negative
+                          ? CofferColors.negative
                           : utilization > 0.5
-                              ? GwpColors.warning
-                              : GwpColors.positive,
+                          ? CofferColors.warning
+                          : CofferColors.positive,
                     ),
                   ),
                 ),
@@ -1982,7 +2033,7 @@ class _VisualCard extends StatelessWidget {
                 '额度使用 ${displayPercentDouble(utilization * 100)}',
                 style: const TextStyle(
                   fontSize: 9,
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                 ),
               ),
             ],
@@ -2003,7 +2054,7 @@ class _VisualCard extends StatelessWidget {
       return const Color(0xFF006FCF);
     }
     if (lower.contains('jcb')) return const Color(0xFF0E4C96);
-    return GwpColors.actionPrimary;
+    return CofferColors.actionPrimary;
   }
 
   static StatusVariant _cardStatusVariant(dynamic s) {
@@ -2028,14 +2079,15 @@ class _ChannelNetworkSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final linksAsync =
-        ref.watch(accountChannelsByAccountProvider(accountId));
+    final linksAsync = ref.watch(accountChannelsByAccountProvider(accountId));
     final channelsAsync = ref.watch(channelListProvider);
-    final protocolEntriesAsync = ref.watch(dictEntriesProvider(DictType.transferProtocol));
+    final protocolEntriesAsync = ref.watch(
+      dictEntriesProvider(DictType.transferProtocol),
+    );
 
     return _SectionCard(
       icon: Icons.swap_horiz_outlined,
-      iconColor: GwpColors.info,
+      iconColor: CofferColors.info,
       title: '转账通道',
       child: linksAsync.when(
         loading: () => const SizedBox(
@@ -2044,7 +2096,7 @@ class _ChannelNetworkSection extends ConsumerWidget {
         ),
         error: (e, _) => Text(
           '加载失败: ${errorToMessage(e)}',
-          style: const TextStyle(color: GwpColors.negative, fontSize: 12),
+          style: const TextStyle(color: CofferColors.negative, fontSize: 12),
         ),
         data: (links) => channelsAsync.when(
           loading: () => const SizedBox(
@@ -2053,11 +2105,13 @@ class _ChannelNetworkSection extends ConsumerWidget {
           ),
           error: (e, _) => Text(
             '加载通道失败: ${errorToMessage(e)}',
-            style: const TextStyle(color: GwpColors.negative, fontSize: 12),
+            style: const TextStyle(color: CofferColors.negative, fontSize: 12),
           ),
           data: (channels) {
             final ProtocolIndex protocolIndex = {
-              for (final entry in protocolEntriesAsync.value ?? const <DictEntry>[]) entry.code: entry,
+              for (final entry
+                  in protocolEntriesAsync.value ?? const <DictEntry>[])
+                entry.code: entry,
             };
             final byId = {for (final c in channels) c.id: c};
             final attached = [
@@ -2082,9 +2136,9 @@ class _ChannelNetworkSection extends ConsumerWidget {
                       protocolIndex: protocolIndex,
                     ),
                     if (i < attached.length - 1)
-                      const SizedBox(height: GwpSpacing.sm),
+                      const SizedBox(height: CofferSpacing.sm),
                   ],
-                const SizedBox(height: GwpSpacing.sm),
+                const SizedBox(height: CofferSpacing.sm),
                 _SectionAddButton(
                   label: available.isEmpty ? '新建通道' : '添加通道',
                   onPressed: () {
@@ -2121,7 +2175,8 @@ class _ChannelNetworkSection extends ConsumerWidget {
                 leading: Icon(
                   Icons.swap_horiz,
                   color:
-                      _protocolColors[c.transferProtocol] ?? GwpColors.textMuted,
+                      _protocolColors[c.transferProtocol] ??
+                      CofferColors.textMuted,
                 ),
                 title: Row(
                   children: [
@@ -2132,7 +2187,9 @@ class _ChannelNetworkSection extends ConsumerWidget {
                     ],
                   ],
                 ),
-                subtitle: Text(protocolDisplayLabel(protocolIndex, c.transferProtocol)),
+                subtitle: Text(
+                  protocolDisplayLabel(protocolIndex, c.transferProtocol),
+                ),
                 onTap: () => Navigator.of(ctx).pop(c.id),
               ),
           ],
@@ -2149,19 +2206,19 @@ class _ChannelNetworkSection extends ConsumerWidget {
     );
     if (config == null) return;
     final r = await ref.read(saveAccountChannelConfigUseCaseProvider)(
-          accountId: accountId,
-          channelId: picked,
-          feeRateOverride: config.feeRateOverride,
-          fixedFeeOverride: config.fixedFeeOverride,
-          feeCurrencyOverride: config.feeCurrencyOverride,
-          regionOverride: config.regionOverride,
-        );
+      accountId: accountId,
+      channelId: picked,
+      feeRateOverride: config.feeRateOverride,
+      fixedFeeOverride: config.fixedFeeOverride,
+      feeCurrencyOverride: config.feeCurrencyOverride,
+      regionOverride: config.regionOverride,
+    );
     if (!context.mounted) return;
     r.when(
       ok: (_) {},
-      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('关联失败: ${errorToMessage(e)}')),
-      ),
+      err: (e) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('关联失败: ${errorToMessage(e)}'))),
     );
   }
 }
@@ -2182,9 +2239,12 @@ class _ChannelCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final protColor =
-        _protocolColors[channel.transferProtocol] ?? GwpColors.textMuted;
+        _protocolColors[channel.transferProtocol] ?? CofferColors.textMuted;
     final isEnabled = channel.status == ChannelStatus.enabled;
-    final protocolName = protocolDisplayName(protocolIndex, channel.transferProtocol);
+    final protocolName = protocolDisplayName(
+      protocolIndex,
+      channel.transferProtocol,
+    );
 
     final defaultFeeDesc = _feeDesc(
       feeRate: channel.feeRate,
@@ -2217,7 +2277,7 @@ class _ChannelCard extends ConsumerWidget {
             borderRadius: BorderRadius.circular(10),
             onTap: () => context.push('/channels/${channel.id}'),
             child: Padding(
-              padding: const EdgeInsets.all(GwpSpacing.sm),
+              padding: const EdgeInsets.all(CofferSpacing.sm),
               child: Row(
                 children: [
                   Container(
@@ -2238,7 +2298,7 @@ class _ChannelCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: GwpSpacing.sm),
+                  const SizedBox(width: CofferSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2254,20 +2314,20 @@ class _ChannelCard extends ConsumerWidget {
                                       style: const TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
-                                        color: GwpColors.textPrimary,
+                                        color: CofferColors.textPrimary,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   if (channel.isBuiltin) ...[
-                                    const SizedBox(width: GwpSpacing.xs),
+                                    const SizedBox(width: CofferSpacing.xs),
                                     const BuiltinBadge(),
                                   ],
                                 ],
                               ),
                             ),
-                            const SizedBox(width: GwpSpacing.sm),
-                            GwpStatusBadge(
+                            const SizedBox(width: CofferSpacing.sm),
+                            CofferStatusBadge(
                               label: channel.status.labelZh,
                               variant: isEnabled
                                   ? StatusVariant.positive
@@ -2278,24 +2338,22 @@ class _ChannelCard extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           '$protocolName · '
-                          '${hasOverride
-                              ? '默认 $defaultFeeDesc · 账户 $effectiveFeeDesc'
-                              : '费率 $defaultFeeDesc'
-                                  '${channel.dailyLimit != null ? ' · 日限额 ${compactValue(channel.dailyLimit!.toDouble())}' : ''}'}',
+                          '${hasOverride ? '默认 $defaultFeeDesc · 账户 $effectiveFeeDesc' : '费率 $defaultFeeDesc'
+                                    '${channel.dailyLimit != null ? ' · 日限额 ${compactValue(channel.dailyLimit!.toDouble())}' : ''}'}',
                           style: const TextStyle(
                             fontSize: 10,
-                            color: GwpColors.textMuted,
+                            color: CofferColors.textMuted,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: GwpSpacing.sm),
+                  const SizedBox(width: CofferSpacing.sm),
                   const Icon(
                     Icons.chevron_right,
                     size: 18,
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                   ),
                 ],
               ),
@@ -2304,8 +2362,8 @@ class _ChannelCard extends ConsumerWidget {
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: GwpSpacing.sm,
-              vertical: GwpSpacing.xs,
+              horizontal: CofferSpacing.sm,
+              vertical: CofferSpacing.xs,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -2318,7 +2376,8 @@ class _ChannelCard extends ConsumerWidget {
                       initial: link,
                     );
                     if (config == null) return;
-                    final r = await ref.read(saveAccountChannelConfigUseCaseProvider)(
+                    final r =
+                        await ref.read(saveAccountChannelConfigUseCaseProvider)(
                           accountId: accountId,
                           channelId: channel.id,
                           feeRateOverride: config.feeRateOverride,
@@ -2337,15 +2396,12 @@ class _ChannelCard extends ConsumerWidget {
                   icon: const Icon(Icons.tune, size: 16),
                   label: const Text('配置费用'),
                 ),
-                const SizedBox(width: GwpSpacing.xs),
+                const SizedBox(width: CofferSpacing.xs),
                 TextButton.icon(
                   onPressed: () async {
                     final r = await ref
                         .read(linkAccountChannelUseCaseProvider)
-                        .unlink(
-                          accountId: accountId,
-                          channelId: channel.id,
-                        );
+                        .unlink(accountId: accountId, channelId: channel.id);
                     if (!context.mounted) return;
                     r.when(
                       ok: (_) {},
@@ -2357,7 +2413,7 @@ class _ChannelCard extends ConsumerWidget {
                   icon: const Icon(Icons.link_off, size: 16),
                   label: const Text('解绑'),
                   style: TextButton.styleFrom(
-                    foregroundColor: GwpColors.textMuted,
+                    foregroundColor: CofferColors.textMuted,
                   ),
                 ),
               ],
@@ -2430,7 +2486,10 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
               children: [
                 Text(
                   '默认费率：${_feeDesc(feeRate: channel.feeRate, fixedFee: channel.fixedFee, currency: channel.limitCurrency)}',
-                  style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: CofferColors.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -2484,7 +2543,8 @@ Future<_AccountChannelConfigDraft?> _showAccountChannelConfigDialog({
                     labelText: '地区覆盖（可空）',
                     helperText: '例如 IBKR 连 CHATS 时填 HK，绕过地区限制',
                   ),
-                  onChanged: (v) => regionOverride = v.trim().isEmpty ? null : v.trim(),
+                  onChanged: (v) =>
+                      regionOverride = v.trim().isEmpty ? null : v.trim(),
                 ),
               ],
             ),
@@ -2540,16 +2600,19 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              GwpSpacing.base, GwpSpacing.md, GwpSpacing.base, GwpSpacing.sm,
+              CofferSpacing.base,
+              CofferSpacing.md,
+              CofferSpacing.base,
+              CofferSpacing.sm,
             ),
             child: Row(
               children: [
@@ -2562,13 +2625,13 @@ class _SectionCard extends StatelessWidget {
                   ),
                   child: Icon(icon, size: 14, color: iconColor),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
+                    color: CofferColors.textPrimary,
                   ),
                 ),
               ],
@@ -2576,7 +2639,7 @@ class _SectionCard extends StatelessWidget {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.all(GwpSpacing.md),
+            padding: const EdgeInsets.all(CofferSpacing.md),
             child: child,
           ),
         ],
@@ -2596,7 +2659,7 @@ class _SubLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: GwpColors.textSecondary,
+        color: CofferColors.textSecondary,
       ),
     );
   }
@@ -2613,17 +2676,14 @@ class _EmptyHint extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         message,
-        style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+        style: const TextStyle(fontSize: 12, color: CofferColors.textMuted),
       ),
     );
   }
 }
 
 class _SectionAddButton extends StatelessWidget {
-  const _SectionAddButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _SectionAddButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -2649,22 +2709,17 @@ class _ShowMoreBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: GwpSpacing.sm),
+      padding: const EdgeInsets.only(top: CofferSpacing.sm),
       child: OutlinedButton.icon(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: GwpColors.textSecondary,
-          side: const BorderSide(color: GwpColors.border, width: 0.5),
-          padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          foregroundColor: CofferColors.textSecondary,
+          side: const BorderSide(color: CofferColors.border, width: 0.5),
+          padding: const EdgeInsets.symmetric(vertical: CofferSpacing.sm),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         icon: const Icon(Icons.expand_more, size: 16),
-        label: Text(
-          '展开剩余 $remaining 项',
-          style: const TextStyle(fontSize: 12),
-        ),
+        label: Text('展开剩余 $remaining 项', style: const TextStyle(fontSize: 12)),
       ),
     );
   }

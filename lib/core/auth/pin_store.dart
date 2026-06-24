@@ -64,13 +64,13 @@ class PinStore {
         _kdf = kdf ?? PasswordKdf(memoryKib: 16384, iterations: 2, hashLength: 32),
         _random = random ?? Random.secure();
 
-  static const _kSalt = 'gwp.pin.salt.v1';
-  static const _kHash = 'gwp.pin.hash.v1';
+  static const _kSalt = 'coffer.pin.salt.v1';
+  static const _kHash = 'coffer.pin.hash.v1';
   // v2: salt+hash 合并为单条 JSON，原子写入避免进程崩溃时两字段不一致
-  static const _kCredential = 'gwp.pin.credential.v2';
-  static const _kBiometricEnabled = 'gwp.pin.biometric_enabled.v1';
-  static const _kFailCount = 'gwp.pin.fail_count.v1';
-  static const _kLockedUntil = 'gwp.pin.locked_until.v1';
+  static const _kCredential = 'coffer.pin.credential.v2';
+  static const _kBiometricEnabled = 'coffer.pin.biometric_enabled.v1';
+  static const _kFailCount = 'coffer.pin.fail_count.v1';
+  static const _kLockedUntil = 'coffer.pin.locked_until.v1';
 
   /// 允许的连续失败次数，超过后进入冷却
   static const int maxFailBeforeLock = 5;

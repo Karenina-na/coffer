@@ -91,24 +91,24 @@ sealed class AssetTypeInfo with _$AssetTypeInfo {
 
 FixedIncomeInfo _fixedIncomeFromJson(Map<String, dynamic> json) {
   return FixedIncomeInfo(
-    issuer: json['issuer'] as String?,
+    issuer: _string(json['issuer']),
     annualRate: _dec(json['annualRate']),
     startDate: _dt(json['startDate']),
     maturityDate: _dt(json['maturityDate']),
-    compounding: json['compounding'] as String?,
-    dayCount: json['dayCount'] as int?,
+    compounding: _string(json['compounding']),
+    dayCount: _int(json['dayCount']),
   );
 }
 
 InsuranceInfo _insuranceFromJson(Map<String, dynamic> json) {
   return InsuranceInfo(
-    insurer: json['insurer'] as String?,
-    policyNumber: json['policyNumber'] as String?,
+    insurer: _string(json['insurer']),
+    policyNumber: _string(json['policyNumber']),
     annualPremium: _dec(json['annualPremium']),
     coverage: _dec(json['coverage']),
     effectiveDate: _dt(json['effectiveDate']),
     maturityDate: _dt(json['maturityDate']),
-    paymentFrequency: json['paymentFrequency'] as String?,
+    paymentFrequency: _string(json['paymentFrequency']),
   );
 }
 
@@ -147,10 +147,19 @@ extension AssetTypeInfoJson on AssetTypeInfo {
 
 PreciousMetalInfo _preciousMetalFromJson(Map<String, dynamic> json) {
   return PreciousMetalInfo(
-    metalType: json['metalType'] as String?,
+    metalType: _string(json['metalType']),
     weight: _dec(json['weight']),
     purity: _dec(json['purity']),
   );
+}
+
+String? _string(dynamic v) => v is String ? v : null;
+
+int? _int(dynamic v) {
+  if (v is int) return v;
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v);
+  return null;
 }
 
 Decimal? _dec(dynamic v) {

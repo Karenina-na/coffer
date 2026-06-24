@@ -4,26 +4,29 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/ui/app_top_bar.dart';
+import '../../../app/widgets/app_top_bar.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/finance_map_projection.dart';
 import '../../../core/ui/floating_nav_layout.dart';
-import '../../../core/ui/global_search_delegate.dart';
-import '../../../core/ui/gwp_donut_chart.dart';
+import '../../search/presentation/global_search_delegate.dart';
+import '../../../core/ui/coffer_donut_chart.dart';
 import '../../../core/ui/projected_edge_geometry.dart';
 import '../../../core/ui/projected_label_layout.dart';
 import '../../../core/ui/projected_land_surface.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_kpi_tile.dart';
-import '../../../core/ui/gwp_node_map.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_kpi_tile.dart';
+import '../../../core/ui/coffer_node_map.dart';
+import '../../../core/ui/coffer_status_badge.dart';
+import '../../../core/ui/horizontal_gesture_guard.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/domain_event.dart';
 import '../../../domain/entities/event_enums.dart';
+import '../../wealth/presentation/wealth_summary_provider.dart';
+import '../../wealth/presentation/wealth_trend_provider.dart';
 import 'dashboard_providers.dart';
 import '../../../data/providers/dict_providers.dart';
 
@@ -35,7 +38,7 @@ part 'parts/dashboard_bills_map.dart';
 part 'parts/dashboard_activity.dart';
 
 final dashboardRefreshProviders = <dynamic>[
-  dashboardSummaryProvider,
+  wealthSummaryProvider,
   dashboardKpiProvider,
   allocationByCurrencyProvider,
   allocationByTypeProvider,
@@ -99,32 +102,32 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final summary = ref.watch(dashboardSummaryProvider);
+    final summary = ref.watch(wealthSummaryProvider);
     return Scaffold(
       appBar: const AppTopBar(title: Text('仪表盘'), showAppIcon: true),
       body: RefreshIndicator(
-        color: GwpColors.actionPrimary,
-        backgroundColor: GwpColors.surface2,
+        color: CofferColors.actionPrimary,
+        backgroundColor: CofferColors.surface2,
         onRefresh: () async => _invalidateAll(),
         child: summary.when(
           loading: () => const Center(
-            child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+            child: CircularProgressIndicator(color: CofferColors.actionPrimary),
           ),
           error: (e, _) => ListView(
             children: [
               const SizedBox(height: 80),
-              GwpEmptyState.error(
+              CofferEmptyState.error(
                 message: '加载失败: ${errorToMessage(e)}',
-                onRetry: () => ref.invalidate(dashboardSummaryProvider),
+                onRetry: () => ref.invalidate(wealthSummaryProvider),
               ),
             ],
           ),
           data: (s) => ListView(
-            padding: const EdgeInsets.all(GwpSpacing.base),
+            padding: const EdgeInsets.all(CofferSpacing.base),
             children: [
               // A. Hero: Grid World Map
               const _GridMapHero(),
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
 
               // B+. Today's rate alerts（紧贴 Hero，作为第一视觉焦点）
               const _TodaysAlertsBanner(),
@@ -136,15 +139,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 onCardsTap: () => context.go('/cards'),
                 onEventsTap: () => context.go('/events'),
               ),
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
 
               // C. Asset Allocation（标题内嵌于卡片顶部）
               const _AllocationSection(),
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
 
               // D. Net Worth Trend（标题 + 范围 chip 内嵌于卡片顶部）
               const _TrendSection(),
-              const SizedBox(height: GwpSpacing.lg),
+              const SizedBox(height: CofferSpacing.lg),
 
               // E. Upcoming credit bills（仅在有数据时渲染）
               const _UpcomingBillsSection(),

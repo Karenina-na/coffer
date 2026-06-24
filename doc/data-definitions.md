@@ -1,8 +1,8 @@
-# GWP 数据定义
+# Coffer 数据定义
 
 ## 1. 说明
 
-本文件用于沉淀 GWP 核心实体的数据结构定义，面向开发实现与接口对齐。
+本文件用于沉淀 Coffer 核心实体的数据结构定义，面向开发实现与接口对齐。
 
 - 账户类型范围：BANK / BROKER / INSURANCE / PAYMENT / CUSTODY / CRYPTO_EXCHANGE / CRYPTO_WALLET
 - 资产类型范围：STOCK / EQUITY / FUND / BOND / CD / OPTION / FUTURE / WARRANT / POLICY / CRYPTO / PERPETUAL / CONTRACT / PRECIOUS_METAL / FX_ASSET
@@ -20,7 +20,8 @@
 | institution_name | VARCHAR(128) | 是 | 开户机构 |
 | status | ENUM | 是 | ACTIVE / INACTIVE / DORMANT / CLOSED |
 | opened_at | DATETIME | 否 | 开户时间 |
-| fx_spread_percent | REAL | 是 | 账户内部换汇百分比损耗（0–100，默认 0）。0 表示该账户不支持内部货币兑换；例如 0.3 表示每次换汇损失 0.3% |
+| fx_spread_percent | REAL | 是 | 账户内部换汇百分比损耗（0–100，默认 0）。0 表示该账户不支持内部货币兑换；例如 0.3 表示每次换汇损失 0.3%。应用层领域模型使用 `Decimal`，在 Drift mapper 边界与 SQLite `REAL` 转换 |
+| fx_fixed_fee | DECIMAL(28,10) / TEXT | 否 | 账户内部换汇固定费（原币计价）；为空或 `0` 表示不收固定费 |
 | ext_info | JSON | 否 | 扩展信息 |
 | created_at | DATETIME | 是 | 创建时间 |
 | updated_at | DATETIME | 是 | 更新时间 |
@@ -349,7 +350,7 @@ UI 的资产价格走势图、Dashboard 净资产趋势均从此表读取。
 - UNIQUE(`unique_key`)：相同查询 / 相同访问目标只保留最近一条；
 - 查询历史最多保留 8 条；
 - 访问历史最多保留 10 条；
-- 启动时若发现旧版 `search_history.dat` 或 `search_history.json`，会自动迁移入库并删除旧文件。
+- 启动时 `SearchHistoryRepository.migrateLegacyHistoryIfNeeded()` 若发现旧版 `search_history.dat` 或 `search_history.json`，会由 data 层自动迁移入库并删除旧文件；presentation 不直接读写旧文件。
 
 写入方：`GlobalSearchDelegate`（搜索提交、搜索结果点击）。
 读取方：`searchHistoryProvider` 空态页（最近搜索 / 最近访问）。

@@ -1,8 +1,8 @@
-# GWP ER 图
+# Coffer ER 图
 
 ## 1. 说明
 
-本文件仅用于展示 GWP 核心数据模型的实体关系图。
+本文件仅用于展示 Coffer 核心数据模型的实体关系图。
 
 ## 2. Mermaid ER 图
 
@@ -27,6 +27,7 @@ erDiagram
         string status
         datetime opened_at
         real fx_spread_percent
+        decimal fx_fixed_fee
         json ext_info
         datetime created_at
         datetime updated_at

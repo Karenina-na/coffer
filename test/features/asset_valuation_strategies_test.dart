@@ -1,15 +1,15 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/entities/asset_type_info.dart';
-import 'package:gwp/domain/providers/asset_price_provider.dart';
-import 'package:gwp/domain/valuation/strategies/fixed_income_valuator.dart';
-import 'package:gwp/domain/valuation/strategies/manual_valuator.dart';
-import 'package:gwp/domain/valuation/strategies/market_quote_valuator.dart';
-import 'package:gwp/domain/valuation/valuation_router.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/entities/asset_type_info.dart';
+import 'package:coffer/domain/providers/asset_price_provider.dart';
+import 'package:coffer/domain/valuation/strategies/fixed_income_valuator.dart';
+import 'package:coffer/domain/valuation/strategies/manual_valuator.dart';
+import 'package:coffer/domain/valuation/strategies/market_quote_valuator.dart';
+import 'package:coffer/domain/valuation/valuation_router.dart';
 
 const _serverError = NetworkError('fake', kind: NetworkErrorKind.serverError);
 const _notFound = NotFoundError('fake not found');

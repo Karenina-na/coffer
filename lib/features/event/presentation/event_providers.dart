@@ -5,9 +5,11 @@ import '../../../data/providers/event_providers.dart';
 import '../../../domain/entities/domain_event.dart';
 import '../../../domain/usecases/ack_event.dart';
 import '../../../domain/usecases/create_event.dart';
+import '../../../domain/usecases/delete_event.dart';
+import '../../../domain/usecases/update_event_handling.dart';
 
 export '../../../data/providers/event_providers.dart'
-    show domainEventBusProvider, eventDaoProvider, eventRepositoryProvider;
+    show domainEventBusProvider, eventRepositoryProvider;
 
 final recentEventsProvider = StreamProvider<List<DomainEvent>>((ref) {
   return ref.watch(eventRepositoryProvider).watchRecent();
@@ -20,10 +22,9 @@ final pendingAckEventsProvider = StreamProvider<List<DomainEvent>>((ref) {
 
 /// 未确认事件计数，用于底部导航 Events Tab 角标。
 final unreadEventCountProvider = Provider<int>((ref) {
-  return ref.watch(pendingAckEventsProvider).maybeWhen(
-        data: (list) => list.length,
-        orElse: () => 0,
-      );
+  return ref
+      .watch(pendingAckEventsProvider)
+      .maybeWhen(data: (list) => list.length, orElse: () => 0);
 });
 
 final ackEventUseCaseProvider = Provider<AckEventUseCase>((ref) {
@@ -33,6 +34,16 @@ final ackEventUseCaseProvider = Provider<AckEventUseCase>((ref) {
 final createEventUseCaseProvider = Provider<CreateEventUseCase>((ref) {
   return CreateEventUseCase(ref.watch(eventRepositoryProvider));
 });
+
+final deleteEventUseCaseProvider = Provider<DeleteEventUseCase>((ref) {
+  return DeleteEventUseCase(ref.watch(eventRepositoryProvider));
+});
+
+final updateEventHandlingUseCaseProvider = Provider<UpdateEventHandlingUseCase>(
+  (ref) {
+    return UpdateEventHandlingUseCase(ref.watch(eventRepositoryProvider));
+  },
+);
 
 final uuidGeneratorProvider = Provider<String Function()>((_) {
   const uuid = Uuid();

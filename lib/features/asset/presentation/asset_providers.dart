@@ -8,6 +8,7 @@ import '../../../domain/entities/asset_cost_history_point.dart';
 import '../../../domain/entities/asset_price_history_point.dart';
 import '../../../domain/usecases/check_asset_sync_outdated.dart';
 import '../../../domain/usecases/create_asset.dart';
+import '../../../domain/usecases/delete_asset.dart';
 import '../../../domain/usecases/refresh_asset_price.dart';
 import '../../../domain/usecases/transfer_asset.dart';
 import '../../../domain/usecases/update_asset.dart';
@@ -24,11 +25,8 @@ import '../../exchange_rate/presentation/exchange_rate_providers.dart';
 
 export '../../../data/providers/asset_providers.dart'
     show
-        assetDaoProvider,
         assetRepositoryProvider,
-        assetPriceHistoryDaoProvider,
         assetPriceHistoryRepositoryProvider,
-        assetCostHistoryDaoProvider,
         assetCostHistoryRepositoryProvider,
         assetPriceProviderProvider;
 
@@ -53,7 +51,9 @@ final valueAssetsInCurrencyUseCaseProvider =
       return ValueAssetsInCurrencyUseCase(ref.watch(priceProviderProvider));
     });
 
-final valuedAssetsProvider = FutureProvider.autoDispose<ValuedAssets>((ref) async {
+final valuedAssetsProvider = FutureProvider.autoDispose<ValuedAssets>((
+  ref,
+) async {
   final assets = await ref.watch(assetListProvider.future);
   final base = ref.watch(valuationCurrencyProvider);
   final useCase = ref.watch(valueAssetsInCurrencyUseCaseProvider);
@@ -64,20 +64,21 @@ final valuedAssetsProvider = FutureProvider.autoDispose<ValuedAssets>((ref) asyn
   );
 });
 
-final valuedAssetsByAccountProvider =
-    FutureProvider.autoDispose.family<ValuedAssets, String>((ref, accountId) async {
+final valuedAssetsByAccountProvider = FutureProvider.autoDispose
+    .family<ValuedAssets, String>((ref, accountId) async {
       final assets = await ref.watch(assetsByAccountProvider(accountId).future);
       final base = ref.watch(valuationCurrencyProvider);
       final useCase = ref.watch(valueAssetsInCurrencyUseCaseProvider);
       final result = await useCase(assets: assets, valuationCurrency: base);
       return result.when(
         ok: (valued) => valued,
-        err: (e) => throw Exception('value account assets failed: ${e.message}'),
+        err: (e) =>
+            throw Exception('value account assets failed: ${e.message}'),
       );
     });
 
-final valuedAssetByIdProvider =
-    FutureProvider.autoDispose.family<ValuedAsset?, String>((ref, assetId) async {
+final valuedAssetByIdProvider = FutureProvider.autoDispose
+    .family<ValuedAsset?, String>((ref, assetId) async {
       final asset = await ref.watch(assetByIdProvider(assetId).future);
       if (asset == null) return null;
       final base = ref.watch(valuationCurrencyProvider);
@@ -116,15 +117,18 @@ final updateAssetUseCaseProvider = Provider<UpdateAssetUseCase>((ref) {
   );
 });
 
+final deleteAssetUseCaseProvider = Provider<DeleteAssetUseCase>((ref) {
+  return DeleteAssetUseCase(ref.watch(assetRepositoryProvider));
+});
+
 final valuateAssetUseCaseProvider = Provider<ValuateAssetUseCase>((ref) {
-  final db = ref.watch(appDatabaseProvider);
   return ValuateAssetUseCase(
     ref.watch(assetRepositoryProvider),
     ref.watch(assetPriceHistoryRepositoryProvider),
     ref.watch(priceProviderProvider),
     idGenerator: ref.watch(uuidGeneratorProvider),
     now: DateTime.now,
-    transaction: <T>(fn) => db.transaction(fn),
+    transaction: ref.watch(databaseTransactionRunnerProvider),
   );
 });
 
@@ -175,7 +179,6 @@ final checkAssetSyncOutdatedUseCaseProvider =
     });
 
 final transferAssetUseCaseProvider = Provider<TransferAssetUseCase>((ref) {
-  final db = ref.watch(appDatabaseProvider);
   return TransferAssetUseCase(
     ref.watch(assetRepositoryProvider),
     ref.watch(accountRepositoryProvider),
@@ -184,6 +187,6 @@ final transferAssetUseCaseProvider = Provider<TransferAssetUseCase>((ref) {
     ref.watch(domainEventBusProvider),
     idGenerator: ref.watch(uuidGeneratorProvider),
     now: DateTime.now,
-    transaction: <T>(fn) => db.transaction(fn),
+    transaction: ref.watch(databaseTransactionRunnerProvider),
   );
 });

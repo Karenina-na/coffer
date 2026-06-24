@@ -3,17 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/core/valuation/valuation_currency_provider.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/account.dart';
-import 'package:gwp/domain/entities/account_enums.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/usecases/value_assets_in_currency.dart';
-import 'package:gwp/features/account/presentation/account_providers.dart';
-import 'package:gwp/features/asset/presentation/asset_list_page.dart';
-import 'package:gwp/features/asset/presentation/asset_providers.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/core/valuation/valuation_currency_provider.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/account.dart';
+import 'package:coffer/domain/entities/account_enums.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/usecases/value_assets_in_currency.dart';
+import 'package:coffer/features/account/presentation/account_providers.dart';
+import 'package:coffer/features/asset/presentation/asset_list_page.dart';
+import 'package:coffer/features/asset/presentation/asset_providers.dart';
 
 void main() {
   Future<void> pumpAssetList(
@@ -42,12 +42,14 @@ void main() {
               missingAssetIds: const [],
             ),
           ),
-          regionMetaIndexProvider.overrideWith((ref) => Stream.value(regionIndex)),
-          valuationCurrencyProvider.overrideWith(() => ValuationCurrencyNotifier()),
+          regionMetaIndexProvider.overrideWith(
+            (ref) => Stream.value(regionIndex),
+          ),
+          valuationCurrencyProvider.overrideWith(
+            () => ValuationCurrencyNotifier(),
+          ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AssetListBody()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AssetListBody())),
       ),
     );
     await tester.pump();
@@ -77,6 +79,7 @@ void main() {
       sovereigntyRegion: region,
       institutionName: name,
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     );
@@ -128,117 +131,244 @@ void main() {
     );
   }
 
-  testWidgets('renders nested region, account-type, and account groups in value order', (
-    tester,
-  ) async {
-    final accounts = [
-      buildAccount(id: 'gb-bank-1', type: AccountType.bank, region: 'GB', name: 'HSBC'),
-      buildAccount(id: 'gb-bank-2', type: AccountType.bank, region: 'GB', name: 'Barclays'),
-      buildAccount(id: 'gb-broker-1', type: AccountType.broker, region: 'GB', name: 'IBKR UK'),
-      buildAccount(id: 'us-bank-1', type: AccountType.bank, region: 'US', name: 'Chase'),
-    ];
-    final valuedAssets = [
-      buildValuedAsset(id: 'a1', accountId: 'gb-bank-1', type: AssetType.stock, marketValue: Decimal.fromInt(700)),
-      buildValuedAsset(id: 'a2', accountId: 'gb-bank-2', type: AssetType.fund, marketValue: Decimal.fromInt(500)),
-      buildValuedAsset(id: 'a3', accountId: 'gb-broker-1', type: AssetType.stock, marketValue: Decimal.fromInt(400)),
-      buildValuedAsset(id: 'a4', accountId: 'us-bank-1', type: AssetType.bond, marketValue: Decimal.fromInt(300)),
-    ];
-    final regionIndex = <String, RegionMeta>{
-      'GB': const RegionMeta(code: 'GB', displayName: '英国'),
-      'US': const RegionMeta(code: 'US', displayName: '美国'),
-    };
+  testWidgets(
+    'renders nested region, account-type, and account groups in value order',
+    (tester) async {
+      final accounts = [
+        buildAccount(
+          id: 'gb-bank-1',
+          type: AccountType.bank,
+          region: 'GB',
+          name: 'HSBC',
+        ),
+        buildAccount(
+          id: 'gb-bank-2',
+          type: AccountType.bank,
+          region: 'GB',
+          name: 'Barclays',
+        ),
+        buildAccount(
+          id: 'gb-broker-1',
+          type: AccountType.broker,
+          region: 'GB',
+          name: 'IBKR UK',
+        ),
+        buildAccount(
+          id: 'us-bank-1',
+          type: AccountType.bank,
+          region: 'US',
+          name: 'Chase',
+        ),
+      ];
+      final valuedAssets = [
+        buildValuedAsset(
+          id: 'a1',
+          accountId: 'gb-bank-1',
+          type: AssetType.stock,
+          marketValue: Decimal.fromInt(700),
+        ),
+        buildValuedAsset(
+          id: 'a2',
+          accountId: 'gb-bank-2',
+          type: AssetType.fund,
+          marketValue: Decimal.fromInt(500),
+        ),
+        buildValuedAsset(
+          id: 'a3',
+          accountId: 'gb-broker-1',
+          type: AssetType.stock,
+          marketValue: Decimal.fromInt(400),
+        ),
+        buildValuedAsset(
+          id: 'a4',
+          accountId: 'us-bank-1',
+          type: AssetType.bond,
+          marketValue: Decimal.fromInt(300),
+        ),
+      ];
+      final regionIndex = <String, RegionMeta>{
+        'GB': const RegionMeta(code: 'GB', displayName: '英国'),
+        'US': const RegionMeta(code: 'US', displayName: '美国'),
+      };
 
-    await pumpAssetList(
-      tester,
-      accounts: accounts,
-      valuedAssets: valuedAssets,
-      regionIndex: regionIndex,
-    );
+      await pumpAssetList(
+        tester,
+        accounts: accounts,
+        valuedAssets: valuedAssets,
+        regionIndex: regionIndex,
+      );
 
-    // Regions start collapsed; expand to reveal sub-groups.
-    await tester.tap(find.text('英国 (3)'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('美国 (1)'));
-    await tester.pumpAndSettle();
+      // Regions start collapsed; expand to reveal sub-groups.
+      await tester.tap(find.text('英国 (3)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('美国 (1)'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('英国 (3)'), findsOneWidget);
-    expect(find.text('美国 (1)'), findsOneWidget);
-    expect(find.text('银行 (2)'), findsOneWidget);
-    expect(find.text('券商 (1)'), findsOneWidget);
-    expect(find.text('HSBC (1)'), findsOneWidget);
-    expect(find.text('Barclays (1)'), findsOneWidget);
-    expect(find.text('IBKR UK (1)'), findsOneWidget);
+      expect(find.text('英国 (3)'), findsOneWidget);
+      expect(find.text('美国 (1)'), findsOneWidget);
+      expect(find.text('银行 (2)'), findsOneWidget);
+      expect(find.text('券商 (1)'), findsOneWidget);
+      expect(find.text('HSBC (1)'), findsOneWidget);
+      expect(find.text('Barclays (1)'), findsOneWidget);
+      expect(find.text('IBKR UK (1)'), findsOneWidget);
 
-    final ukTopLeft = tester.getTopLeft(find.text('英国 (3)'));
-    final usTopLeft = tester.getTopLeft(find.text('美国 (1)'));
-    expect(ukTopLeft.dy, lessThan(usTopLeft.dy));
+      final ukTopLeft = tester.getTopLeft(find.text('英国 (3)'));
+      final usTopLeft = tester.getTopLeft(find.text('美国 (1)'));
+      expect(ukTopLeft.dy, lessThan(usTopLeft.dy));
 
-    final bankTopLeft = tester.getTopLeft(find.text('银行 (2)'));
-    final brokerTopLeft = tester.getTopLeft(find.text('券商 (1)'));
-    expect(bankTopLeft.dy, lessThan(brokerTopLeft.dy));
+      final bankTopLeft = tester.getTopLeft(find.text('银行 (2)'));
+      final brokerTopLeft = tester.getTopLeft(find.text('券商 (1)'));
+      expect(bankTopLeft.dy, lessThan(brokerTopLeft.dy));
 
-    final hsbcTopLeft = tester.getTopLeft(find.text('HSBC (1)'));
-    final barclaysTopLeft = tester.getTopLeft(find.text('Barclays (1)'));
-    expect(hsbcTopLeft.dy, lessThan(barclaysTopLeft.dy));
-  });
+      final hsbcTopLeft = tester.getTopLeft(find.text('HSBC (1)'));
+      final barclaysTopLeft = tester.getTopLeft(find.text('Barclays (1)'));
+      expect(hsbcTopLeft.dy, lessThan(barclaysTopLeft.dy));
+    },
+  );
 
-  testWidgets('collapsing a region hides subgroup headers account headers and asset cards', (
-    tester,
-  ) async {
-    final accounts = [
-      buildAccount(id: 'gb-bank-1', type: AccountType.bank, region: 'GB', name: 'HSBC'),
-      buildAccount(id: 'gb-broker-1', type: AccountType.broker, region: 'GB', name: 'IBKR UK'),
-    ];
-    final valuedAssets = [
-      buildValuedAsset(id: 'b1', accountId: 'gb-bank-1', type: AssetType.stock, marketValue: Decimal.fromInt(600)),
-      buildValuedAsset(id: 'b2', accountId: 'gb-broker-1', type: AssetType.bond, marketValue: Decimal.fromInt(300)),
-    ];
-    final regionIndex = <String, RegionMeta>{
-      'GB': const RegionMeta(code: 'GB', displayName: '英国'),
-    };
+  testWidgets(
+    'collapsing a region hides subgroup headers account headers and asset cards',
+    (tester) async {
+      final accounts = [
+        buildAccount(
+          id: 'gb-bank-1',
+          type: AccountType.bank,
+          region: 'GB',
+          name: 'HSBC',
+        ),
+        buildAccount(
+          id: 'gb-broker-1',
+          type: AccountType.broker,
+          region: 'GB',
+          name: 'IBKR UK',
+        ),
+      ];
+      final valuedAssets = [
+        buildValuedAsset(
+          id: 'b1',
+          accountId: 'gb-bank-1',
+          type: AssetType.stock,
+          marketValue: Decimal.fromInt(600),
+        ),
+        buildValuedAsset(
+          id: 'b2',
+          accountId: 'gb-broker-1',
+          type: AssetType.bond,
+          marketValue: Decimal.fromInt(300),
+        ),
+      ];
+      final regionIndex = <String, RegionMeta>{
+        'GB': const RegionMeta(code: 'GB', displayName: '英国'),
+      };
 
-    await pumpAssetList(
-      tester,
-      accounts: accounts,
-      valuedAssets: valuedAssets,
-      regionIndex: regionIndex,
-    );
+      await pumpAssetList(
+        tester,
+        accounts: accounts,
+        valuedAssets: valuedAssets,
+        regionIndex: regionIndex,
+      );
 
-    // Expand the region first.
-    await tester.tap(find.text('英国 (2)'));
-    await tester.pumpAndSettle();
+      // Expand the region first.
+      await tester.tap(find.text('英国 (2)'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('银行 (1)'), findsOneWidget);
-    expect(find.text('HSBC (1)'), findsOneWidget);
-    expect(find.text('b1'), findsOneWidget);
+      expect(find.text('银行 (1)'), findsOneWidget);
+      expect(find.text('HSBC (1)'), findsOneWidget);
+      expect(find.text('b1'), findsOneWidget);
 
-    await tester.tap(find.text('英国 (2)'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('英国 (2)'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('银行 (1)'), findsNothing);
-    expect(find.text('HSBC (1)'), findsNothing);
-    expect(find.text('b1'), findsNothing);
-  });
+      expect(find.text('银行 (1)'), findsNothing);
+      expect(find.text('HSBC (1)'), findsNothing);
+      expect(find.text('b1'), findsNothing);
+    },
+  );
 
   testWidgets('renders all grouped accounts and assets by default', (
     tester,
   ) async {
     final accounts = [
-      buildAccount(id: 'gb-bank-1', type: AccountType.bank, region: 'GB', name: 'HSBC'),
-      buildAccount(id: 'gb-bank-2', type: AccountType.bank, region: 'GB', name: 'Barclays'),
-      buildAccount(id: 'gb-bank-3', type: AccountType.bank, region: 'GB', name: 'Lloyds'),
-      buildAccount(id: 'gb-bank-4', type: AccountType.bank, region: 'GB', name: 'NatWest'),
-      buildAccount(id: 'gb-broker-1', type: AccountType.broker, region: 'GB', name: 'IBKR UK'),
+      buildAccount(
+        id: 'gb-bank-1',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'HSBC',
+      ),
+      buildAccount(
+        id: 'gb-bank-2',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'Barclays',
+      ),
+      buildAccount(
+        id: 'gb-bank-3',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'Lloyds',
+      ),
+      buildAccount(
+        id: 'gb-bank-4',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'NatWest',
+      ),
+      buildAccount(
+        id: 'gb-broker-1',
+        type: AccountType.broker,
+        region: 'GB',
+        name: 'IBKR UK',
+      ),
     ];
     final valuedAssets = [
-      buildValuedAsset(id: 'c1', accountId: 'gb-bank-1', type: AssetType.stock, marketValue: Decimal.fromInt(500)),
-      buildValuedAsset(id: 'c2', accountId: 'gb-bank-1', type: AssetType.fund, marketValue: Decimal.fromInt(400)),
-      buildValuedAsset(id: 'c3', accountId: 'gb-bank-1', type: AssetType.bond, marketValue: Decimal.fromInt(300)),
-      buildValuedAsset(id: 'c4', accountId: 'gb-bank-1', type: AssetType.cd, marketValue: Decimal.fromInt(200)),
-      buildValuedAsset(id: 'c5', accountId: 'gb-bank-2', type: AssetType.stock, marketValue: Decimal.fromInt(190)),
-      buildValuedAsset(id: 'c6', accountId: 'gb-bank-3', type: AssetType.stock, marketValue: Decimal.fromInt(180)),
-      buildValuedAsset(id: 'c7', accountId: 'gb-bank-4', type: AssetType.stock, marketValue: Decimal.fromInt(170)),
-      buildValuedAsset(id: 'c8', accountId: 'gb-broker-1', type: AssetType.stock, marketValue: Decimal.fromInt(160)),
+      buildValuedAsset(
+        id: 'c1',
+        accountId: 'gb-bank-1',
+        type: AssetType.stock,
+        marketValue: Decimal.fromInt(500),
+      ),
+      buildValuedAsset(
+        id: 'c2',
+        accountId: 'gb-bank-1',
+        type: AssetType.fund,
+        marketValue: Decimal.fromInt(400),
+      ),
+      buildValuedAsset(
+        id: 'c3',
+        accountId: 'gb-bank-1',
+        type: AssetType.bond,
+        marketValue: Decimal.fromInt(300),
+      ),
+      buildValuedAsset(
+        id: 'c4',
+        accountId: 'gb-bank-1',
+        type: AssetType.cd,
+        marketValue: Decimal.fromInt(200),
+      ),
+      buildValuedAsset(
+        id: 'c5',
+        accountId: 'gb-bank-2',
+        type: AssetType.stock,
+        marketValue: Decimal.fromInt(190),
+      ),
+      buildValuedAsset(
+        id: 'c6',
+        accountId: 'gb-bank-3',
+        type: AssetType.stock,
+        marketValue: Decimal.fromInt(180),
+      ),
+      buildValuedAsset(
+        id: 'c7',
+        accountId: 'gb-bank-4',
+        type: AssetType.stock,
+        marketValue: Decimal.fromInt(170),
+      ),
+      buildValuedAsset(
+        id: 'c8',
+        accountId: 'gb-broker-1',
+        type: AssetType.stock,
+        marketValue: Decimal.fromInt(160),
+      ),
     ];
     final regionIndex = <String, RegionMeta>{
       'GB': const RegionMeta(code: 'GB', displayName: '英国'),

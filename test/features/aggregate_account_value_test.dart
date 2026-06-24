@@ -1,11 +1,11 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/repositories/exchange_rate_repository.dart';
-import 'package:gwp/domain/usecases/aggregate_account_value.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/repositories/exchange_rate_repository.dart';
+import 'package:coffer/domain/usecases/aggregate_account_value.dart';
 
 class _FakePriceProvider implements PriceProvider {
   _FakePriceProvider(this._rates);

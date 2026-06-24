@@ -9,7 +9,7 @@ import '../../../domain/usecases/save_card.dart';
 import '../../account/presentation/account_providers.dart';
 
 export '../../../data/providers/card_providers.dart'
-    show cryptoServiceProvider, cardDaoProvider, cardRepositoryProvider;
+    show cryptoServiceProvider, cardRepositoryProvider;
 
 final cardListProvider = StreamProvider<List<BankCard>>((ref) {
   return ref.watch(cardRepositoryProvider).watchAll();

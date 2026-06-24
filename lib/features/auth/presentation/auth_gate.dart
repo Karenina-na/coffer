@@ -83,7 +83,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
     final unlocked = ref.watch(isUnlockedProvider);
     final overlay = switch (_mode) {
       _GateMode.loading => const Scaffold(
-        backgroundColor: GwpColors.canvas,
+        backgroundColor: CofferColors.canvas,
         body: SizedBox.shrink(),
       ),
       _GateMode.setup => _PinSetupScreen(
@@ -248,7 +248,7 @@ class _LockScreenState extends ConsumerState<_LockScreen> {
             const Icon(
               Icons.lock_outline,
               size: 56,
-              color: GwpColors.actionPrimary,
+              color: CofferColors.actionPrimary,
             ),
             const SizedBox(height: 16),
             const Text(
@@ -256,7 +256,7 @@ class _LockScreenState extends ConsumerState<_LockScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
             ),
             const SizedBox(height: 24),
@@ -267,12 +267,12 @@ class _LockScreenState extends ConsumerState<_LockScreen> {
             else if (_isLocked)
               Text(
                 '尝试过多，$_lockSecondsLeft 秒后再试',
-                style: const TextStyle(fontSize: 13, color: GwpColors.negative),
+                style: const TextStyle(fontSize: 13, color: CofferColors.negative),
               )
             else if (_error != null)
               Text(
                 _error!,
-                style: const TextStyle(fontSize: 13, color: GwpColors.negative),
+                style: const TextStyle(fontSize: 13, color: CofferColors.negative),
               )
             else
               const SizedBox(height: 18),
@@ -393,7 +393,7 @@ class _PinSetupScreenState extends ConsumerState<_PinSetupScreen> {
             const Icon(
               Icons.pin_outlined,
               size: 56,
-              color: GwpColors.actionPrimary,
+              color: CofferColors.actionPrimary,
             ),
             const SizedBox(height: 16),
             Text(
@@ -401,7 +401,7 @@ class _PinSetupScreenState extends ConsumerState<_PinSetupScreen> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
@@ -412,7 +412,7 @@ class _PinSetupScreenState extends ConsumerState<_PinSetupScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: GwpColors.textSecondary,
+                  color: CofferColors.textSecondary,
                 ),
               ),
             ),
@@ -424,7 +424,7 @@ class _PinSetupScreenState extends ConsumerState<_PinSetupScreen> {
             else if (_error != null)
               Text(
                 _error!,
-                style: const TextStyle(fontSize: 13, color: GwpColors.negative),
+                style: const TextStyle(fontSize: 13, color: CofferColors.negative),
               )
             else
               const SizedBox(height: 18),
@@ -469,13 +469,13 @@ class _PinDots extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: on ? GwpColors.actionPrimary : Colors.transparent,
+            color: on ? CofferColors.actionPrimary : Colors.transparent,
             border: Border.all(
               color: on
-                  ? GwpColors.actionPrimary
+                  ? CofferColors.actionPrimary
                   : (busy
-                        ? GwpColors.actionPrimary.withValues(alpha: 0.4)
-                        : GwpColors.borderStrong),
+                        ? CofferColors.actionPrimary.withValues(alpha: 0.4)
+                        : CofferColors.borderStrong),
               width: 1.5,
             ),
           ),
@@ -500,13 +500,13 @@ class _BusyHint extends StatelessWidget {
           height: 14,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: GwpColors.actionPrimary,
+            color: CofferColors.actionPrimary,
           ),
         ),
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(fontSize: 13, color: GwpColors.textSecondary),
+          style: const TextStyle(fontSize: 13, color: CofferColors.textSecondary),
         ),
       ],
     );
@@ -608,8 +608,8 @@ class _KeypadButton extends StatelessWidget {
                           icon,
                           size: 22,
                           color: subdued
-                              ? GwpColors.textSecondary
-                              : GwpColors.textPrimary,
+                              ? CofferColors.textSecondary
+                              : CofferColors.textPrimary,
                         ),
                         if (label != null) ...[
                           const SizedBox(height: 2),
@@ -617,7 +617,7 @@ class _KeypadButton extends StatelessWidget {
                             label!,
                             style: const TextStyle(
                               fontSize: 10,
-                              color: GwpColors.textMuted,
+                              color: CofferColors.textMuted,
                             ),
                           ),
                         ],
@@ -628,8 +628,8 @@ class _KeypadButton extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w500,
-                        color: GwpColors.textPrimary,
-                        fontFeatures: GwpTypo.tabularFigures,
+                        color: CofferColors.textPrimary,
+                        fontFeatures: CofferTypo.tabularFigures,
                       ),
                     ),
             ),

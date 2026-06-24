@@ -8,8 +8,8 @@ import 'design_tokens.dart';
 /// The filled portion uses a gradient from neutral to the semantic color
 /// (positive = green, negative = red), and its width represents the
 /// absolute value relative to [maxAbsValue].
-class GwpHeatStrip extends StatelessWidget {
-  const GwpHeatStrip({
+class CofferHeatStrip extends StatelessWidget {
+  const CofferHeatStrip({
     super.key,
     required this.value,
     this.maxAbsValue = 1.0,
@@ -39,7 +39,7 @@ class GwpHeatStrip extends StatelessWidget {
         : 0.0;
     final isPositive = value >= 0;
     final barColor =
-        isPositive ? GwpColors.positive : GwpColors.negative;
+        isPositive ? CofferColors.positive : CofferColors.negative;
 
     return Row(
       children: [
@@ -53,7 +53,7 @@ class GwpHeatStrip extends StatelessWidget {
                 painter: _HeatStripPainter(
                   ratio: ratio,
                   barColor: barColor,
-                  trackColor: GwpColors.surface3,
+                  trackColor: CofferColors.surface3,
                 ),
               ),
             ),
@@ -64,8 +64,8 @@ class GwpHeatStrip extends StatelessWidget {
           Text(
             label!,
             style: TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 10,
               fontWeight: FontWeight.w500,
               color: barColor,

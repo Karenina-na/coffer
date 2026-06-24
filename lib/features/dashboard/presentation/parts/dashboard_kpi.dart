@@ -12,7 +12,7 @@ class _KpiGrid extends ConsumerWidget {
     required this.onEventsTap,
   });
 
-  final DashboardSummary summary;
+  final WealthSummary summary;
   final VoidCallback onAccountsTap;
   final VoidCallback onCardsTap;
   final VoidCallback onEventsTap;
@@ -25,7 +25,7 @@ class _KpiGrid extends ConsumerWidget {
       loading: () => const SizedBox(
         height: 80,
         child: Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+          child: CircularProgressIndicator(color: CofferColors.actionPrimary),
         ),
       ),
       error: (_, _) => const SizedBox.shrink(),
@@ -34,7 +34,7 @@ class _KpiGrid extends ConsumerWidget {
         return Row(
           children: [
             Expanded(
-              child: GwpKpiTile(
+              child: CofferKpiTile(
                 icon: missing > 0
                     ? Icons.warning_amber_outlined
                     : Icons.account_balance_outlined,
@@ -44,14 +44,14 @@ class _KpiGrid extends ConsumerWidget {
                     ? '$missing 条缺汇率'
                     : '${kpi.regionSet.length} 个地区',
                 iconColor: missing > 0
-                    ? GwpColors.warning
-                    : GwpColors.actionPrimary,
+                    ? CofferColors.warning
+                    : CofferColors.actionPrimary,
                 onTap: onAccountsTap,
               ),
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             Expanded(
-              child: GwpKpiTile(
+              child: CofferKpiTile(
                 icon: Icons.credit_card_outlined,
                 label: '卡片',
                 value: '${kpi.cardCount}',
@@ -59,14 +59,14 @@ class _KpiGrid extends ConsumerWidget {
                     ? '${kpi.creditCardCount} 张信用卡 · 已用 ${(kpi.creditUsedRatio * 100).toStringAsFixed(0)}%'
                     : '无信用卡',
                 iconColor: kpi.creditUsedRatio > 0.8
-                    ? GwpColors.negative
-                    : GwpColors.actionPrimary,
+                    ? CofferColors.negative
+                    : CofferColors.actionPrimary,
                 onTap: onCardsTap,
               ),
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             Expanded(
-              child: GwpKpiTile(
+              child: CofferKpiTile(
                 icon: Icons.notification_important_outlined,
                 label: '待处理事件',
                 value: '${kpi.pendingEventCount}',
@@ -74,8 +74,8 @@ class _KpiGrid extends ConsumerWidget {
                     ? '${kpi.criticalEventCount} 条紧急'
                     : '无紧急',
                 iconColor: kpi.criticalEventCount > 0
-                    ? GwpColors.negative
-                    : GwpColors.actionPrimary,
+                    ? CofferColors.negative
+                    : CofferColors.actionPrimary,
                 onTap: onEventsTap,
               ),
             ),

@@ -21,25 +21,25 @@ class _RecentActivitySection extends ConsumerWidget {
               children: [
                 Text('全部',
                     style: TextStyle(
-                        fontSize: 11, color: GwpColors.actionPrimary)),
+                        fontSize: 11, color: CofferColors.actionPrimary)),
                 Icon(Icons.chevron_right,
-                    size: 14, color: GwpColors.actionPrimary),
+                    size: 14, color: CofferColors.actionPrimary),
               ],
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: GwpColors.surface1,
+            color: CofferColors.surface1,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: GwpColors.border, width: 0.5),
+            border: Border.all(color: CofferColors.border, width: 0.5),
           ),
           child: async.when(
             loading: () => const SizedBox(
               height: 120,
               child: Center(
                 child: CircularProgressIndicator(
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                   strokeWidth: 2,
                 ),
               ),
@@ -47,22 +47,22 @@ class _RecentActivitySection extends ConsumerWidget {
             error: (_, _) => const SizedBox(
               height: 120,
               child: Center(
-                child: Icon(Icons.error_outline, color: GwpColors.textMuted),
+                child: Icon(Icons.error_outline, color: CofferColors.textMuted),
               ),
             ),
             data: (events) {
               if (events.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(
-                    vertical: GwpSpacing.xl,
-                    horizontal: GwpSpacing.base,
+                    vertical: CofferSpacing.xl,
+                    horizontal: CofferSpacing.base,
                   ),
                   child: Center(
                     child: Text(
                       '暂无活动',
                       style: TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                   ),
@@ -76,7 +76,7 @@ class _RecentActivitySection extends ConsumerWidget {
                     if (i < display.length - 1)
                       const Divider(
                           height: 0.5,
-                          color: GwpColors.border,
+                          color: CofferColors.border,
                           thickness: 0.5),
                   ],
                 ],
@@ -106,8 +106,8 @@ class _ActivityTile extends StatelessWidget {
       onTap: () => GoRouter.of(context).go('/events'),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.base,
-          vertical: GwpSpacing.sm,
+          horizontal: CofferSpacing.base,
+          vertical: CofferSpacing.sm,
         ),
         child: Row(
           children: [
@@ -115,17 +115,17 @@ class _ActivityTile extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: GwpColors.surface3,
+                color: CofferColors.surface3,
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
               child: Icon(
                 _modelIcon[event.relatedModel] ?? Icons.event_note_outlined,
                 size: 16,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
-            const SizedBox(width: GwpSpacing.md),
+            const SizedBox(width: CofferSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +135,7 @@ class _ActivityTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -145,13 +145,13 @@ class _ActivityTile extends StatelessWidget {
                     '${event.relatedModel.labelZh} · ${_fmtRelative(event.triggerTime)}',
                     style: const TextStyle(
                       fontSize: 11,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             _statusBadge(event.status),
           ],
         ),
@@ -166,7 +166,7 @@ class _ActivityTile extends StatelessWidget {
       EventStatus.resolved => ('已处理', StatusVariant.positive),
       EventStatus.closed => ('已关闭', StatusVariant.muted),
     };
-    return GwpStatusBadge(label: label, variant: variant);
+    return CofferStatusBadge(label: label, variant: variant);
   }
 
   static String _fmtRelative(DateTime t) {
@@ -215,24 +215,24 @@ class _TodaysAlertsBanner extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: GwpSpacing.base),
+      padding: const EdgeInsets.only(bottom: CofferSpacing.base),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => context.go('/events'),
         child: Container(
           padding: const EdgeInsets.symmetric(
-              horizontal: GwpSpacing.base, vertical: GwpSpacing.md),
+              horizontal: CofferSpacing.base, vertical: CofferSpacing.md),
           decoration: BoxDecoration(
-            color: GwpColors.warningBg,
+            color: CofferColors.warningBg,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: GwpColors.warning.withValues(alpha: 0.35), width: 1),
+                color: CofferColors.warning.withValues(alpha: 0.35), width: 1),
           ),
           child: Row(
             children: [
               const Icon(Icons.notifications_active_outlined,
-                  size: 18, color: GwpColors.warning),
-              const SizedBox(width: GwpSpacing.md),
+                  size: 18, color: CofferColors.warning),
+              const SizedBox(width: CofferSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,7 +242,7 @@ class _TodaysAlertsBanner extends ConsumerWidget {
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: GwpColors.warning,
+                        color: CofferColors.warning,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -253,15 +253,15 @@ class _TodaysAlertsBanner extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               const Icon(Icons.chevron_right,
-                  size: 18, color: GwpColors.warning),
+                  size: 18, color: CofferColors.warning),
             ],
           ),
         ),

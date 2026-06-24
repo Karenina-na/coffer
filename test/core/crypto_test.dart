@@ -1,10 +1,10 @@
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/crypto/field_cipher.dart';
-import 'package:gwp/core/crypto/key_derivation.dart';
-import 'package:gwp/core/crypto/secure_key_store.dart';
-import 'package:gwp/core/errors.dart';
+import 'package:coffer/core/crypto/field_cipher.dart';
+import 'package:coffer/core/crypto/key_derivation.dart';
+import 'package:coffer/core/crypto/secure_key_store.dart';
+import 'package:coffer/core/errors.dart';
 
 void main() {
   group('FieldCipher', () {
@@ -37,7 +37,7 @@ void main() {
     test('损坏 master key 不会静默重建', () async {
       const storage = FlutterSecureStorage();
       FlutterSecureStorage.setMockInitialValues({
-        'gwp.master_key.v1': 'not-base64',
+        'coffer.master_key.v1': 'not-base64',
       });
       final store = SecureKeyStore(storage: storage);
 
@@ -45,7 +45,7 @@ void main() {
         store.loadOrCreateMaster(),
         throwsA(isA<CryptoError>()),
       );
-      expect(await storage.read(key: 'gwp.master_key.v1'), 'not-base64');
+      expect(await storage.read(key: 'coffer.master_key.v1'), 'not-base64');
     });
   });
 

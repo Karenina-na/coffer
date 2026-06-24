@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/dict_entry.dart';
-import 'package:gwp/domain/entities/dict_type.dart';
-import 'package:gwp/domain/entities/exchange_rate.dart';
-import 'package:gwp/domain/entities/watched_pair.dart';
-import 'package:gwp/domain/repositories/dict_repository.dart';
-import 'package:gwp/domain/repositories/watched_pair_repository.dart';
-import 'package:gwp/domain/usecases/manage_watched_pair.dart';
-import 'package:gwp/features/exchange_rate/presentation/exchange_rate_list_page.dart';
-import 'package:gwp/features/exchange_rate/presentation/exchange_rate_providers.dart';
-import 'package:gwp/features/exchange_rate/presentation/rate_sparkline.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/dict_entry.dart';
+import 'package:coffer/domain/entities/dict_type.dart';
+import 'package:coffer/domain/entities/exchange_rate.dart';
+import 'package:coffer/domain/entities/watched_pair.dart';
+import 'package:coffer/domain/repositories/dict_repository.dart';
+import 'package:coffer/domain/repositories/watched_pair_repository.dart';
+import 'package:coffer/domain/usecases/manage_watched_pair.dart';
+import 'package:coffer/features/exchange_rate/presentation/exchange_rate_list_page.dart';
+import 'package:coffer/features/exchange_rate/presentation/exchange_rate_providers.dart';
+import 'package:coffer/features/exchange_rate/presentation/rate_sparkline.dart';
 
 void main() {
   testWidgets('汇率主页不再展示录入按钮', (tester) async {

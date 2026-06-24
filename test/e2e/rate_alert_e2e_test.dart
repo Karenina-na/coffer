@@ -7,15 +7,15 @@ library;
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/data/repositories/drift_event_repository.dart';
-import 'package:gwp/data/repositories/drift_exchange_rate_repository.dart';
-import 'package:gwp/data/repositories/drift_watched_pair_repository.dart';
-import 'package:gwp/domain/entities/exchange_rate.dart';
-import 'package:gwp/domain/entities/exchange_rate_enums.dart';
-import 'package:gwp/domain/events/event_bus.dart';
-import 'package:gwp/domain/usecases/check_rate_alerts.dart';
-import 'package:gwp/domain/utils/pair_key.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/data/repositories/drift_event_repository.dart';
+import 'package:coffer/data/repositories/drift_exchange_rate_repository.dart';
+import 'package:coffer/data/repositories/drift_watched_pair_repository.dart';
+import 'package:coffer/domain/entities/exchange_rate.dart';
+import 'package:coffer/domain/entities/exchange_rate_enums.dart';
+import 'package:coffer/domain/events/event_bus.dart';
+import 'package:coffer/domain/usecases/check_rate_alerts.dart';
+import 'package:coffer/domain/utils/pair_key.dart';
 
 void main() {
   late AppDatabase db;

@@ -13,10 +13,10 @@ import '../../../core/result.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_mini_chart.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_mini_chart.dart';
 import '../../../core/ui/format_utils.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/coffer_status_badge.dart';
 import '../../../core/ui/sync_window_menu_button.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../data/providers/dict_providers.dart';
@@ -160,11 +160,11 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
     );
 
     return Scaffold(
-      backgroundColor: GwpColors.canvas,
+      backgroundColor: CofferColors.canvas,
       appBar: AppBar(
         title: const Text('资产详情'),
-        backgroundColor: GwpColors.canvas,
-        foregroundColor: GwpColors.textPrimary,
+        backgroundColor: CofferColors.canvas,
+        foregroundColor: CofferColors.textPrimary,
         elevation: 0,
         actions: [
           SyncWindowMenuButton(
@@ -177,7 +177,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: GwpColors.actionPrimary,
+                      color: CofferColors.actionPrimary,
                     ),
                   )
                 : const Icon(Icons.sync),
@@ -214,15 +214,15 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
       ),
       body: assetAsync.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+          child: CircularProgressIndicator(color: CofferColors.actionPrimary),
         ),
-        error: (e, _) => GwpEmptyState.error(
+        error: (e, _) => CofferEmptyState.error(
           message: '加载失败: ${errorToMessage(e)}',
           onRetry: () => ref.invalidate(assetByIdProvider(widget.assetId)),
         ),
         data: (asset) {
           if (asset == null) {
-            return const GwpEmptyState(
+            return const CofferEmptyState(
               icon: Icons.show_chart_outlined,
               title: '资产不存在或已删除',
               subtitle: '该资产可能已被移除',
@@ -230,18 +230,24 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
           }
           final accountAsync = ref.watch(accountByIdProvider(asset.accountId));
           final account = accountAsync.asData?.value;
-          final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+          final regionIndex =
+              ref.watch(regionMetaIndexProvider).value ?? const {};
           final valuationCurrency = ref.watch(valuationCurrencyProvider);
-          final allPoints = _extractPoints(historyAsync.asData?.value ?? const []);
+          final allPoints = _extractPoints(
+            historyAsync.asData?.value ?? const [],
+          );
           final filtered = _filterByRange(allPoints, _rangeDays);
           final coverage = _coverage(filtered, _rangeDays);
           return valuedAsync.when(
             loading: () => const Center(
-              child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+              child: CircularProgressIndicator(
+                color: CofferColors.actionPrimary,
+              ),
             ),
-            error: (e, _) => GwpEmptyState.error(
+            error: (e, _) => CofferEmptyState.error(
               message: '加载计价值失败: ${errorToMessage(e)}',
-              onRetry: () => ref.invalidate(valuedAssetByIdProvider(widget.assetId)),
+              onRetry: () =>
+                  ref.invalidate(valuedAssetByIdProvider(widget.assetId)),
             ),
             data: (valuedAsset) => ListView(
               padding: const EdgeInsets.only(bottom: 24),
@@ -252,13 +258,13 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                   valuationCurrency: valuationCurrency,
                   points: filtered,
                 ),
-                const SizedBox(height: GwpSpacing.base),
+                const SizedBox(height: CofferSpacing.base),
                 _SectionCard(
                   icon: Icons.category_outlined,
                   title: '资产详情',
                   children: [_TypeInfoCard(asset: asset)],
                 ),
-                const SizedBox(height: GwpSpacing.md),
+                const SizedBox(height: CofferSpacing.md),
                 _SectionCard(
                   icon: Icons.show_chart,
                   title: '价格走势',
@@ -279,7 +285,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                     _RangeStats(points: filtered),
                   ],
                 ),
-                const SizedBox(height: GwpSpacing.md),
+                const SizedBox(height: CofferSpacing.md),
                 _SectionCard(
                   icon: Icons.analytics_outlined,
                   title: '持仓分析',
@@ -291,7 +297,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: GwpSpacing.md),
+                const SizedBox(height: CofferSpacing.md),
                 _SectionCard(
                   icon: Icons.account_balance_outlined,
                   title: '关联账户',
@@ -306,12 +312,15 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
                   ],
                 ),
                 if (filtered.isNotEmpty) ...[
-                  const SizedBox(height: GwpSpacing.md),
+                  const SizedBox(height: CofferSpacing.md),
                   _SectionCard(
                     icon: Icons.history,
                     title: '估值历史',
                     children: [
-                      _HistoryTimeline(points: filtered, currency: asset.currency),
+                      _HistoryTimeline(
+                        points: filtered,
+                        currency: asset.currency,
+                      ),
                     ],
                   ),
                 ],
@@ -361,7 +370,7 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    final r = await ref.read(assetRepositoryProvider).softDelete(asset.id);
+    final r = await ref.read(deleteAssetUseCaseProvider)(asset.id);
     if (!mounted) return;
     r.when(
       ok: (_) {
@@ -384,38 +393,37 @@ class _AssetDetailPageState extends ConsumerState<AssetDetailPage> {
         .toList();
     if (targets.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('没有其他可用账户')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('没有其他可用账户')));
       return;
     }
 
     final result = await showDialog<TransferResult?>(
       context: context,
-      builder: (ctx) => TransferDialog(
-        asset: asset,
-        accounts: targets,
-      ),
+      builder: (ctx) => TransferDialog(asset: asset, accounts: targets),
     );
     if (result == null || !mounted) return;
 
     final useCase = ref.read(transferAssetUseCaseProvider);
-    final r = await useCase(TransferAssetRequest(
-      assetId: asset.id,
-      targetAccountId: result.targetAccountId,
-      newQuantity: result.quantity,
-    ));
+    final r = await useCase(
+      TransferAssetRequest(
+        assetId: asset.id,
+        targetAccountId: result.targetAccountId,
+        newQuantity: result.quantity,
+      ),
+    );
     if (!mounted) return;
     r.when(
       ok: (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('资产已划转')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('资产已划转')));
         context.pop();
       },
-      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('划转失败: ${errorToMessage(e)}')),
-      ),
+      err: (e) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('划转失败: ${errorToMessage(e)}'))),
     );
   }
 
@@ -573,33 +581,33 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: GwpSpacing.base),
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      margin: const EdgeInsets.symmetric(horizontal: CofferSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: GwpColors.textSecondary),
+              Icon(icon, size: 16, color: CofferColors.textSecondary),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: GwpColors.textSecondary,
+                  color: CofferColors.textSecondary,
                 ),
               ),
             ],
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: GwpSpacing.sm),
-            child: Divider(height: 1, color: GwpColors.border),
+            padding: EdgeInsets.symmetric(vertical: CofferSpacing.sm),
+            child: Divider(height: 1, color: CofferColors.border),
           ),
           ...children,
         ],
@@ -626,7 +634,8 @@ class _AssetHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typeColor = _typeColors[asset.assetType] ?? GwpColors.actionPrimary;
+    final typeColor =
+        _typeColors[asset.assetType] ?? CofferColors.actionPrimary;
     final typeIcon = _typeIcons[asset.assetType] ?? Icons.show_chart;
     final currentPrice = asset.currentPrice;
     final title = asset.assetCode ?? asset.assetType.labelZh;
@@ -642,8 +651,8 @@ class _AssetHero extends StatelessWidget {
     }
     final isUp = changeAbs == null || changeAbs >= Decimal.zero;
     final changeColor = changeAbs == null
-        ? GwpColors.textMuted
-        : (isUp ? GwpColors.positive : GwpColors.negative);
+        ? CofferColors.textMuted
+        : (isUp ? CofferColors.positive : CofferColors.negative);
 
     // Sparkline data from last 30 points
     final sparkData = points.length >= 2
@@ -655,9 +664,9 @@ class _AssetHero extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        GwpSpacing.base,
-        GwpSpacing.sm,
-        GwpSpacing.base,
+        CofferSpacing.base,
+        CofferSpacing.sm,
+        CofferSpacing.base,
         0,
       ),
       decoration: BoxDecoration(
@@ -665,14 +674,14 @@ class _AssetHero extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [typeColor.withValues(alpha: 0.18), GwpColors.surface1],
+          colors: [typeColor.withValues(alpha: 0.18), CofferColors.surface1],
         ),
         border: Border.all(
           color: typeColor.withValues(alpha: 0.25),
           width: 0.5,
         ),
       ),
-      padding: const EdgeInsets.all(GwpSpacing.lg),
+      padding: const EdgeInsets.all(CofferSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -689,7 +698,7 @@ class _AssetHero extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Icon(typeIcon, size: 22, color: typeColor),
               ),
-              const SizedBox(width: GwpSpacing.md),
+              const SizedBox(width: CofferSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -699,7 +708,7 @@ class _AssetHero extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -707,19 +716,19 @@ class _AssetHero extends StatelessWidget {
                       '${_assetTypeLabel(asset.assetType)} · ${asset.currency}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              GwpStatusBadge(
+              CofferStatusBadge(
                 label: _assetStatusLabel(asset.status),
                 variant: _statusVariant(asset.status),
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.lg),
+          const SizedBox(height: CofferSpacing.lg),
           // Hero price
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -732,20 +741,18 @@ class _AssetHero extends StatelessWidget {
                       '当前价格',
                       style: TextStyle(
                         fontSize: 11,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      currentPrice == null
-                          ? '—'
-                          : heroFormat(currentPrice),
+                      currentPrice == null ? '—' : heroFormat(currentPrice),
                       style: const TextStyle(
-                        fontFamily: GwpTypo.monoFont,
-                        fontFeatures: GwpTypo.tabularFigures,
+                        fontFamily: CofferTypo.monoFont,
+                        fontFeatures: CofferTypo.tabularFigures,
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                     if (currentPrice != null)
@@ -753,7 +760,7 @@ class _AssetHero extends StatelessWidget {
                         asset.currency,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: GwpColors.textSecondary,
+                          color: CofferColors.textSecondary,
                         ),
                       ),
                   ],
@@ -761,10 +768,10 @@ class _AssetHero extends StatelessWidget {
               ),
               // Sparkline
               if (sparkData.length >= 2)
-                GwpMiniChart(data: sparkData, width: 96, height: 40),
+                CofferMiniChart(data: sparkData, width: 96, height: 40),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // Change row
           Row(
             children: [
@@ -777,7 +784,7 @@ class _AssetHero extends StatelessWidget {
                 Text(
                   displayNumber(changeAbs, alwaysShowSign: true),
                   style: TextStyle(
-                    fontFamily: GwpTypo.monoFont,
+                    fontFamily: CofferTypo.monoFont,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: changeColor,
@@ -785,29 +792,31 @@ class _AssetHero extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 if (changePct != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    displayPercent(changePct, alwaysShowSign: true),
-                    style: TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: changeColor,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isUp
+                          ? CofferColors.positiveBg
+                          : CofferColors.negativeBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      displayPercent(changePct, alwaysShowSign: true),
+                      style: TextStyle(
+                        fontFamily: CofferTypo.monoFont,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: changeColor,
+                      ),
                     ),
                   ),
-                ),
               ] else
                 const Text(
                   '需要更多估值点',
-                  style: TextStyle(fontSize: 12, color: GwpColors.textMuted),
+                  style: TextStyle(fontSize: 12, color: CofferColors.textMuted),
                 ),
               const Spacer(),
               if (asset.valuationTime != null)
@@ -815,12 +824,12 @@ class _AssetHero extends StatelessWidget {
                   _fmtDateTime(asset.valuationTime!),
                   style: const TextStyle(
                     fontSize: 10,
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // KPI chips
           Row(
             children: [
@@ -829,7 +838,7 @@ class _AssetHero extends StatelessWidget {
                 label: '数量',
                 value: asset.quantity.toString(),
               ),
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               _HeroChip(
                 icon: Icons.account_balance_wallet_outlined,
                 label: '市值',
@@ -837,7 +846,7 @@ class _AssetHero extends StatelessWidget {
                     ? '—'
                     : compactValue(valuedAsset!.valuedAmount!.toDouble()),
               ),
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               _HeroChip(
                 icon: Icons.paid_outlined,
                 label: '计价',
@@ -846,18 +855,18 @@ class _AssetHero extends StatelessWidget {
             ],
           ),
           if (valuedAsset?.valuedAmount != null) ...[
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             Text(
               Money.format(
                 valuedAsset!.valuedAmount!,
                 currency: valuationCurrency,
               ),
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
             ),
           ],
@@ -882,17 +891,17 @@ class _HeroChip extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.sm,
-          vertical: GwpSpacing.xs,
+          horizontal: CofferSpacing.sm,
+          vertical: CofferSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: GwpColors.surface2.withValues(alpha: 0.6),
+          color: CofferColors.surface2.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: GwpColors.textMuted),
+            Icon(icon, size: 12, color: CofferColors.textMuted),
             const SizedBox(width: 4),
             Expanded(
               child: Column(
@@ -902,17 +911,17 @@ class _HeroChip extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       fontSize: 9,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                   Text(
                     value,
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
+                      fontFamily: CofferTypo.monoFont,
+                      fontFeatures: CofferTypo.tabularFigures,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -953,12 +962,14 @@ class _RangeSelector extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   color: r.$1 == current
-                      ? GwpColors.actionPrimary.withValues(alpha: 0.15)
+                      ? CofferColors.actionPrimary.withValues(alpha: 0.15)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                   border: r.$1 == current
                       ? Border.all(
-                          color: GwpColors.actionPrimary.withValues(alpha: 0.4),
+                          color: CofferColors.actionPrimary.withValues(
+                            alpha: 0.4,
+                          ),
                           width: 0.5,
                         )
                       : null,
@@ -972,8 +983,8 @@ class _RangeSelector extends StatelessWidget {
                         ? FontWeight.w600
                         : FontWeight.w400,
                     color: r.$1 == current
-                        ? GwpColors.actionPrimary
-                        : GwpColors.textSecondary,
+                        ? CofferColors.actionPrimary
+                        : CofferColors.textSecondary,
                   ),
                 ),
               ),
@@ -1001,23 +1012,23 @@ class _CoverageBanner extends StatelessWidget {
         ? '暂无估值数据，点击右上「同步」拉取'
         : '当前区间缺少早段数据，点击右上「同步」补齐';
     return Container(
-      margin: const EdgeInsets.only(top: GwpSpacing.sm),
+      margin: const EdgeInsets.only(top: CofferSpacing.sm),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: GwpColors.warningBg,
+        color: CofferColors.warningBg,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: GwpColors.warning.withValues(alpha: 0.3)),
+        border: Border.all(color: CofferColors.warning.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 14, color: GwpColors.warning),
+          const Icon(Icons.info_outline, size: 14, color: CofferColors.warning),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               msg,
               style: const TextStyle(
                 fontSize: 11,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
           ),
@@ -1042,7 +1053,7 @@ class _PriceChart extends StatelessWidget {
       return Center(
         child: Text(
           points.isEmpty ? '暂无估值数据' : '仅 1 个数据点，无法绘图',
-          style: const TextStyle(fontSize: 13, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 13, color: CofferColors.textMuted),
         ),
       );
     }
@@ -1051,7 +1062,7 @@ class _PriceChart extends StatelessWidget {
     final maxV = values.reduce((a, b) => a > b ? a : b);
     final range = maxV - minV;
     final isUp = values.last >= values.first;
-    final lineColor = isUp ? GwpColors.positive : GwpColors.negative;
+    final lineColor = isUp ? CofferColors.positive : CofferColors.negative;
 
     final spots = <FlSpot>[
       for (var i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
@@ -1062,7 +1073,7 @@ class _PriceChart extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface2.withValues(alpha: 0.3),
+        color: CofferColors.surface2.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.fromLTRB(4, 12, 12, 4),
@@ -1078,7 +1089,7 @@ class _PriceChart extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: range > 0 ? range / 3 : 1,
                   getDrawingHorizontalLine: (_) => FlLine(
-                    color: GwpColors.border.withValues(alpha: 0.3),
+                    color: CofferColors.border.withValues(alpha: 0.3),
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -1097,8 +1108,8 @@ class _PriceChart extends StatelessWidget {
                             _fmtPrice(value),
                             style: const TextStyle(
                               fontSize: 9,
-                              color: GwpColors.textMuted,
-                              fontFamily: GwpTypo.monoFont,
+                              color: CofferColors.textMuted,
+                              fontFamily: CofferTypo.monoFont,
                             ),
                           ),
                         );
@@ -1121,7 +1132,7 @@ class _PriceChart extends StatelessWidget {
                             _shortDate(points[idx].t),
                             style: const TextStyle(
                               fontSize: 8,
-                              color: GwpColors.textMuted,
+                              color: CofferColors.textMuted,
                             ),
                           ),
                         );
@@ -1138,7 +1149,7 @@ class _PriceChart extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => GwpColors.surface3,
+                    getTooltipColor: (_) => CofferColors.surface3,
                     tooltipRoundedRadius: 8,
                     getTooltipItems: (touchedSpots) => touchedSpots.map((s) {
                       final idx = s.x.toInt().clamp(0, points.length - 1);
@@ -1146,7 +1157,7 @@ class _PriceChart extends StatelessWidget {
                       return LineTooltipItem(
                         '${_fmtDate(p.t)}\n${_fmtPrice(p.price.toDouble())} $currency',
                         TextStyle(
-                          fontFamily: GwpTypo.monoFont,
+                          fontFamily: CofferTypo.monoFont,
                           fontSize: 11,
                           color: lineColor,
                           fontWeight: FontWeight.w600,
@@ -1169,7 +1180,7 @@ class _PriceChart extends StatelessWidget {
                               radius: 3,
                               color: lineColor,
                               strokeWidth: 2,
-                              strokeColor: GwpColors.surface1,
+                              strokeColor: CofferColors.surface1,
                             ),
                           ),
                         ),
@@ -1180,7 +1191,7 @@ class _PriceChart extends StatelessWidget {
                   horizontalLines: [
                     HorizontalLine(
                       y: values.first,
-                      color: GwpColors.textMuted.withValues(alpha: 0.3),
+                      color: CofferColors.textMuted.withValues(alpha: 0.3),
                       strokeWidth: 1,
                       dashArray: [4, 3],
                     ),
@@ -1219,11 +1230,17 @@ class _PriceChart extends StatelessWidget {
               const SizedBox(width: 52),
               Text(
                 _fmtDate(points.first.t),
-                style: const TextStyle(fontSize: 9, color: GwpColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: CofferColors.textMuted,
+                ),
               ),
               Text(
                 _fmtDate(points.last.t),
-                style: const TextStyle(fontSize: 9, color: GwpColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: CofferColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -1270,28 +1287,28 @@ class _RangeStats extends StatelessWidget {
       children: [
         _MiniStatCard(
           icon: Icons.arrow_upward_outlined,
-          iconColor: GwpColors.positive,
+          iconColor: CofferColors.positive,
           label: '区间高',
           value: _fmtPrice(high),
         ),
         const SizedBox(width: 6),
         _MiniStatCard(
           icon: Icons.arrow_downward_outlined,
-          iconColor: GwpColors.negative,
+          iconColor: CofferColors.negative,
           label: '区间低',
           value: _fmtPrice(low),
         ),
         const SizedBox(width: 6),
         _MiniStatCard(
           icon: Icons.trending_flat_outlined,
-          iconColor: GwpColors.info,
+          iconColor: CofferColors.info,
           label: '均值',
           value: _fmtPrice(avg),
         ),
         const SizedBox(width: 6),
         _MiniStatCard(
           icon: Icons.trending_up_outlined,
-          iconColor: isUp ? GwpColors.positive : GwpColors.negative,
+          iconColor: isUp ? CofferColors.positive : CofferColors.negative,
           label: '涨跌',
           value: displayPercentDouble(changePct, alwaysShowSign: true),
         ),
@@ -1317,11 +1334,11 @@ class _MiniStatCard extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.xs,
-          vertical: GwpSpacing.sm,
+          horizontal: CofferSpacing.xs,
+          vertical: CofferSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: GwpColors.surface2.withValues(alpha: 0.5),
+          color: CofferColors.surface2.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1331,17 +1348,20 @@ class _MiniStatCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(fontSize: 9, color: GwpColors.textMuted),
+              style: const TextStyle(
+                fontSize: 9,
+                color: CofferColors.textMuted,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               value,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -1381,8 +1401,8 @@ class _HoldingAnalysis extends StatelessWidget {
     }
     final isUp = pnl == null || pnl >= Decimal.zero;
     final pnlColor = pnl == null
-        ? GwpColors.textSecondary
-        : (isUp ? GwpColors.positive : GwpColors.negative);
+        ? CofferColors.textSecondary
+        : (isUp ? CofferColors.positive : CofferColors.negative);
 
     String money(Decimal? d) =>
         d == null ? '—' : Money.format(d, currency: valuationCurrency);
@@ -1394,23 +1414,23 @@ class _HoldingAnalysis extends StatelessWidget {
         if (pnl != null) ...[
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(GwpSpacing.md),
+            padding: const EdgeInsets.all(CofferSpacing.md),
             decoration: BoxDecoration(
-              color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+              color: isUp ? CofferColors.positiveBg : CofferColors.negativeBg,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               children: [
                 const Text(
                   '盈亏',
-                  style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
+                  style: TextStyle(fontSize: 11, color: CofferColors.textMuted),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${isUp ? '+' : ''}${money(pnl)}',
                   style: TextStyle(
-                    fontFamily: GwpTypo.monoFont,
-                    fontFeatures: GwpTypo.tabularFigures,
+                    fontFamily: CofferTypo.monoFont,
+                    fontFeatures: CofferTypo.tabularFigures,
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: pnlColor,
@@ -1420,7 +1440,7 @@ class _HoldingAnalysis extends StatelessWidget {
                   Text(
                     displayPercent(pnlPct, alwaysShowSign: true),
                     style: TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: pnlColor,
@@ -1429,7 +1449,7 @@ class _HoldingAnalysis extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
         ],
         // Compare bar: total cost vs market value
         if (totalCost != null && mv != null) ...[
@@ -1438,10 +1458,10 @@ class _HoldingAnalysis extends StatelessWidget {
             value1: totalCost.toDouble(),
             label2: '总市值 · $valuationCurrency',
             value2: mv.toDouble(),
-            color1: GwpColors.textMuted,
-            color2: isUp ? GwpColors.positive : GwpColors.negative,
+            color1: CofferColors.textMuted,
+            color2: isUp ? CofferColors.positive : CofferColors.negative,
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
         ],
         // Detail grid
         LayoutBuilder(
@@ -1449,12 +1469,12 @@ class _HoldingAnalysis extends StatelessWidget {
             final isNarrow = constraints.maxWidth < 360;
             final columns = isNarrow ? 2 : 3;
             final itemWidth =
-                (constraints.maxWidth - GwpSpacing.sm * (columns - 1)) /
+                (constraints.maxWidth - CofferSpacing.sm * (columns - 1)) /
                 columns;
 
             return Wrap(
-              spacing: GwpSpacing.sm,
-              runSpacing: GwpSpacing.sm,
+              spacing: CofferSpacing.sm,
+              runSpacing: CofferSpacing.sm,
               children: [
                 SizedBox(
                   width: itemWidth,
@@ -1462,11 +1482,17 @@ class _HoldingAnalysis extends StatelessWidget {
                 ),
                 SizedBox(
                   width: itemWidth,
-                  child: _MetricCell(label: '成本价', value: cost?.toString() ?? '—'),
+                  child: _MetricCell(
+                    label: '成本价',
+                    value: cost?.toString() ?? '—',
+                  ),
                 ),
                 SizedBox(
                   width: itemWidth,
-                  child: _MetricCell(label: '现价', value: cur?.toString() ?? '—'),
+                  child: _MetricCell(
+                    label: '现价',
+                    value: cur?.toString() ?? '—',
+                  ),
                 ),
                 SizedBox(
                   width: itemWidth,
@@ -1533,7 +1559,7 @@ class _CompareBar extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 10,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ),
@@ -1544,7 +1570,7 @@ class _CompareBar extends StatelessWidget {
               height: 14,
               child: LinearProgressIndicator(
                 value: frac,
-                backgroundColor: GwpColors.surface3,
+                backgroundColor: CofferColors.surface3,
                 valueColor: AlwaysStoppedAnimation(
                   color.withValues(alpha: 0.7),
                 ),
@@ -1556,11 +1582,11 @@ class _CompareBar extends StatelessWidget {
         Text(
           compactValue(value),
           style: const TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontFeatures: GwpTypo.tabularFigures,
+            fontFamily: CofferTypo.monoFont,
+            fontFeatures: CofferTypo.tabularFigures,
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: GwpColors.textPrimary,
+            color: CofferColors.textPrimary,
           ),
         ),
       ],
@@ -1585,17 +1611,17 @@ class _MetricCell extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
         ),
         const SizedBox(height: 3),
         Text(
           value,
           style: TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontFeatures: GwpTypo.tabularFigures,
+            fontFamily: CofferTypo.monoFont,
+            fontFeatures: CofferTypo.tabularFigures,
             fontSize: emphasize ? 14 : 12,
             fontWeight: emphasize ? FontWeight.w600 : FontWeight.w500,
-            color: GwpColors.textPrimary,
+            color: CofferColors.textPrimary,
           ),
           maxLines: 2,
           softWrap: true,
@@ -1623,9 +1649,9 @@ class _AccountLinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (account == null) {
       return Container(
-        padding: const EdgeInsets.all(GwpSpacing.md),
+        padding: const EdgeInsets.all(CofferSpacing.md),
         decoration: BoxDecoration(
-          color: GwpColors.surface2.withValues(alpha: 0.5),
+          color: CofferColors.surface2.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -1633,15 +1659,15 @@ class _AccountLinkCard extends StatelessWidget {
             const Icon(
               Icons.account_balance_outlined,
               size: 20,
-              color: GwpColors.textMuted,
+              color: CofferColors.textMuted,
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             Expanded(
               child: Text(
                 '关联账户不可用 · ${asset.accountId.substring(0, min(8, asset.accountId.length))}...',
                 style: const TextStyle(
                   fontSize: 12,
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                 ),
               ),
             ),
@@ -1651,30 +1677,30 @@ class _AccountLinkCard extends StatelessWidget {
     }
     final a = account!;
     return Material(
-      color: GwpColors.surface2.withValues(alpha: 0.5),
+      color: CofferColors.surface2.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
         onTap: () => context.push('/accounts/${a.id}'),
         child: Padding(
-          padding: const EdgeInsets.all(GwpSpacing.md),
+          padding: const EdgeInsets.all(CofferSpacing.md),
           child: Row(
             children: [
               Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: GwpColors.actionPrimary.withValues(alpha: 0.12),
+                  color: CofferColors.actionPrimary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
                 child: const Icon(
                   Icons.account_balance,
                   size: 18,
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                 ),
               ),
-              const SizedBox(width: GwpSpacing.md),
+              const SizedBox(width: CofferSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1684,7 +1710,7 @@ class _AccountLinkCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1693,7 +1719,7 @@ class _AccountLinkCard extends StatelessWidget {
                       '${a.accountNo != null ? ' · ${a.accountNo}' : ''}',
                       style: const TextStyle(
                         fontSize: 11,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                       ),
                     ),
                   ],
@@ -1702,7 +1728,7 @@ class _AccountLinkCard extends StatelessWidget {
               const Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
             ],
           ),
@@ -1716,6 +1742,7 @@ class _AccountLinkCard extends StatelessWidget {
 // 5) Basic info
 // ──────────────────────────────────────────────────────────────
 
+// ignore: unused_element
 class _BasicInfoCard extends StatelessWidget {
   const _BasicInfoCard({required this.asset});
   final Asset asset;
@@ -1736,27 +1763,30 @@ class _BasicInfoCard extends StatelessWidget {
         for (var i = 0; i < rows.length; i++) ...[
           _KvRow(k: rows[i].$1, v: rows[i].$2),
           if (i < rows.length - 1)
-            const Divider(height: 1, color: GwpColors.border),
+            const Divider(height: 1, color: CofferColors.border),
         ],
       ],
     );
   }
 }
 
-bool _hasTypeInfo(Asset asset) =>
-    switch (asset.assetType) {
-      AssetType.cd || AssetType.bond || AssetType.policy ||
-      AssetType.preciousMetal => true,
-      _ => false,
-    };
+// ignore: unused_element
+bool _hasTypeInfo(Asset asset) => switch (asset.assetType) {
+  AssetType.cd ||
+  AssetType.bond ||
+  AssetType.policy ||
+  AssetType.preciousMetal => true,
+  _ => false,
+};
 
+// ignore: unused_element
 String _typeInfoTitle(AssetType type) => switch (type) {
-      AssetType.cd => '存单详情',
-      AssetType.bond => '债券详情',
-      AssetType.policy => '保单详情',
-      AssetType.preciousMetal => '贵金属详情',
-      _ => '详情',
-    };
+  AssetType.cd => '存单详情',
+  AssetType.bond => '债券详情',
+  AssetType.policy => '保单详情',
+  AssetType.preciousMetal => '贵金属详情',
+  _ => '详情',
+};
 
 class _TypeInfoCard extends StatefulWidget {
   const _TypeInfoCard({required this.asset});
@@ -1778,29 +1808,64 @@ class _TypeInfoCardState extends State<_TypeInfoCard> {
       children: [
         if (_expanded)
           ...switch (info) {
-            FixedIncomeInfo(:final issuer, :final annualRate,
-                :final startDate, :final maturityDate, :final compounding,
-                :final dayCount) =>
-              _fiRows(issuer, annualRate, startDate, maturityDate,
-                  compounding, dayCount),
-            InsuranceInfo(:final insurer, :final policyNumber,
-                :final annualPremium, :final coverage, :final effectiveDate,
-                :final maturityDate, :final paymentFrequency) =>
-              _insRows(insurer, policyNumber, annualPremium, coverage,
-                  effectiveDate, maturityDate, paymentFrequency),
+            FixedIncomeInfo(
+              :final issuer,
+              :final annualRate,
+              :final startDate,
+              :final maturityDate,
+              :final compounding,
+              :final dayCount,
+            ) =>
+              _fiRows(
+                issuer,
+                annualRate,
+                startDate,
+                maturityDate,
+                compounding,
+                dayCount,
+              ),
+            InsuranceInfo(
+              :final insurer,
+              :final policyNumber,
+              :final annualPremium,
+              :final coverage,
+              :final effectiveDate,
+              :final maturityDate,
+              :final paymentFrequency,
+            ) =>
+              _insRows(
+                insurer,
+                policyNumber,
+                annualPremium,
+                coverage,
+                effectiveDate,
+                maturityDate,
+                paymentFrequency,
+              ),
             PreciousMetalInfo(:final metalType, :final weight, :final purity) =>
               _pmRows(metalType, weight, purity),
             _ => _basicRows(),
           },
         GestureDetector(
           onTap: () => setState(() => _expanded = !_expanded),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(_expanded ? Icons.expand_less : Icons.expand_more,
-                size: 16, color: GwpColors.textMuted),
-            const SizedBox(width: 4),
-            Text(_expanded ? '收起' : '展开详情',
-                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted)),
-          ]),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _expanded ? Icons.expand_less : Icons.expand_more,
+                size: 16,
+                color: CofferColors.textMuted,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _expanded ? '收起' : '展开详情',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: CofferColors.textMuted,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -1819,18 +1884,20 @@ class _TypeInfoCardState extends State<_TypeInfoCard> {
     final rows = <(String, String)>[
       if (issuer != null && issuer.isNotEmpty) ('发行机构', issuer),
       if (annualRate != null)
-        ('年利率',
-          '${(annualRate * Decimal.fromInt(100)).toStringAsFixed(2)}%'),
+        ('年利率', '${(annualRate * Decimal.fromInt(100)).toStringAsFixed(2)}%'),
       if (startDate != null) ('起息日', _fmtDate(startDate)),
       if (maturityDate != null) ('到期日', _fmtDate(maturityDate)),
       if (compounding != null)
-        ('计息方式', switch (compounding) {
-          'simple' => '到期一次性还本付息',
-          'daily' => '按日复利',
-          'monthly' => '按月复利',
-          'annual' => '按年复利',
-          _ => compounding,
-        }),
+        (
+          '计息方式',
+          switch (compounding) {
+            'simple' => '到期一次性还本付息',
+            'daily' => '按日复利',
+            'monthly' => '按月复利',
+            'annual' => '按年复利',
+            _ => compounding,
+          },
+        ),
       if (dayCount != null) ('计息基准', '$dayCount 天'),
     ];
     return _buildRows(rows);
@@ -1849,20 +1916,24 @@ class _TypeInfoCardState extends State<_TypeInfoCard> {
   ) {
     final rows = <(String, String)>[
       if (insurer != null && insurer.isNotEmpty) ('保险公司', insurer),
-      if (policyNumber != null && policyNumber.isNotEmpty) ('保单号', policyNumber),
+      if (policyNumber != null && policyNumber.isNotEmpty)
+        ('保单号', policyNumber),
       if (annualPremium != null) ('年缴保费', annualPremium.toString()),
       if (coverage != null) ('保额', coverage.toString()),
       if (effectiveDate != null) ('生效日期', _fmtDate(effectiveDate)),
       if (maturityDate != null) ('满期日期', _fmtDate(maturityDate)),
       if (paymentFrequency != null)
-        ('缴费频率', switch (paymentFrequency) {
-          'monthly' => '月缴',
-          'quarterly' => '季缴',
-          'semiAnnual' => '半年缴',
-          'annual' => '年缴',
-          'single' => '趸缴',
-          _ => paymentFrequency,
-        }),
+        (
+          '缴费频率',
+          switch (paymentFrequency) {
+            'monthly' => '月缴',
+            'quarterly' => '季缴',
+            'semiAnnual' => '半年缴',
+            'annual' => '年缴',
+            'single' => '趸缴',
+            _ => paymentFrequency,
+          },
+        ),
     ];
     return _buildRows(rows);
   }
@@ -1872,13 +1943,16 @@ class _TypeInfoCardState extends State<_TypeInfoCard> {
   List<Widget> _pmRows(String? metalType, Decimal? weight, Decimal? purity) {
     final rows = <(String, String)>[
       if (metalType != null)
-        ('品种', switch (metalType) {
-          'gold' => '黄金',
-          'silver' => '白银',
-          'platinum' => '铂金',
-          'palladium' => '钯金',
-          _ => metalType,
-        }),
+        (
+          '品种',
+          switch (metalType) {
+            'gold' => '黄金',
+            'silver' => '白银',
+            'platinum' => '铂金',
+            'palladium' => '钯金',
+            _ => metalType,
+          },
+        ),
       if (weight != null) ('重量', '$weight g'),
       if (purity != null) ('纯度', purity.toString()),
     ];
@@ -1890,7 +1964,7 @@ class _TypeInfoCardState extends State<_TypeInfoCard> {
       for (var i = 0; i < rows.length; i++) ...[
         _KvRow(k: rows[i].$1, v: rows[i].$2),
         if (i < rows.length - 1)
-          const Divider(height: 1, color: GwpColors.border),
+          const Divider(height: 1, color: CofferColors.border),
       ],
     ];
   }
@@ -1925,16 +1999,19 @@ class _KvRow extends StatelessWidget {
             width: 72,
             child: Text(
               k,
-              style: const TextStyle(fontSize: 12, color: GwpColors.textMuted),
+              style: const TextStyle(
+                fontSize: 12,
+                color: CofferColors.textMuted,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               v,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
+                fontFamily: CofferTypo.monoFont,
                 fontSize: 12,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               textAlign: TextAlign.right,
             ),
@@ -1989,7 +2066,7 @@ class _HistoryTimelineState extends State<_HistoryTimeline> {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                 ),
               ),
             ),
@@ -2037,22 +2114,22 @@ class _HistoryRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isFirst
-                      ? GwpColors.actionPrimary
-                      : GwpColors.textMuted.withValues(alpha: 0.4),
+                      ? CofferColors.actionPrimary
+                      : CofferColors.textMuted.withValues(alpha: 0.4),
                 ),
               ),
             ],
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           // Date
           SizedBox(
             width: 80,
             child: Text(
               _fmtDate(point.t),
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
+                fontFamily: CofferTypo.monoFont,
                 fontSize: 11,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
           ),
@@ -2061,16 +2138,16 @@ class _HistoryRow extends StatelessWidget {
             child: Text(
               '${point.price} $currency',
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               textAlign: TextAlign.right,
             ),
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           // Change badge
           SizedBox(
             width: 60,
@@ -2082,17 +2159,21 @@ class _HistoryRow extends StatelessWidget {
                       vertical: 1,
                     ),
                     decoration: BoxDecoration(
-                      color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+                      color: isUp
+                          ? CofferColors.positiveBg
+                          : CofferColors.negativeBg,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       displayPercentDouble(changePct, alwaysShowSign: true),
                       style: TextStyle(
-                        fontFamily: GwpTypo.monoFont,
+                        fontFamily: CofferTypo.monoFont,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: isUp ? GwpColors.positive : GwpColors.negative,
+                        color: isUp
+                            ? CofferColors.positive
+                            : CofferColors.negative,
                       ),
                     ),
                   ),

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/auth/pin_store.dart';
-import 'package:gwp/core/crypto/password_kdf.dart';
-import 'package:gwp/features/auth/presentation/auth_gate.dart';
+import 'package:coffer/core/auth/pin_store.dart';
+import 'package:coffer/core/crypto/password_kdf.dart';
+import 'package:coffer/features/auth/presentation/auth_gate.dart';
 
 PinStore _fastPinStore() => PinStore(
       storage: InMemoryPinKv(),

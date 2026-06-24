@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gwp/core/auth/biometric_auth.dart';
-import 'package:gwp/core/auth/pin_store.dart';
-import 'package:gwp/core/crypto/password_kdf.dart';
-import 'package:gwp/data/providers/account_providers.dart';
-import 'package:gwp/features/auth/presentation/auth_gate.dart';
-import 'package:gwp/features/settings/presentation/settings_page.dart';
+import 'package:coffer/core/auth/biometric_auth.dart';
+import 'package:coffer/core/auth/pin_store.dart';
+import 'package:coffer/core/crypto/password_kdf.dart';
+import 'package:coffer/data/providers/account_providers.dart';
+import 'package:coffer/features/auth/presentation/auth_gate.dart';
+import 'package:coffer/features/settings/presentation/settings_page.dart';
 
 /// 测试用的快速 KDF，避免 Argon2id 默认参数在测试 VM 里跑几秒。
 PinStore _fastPinStore() => PinStore(

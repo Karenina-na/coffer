@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'design_tokens.dart';
 
 /// Inline mini area/line chart for sparkline display in list rows and hero cards.
-class GwpMiniChart extends StatelessWidget {
-  const GwpMiniChart({
+class CofferMiniChart extends StatelessWidget {
+  const CofferMiniChart({
     super.key,
     required this.data,
     this.width = 80,
@@ -27,7 +27,7 @@ class GwpMiniChart extends StatelessWidget {
     if (data.length < 2) return SizedBox(width: width, height: height);
 
     final isUp = data.last >= data.first;
-    final lineColor = color ?? (isUp ? GwpColors.positive : GwpColors.negative);
+    final lineColor = color ?? (isUp ? CofferColors.positive : CofferColors.negative);
 
     final spots = <FlSpot>[
       for (var i = 0; i < data.length; i++) FlSpot(i.toDouble(), data[i]),

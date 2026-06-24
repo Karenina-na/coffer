@@ -42,7 +42,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     required String institution,
     AccountStatus status = AccountStatus.active,
     AccountTypeInfo? typeInfo,
-    double fxSpreadPercent = 0,
+    Decimal? fxSpreadPercent,
     Decimal? fxFixedFee,
   }) async {
     await ctx.collect(
@@ -75,7 +75,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       branchName: '深圳分行',
       accountSubtype: 'savings',
     ),
-    fxSpreadPercent: 0.3,
+    fxSpreadPercent: Decimal.parse('0.3'),
   );
   await addAccount(
     key: 'us_broker',
@@ -88,7 +88,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       baseCurrency: 'USD',
       marginEnabled: true,
     ),
-    fxSpreadPercent: 0.2,
+    fxSpreadPercent: Decimal.parse('0.2'),
     fxFixedFee: Decimal.parse('2'),
   );
   await addAccount(
@@ -175,10 +175,7 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     type: AccountType.cryptoWallet,
     region: 'CRYPTO',
     institution: 'MetaMask',
-    typeInfo: const CryptoWalletInfo(
-      walletType: 'hot',
-      chain: 'Ethereum',
-    ),
+    typeInfo: const CryptoWalletInfo(walletType: 'hot', chain: 'Ethereum'),
   );
 
   Future<void> addAsset({
@@ -473,7 +470,8 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       );
       link.when(
         ok: (_) => channelLinks++,
-        err: (e) => ctx.errors.add('channel-link $key/$accountKey: ${e.message}'),
+        err: (e) =>
+            ctx.errors.add('channel-link $key/$accountKey: ${e.message}'),
       );
     }
   }
@@ -557,13 +555,18 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       alertChangePct: pct,
     );
     if (thresholds.isErr) {
-      ctx.errors.add('watch thresholds $base/$quote: ${thresholds.errorOrNull!.message}');
+      ctx.errors.add(
+        'watch thresholds $base/$quote: ${thresholds.errorOrNull!.message}',
+      );
     }
     for (final item in series) {
       final at = item.$3 == SnapshotType.realtime
           ? now
-          : DateTime(now.year, now.month, now.day)
-              .subtract(Duration(days: item.$1));
+          : DateTime(
+              now.year,
+              now.month,
+              now.day,
+            ).subtract(Duration(days: item.$1));
       final r = await deps.exchangeRates.upsert(
         ExchangeRate(
           id: deps.idGen(),
@@ -579,7 +582,8 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       );
       r.when(
         ok: (_) => rates++,
-        err: (e) => ctx.errors.add('rate save $base/$quote ${item.$2}: ${e.message}'),
+        err: (e) =>
+            ctx.errors.add('rate save $base/$quote ${item.$2}: ${e.message}'),
       );
     }
   }
@@ -646,8 +650,11 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
     final assetId = ctx.assetIds[assetKey];
     if (assetId == null) return;
     for (final point in points) {
-      final trigger = DateTime(now.year, now.month, now.day)
-          .subtract(Duration(days: point.$1));
+      final trigger = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: point.$1));
       final history = AssetPriceHistoryPoint(
         id: deps.idGen(),
         assetId: assetId,
@@ -710,7 +717,8 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
         handlingStatus: HandlingStatus.failed,
         handler: 'demo-provider',
         handlingNote: jsonEncode({'stage': 'latest', 'error': '模拟 API 失败'}),
-        sourceKey: '${DomainEventTypes.assetValuationFailed}:$aaplId:${yyyymmdd(now)}:latest',
+        sourceKey:
+            '${DomainEventTypes.assetValuationFailed}:$aaplId:${yyyymmdd(now)}:latest',
         ackRequirement: AckRequirement.optional,
         createdAt: now,
         updatedAt: now,
@@ -742,14 +750,14 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       id: deps.idGen(),
       eventType: DomainEventTypes.rateAlert,
       relatedModel: RelatedModel.asset,
-        relatedId: 'GBP/USD',
+      relatedId: 'GBP/USD',
       triggerTime: now.subtract(const Duration(hours: 8)),
       priority: EventPriority.high,
       status: EventStatus.resolved,
       handlingStatus: HandlingStatus.handled,
-        handlingNote: 'GBP/USD 跌破下沿 1.24',
-        sourceKey: '${DomainEventTypes.rateAlert}:GBP/USD:${yyyymmdd(now)}:low',
-        refs: const {'pair': 'GBP/USD', 'kind': 'low'},
+      handlingNote: 'GBP/USD 跌破下沿 1.24',
+      sourceKey: '${DomainEventTypes.rateAlert}:GBP/USD:${yyyymmdd(now)}:low',
+      refs: const {'pair': 'GBP/USD', 'kind': 'low'},
       ackRequirement: AckRequirement.required_,
       ackStatus: AckStatus.confirmed,
       ackAt: now.subtract(const Duration(hours: 2)),
@@ -769,7 +777,8 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       status: EventStatus.closed,
       handlingStatus: HandlingStatus.handled,
       handlingNote: 'EUR/USD 日内波动超过 1.0%',
-      sourceKey: '${DomainEventTypes.rateAlert}:EUR/USD:${yyyymmdd(now)}:change',
+      sourceKey:
+          '${DomainEventTypes.rateAlert}:EUR/USD:${yyyymmdd(now)}:change',
       refs: const {'pair': 'EUR/USD', 'kind': 'change'},
       ackRequirement: AckRequirement.optional,
       ackStatus: AckStatus.dismissed,
@@ -813,8 +822,8 @@ Future<SeedResult> seedCoreFinancialPack(SeedAssemblyContext ctx) async {
       createdAt: now,
       updatedAt: now,
     ),
-      'event dormant account',
-    );
+    'event dormant account',
+  );
   await createEvent(
     DomainEvent(
       id: deps.idGen(),

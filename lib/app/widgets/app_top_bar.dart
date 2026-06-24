@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/ui/base_currency_switcher.dart';
+import '../../core/ui/settings_action.dart';
+import '../../core/ui/sync_window_menu_button.dart';
+import '../../core/ui/top_create_action.dart';
+import '../../core/ui/top_search_action.dart';
+import '../../core/valuation/valuation_currency_provider.dart';
 import '../../domain/valuation/asset_valuator.dart';
 import '../../features/sync/presentation/sync_providers.dart';
-import '../valuation/valuation_currency_provider.dart';
-import 'base_currency_switcher.dart';
-import 'settings_action.dart';
-import 'sync_window_menu_button.dart';
-import 'top_create_action.dart';
-import 'top_search_action.dart';
 
 /// 全局统一的顶部 AppBar。
 ///
@@ -61,7 +61,8 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       maxLines: 1,
       child: title,
     );
-    final effectiveLeading = leading ??
+    final effectiveLeading =
+        leading ??
         (showAppIcon
             ? Padding(
                 padding: const EdgeInsets.only(left: 12),
@@ -301,7 +302,9 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
                           title: '本位币',
                           expanded: _currencyExpanded,
                           onToggle: () {
-                            setState(() => _currencyExpanded = !_currencyExpanded);
+                            setState(
+                              () => _currencyExpanded = !_currencyExpanded,
+                            );
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +327,9 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
                                       title: code,
                                       selected: code == currentCurrency,
                                       onTap: () => ref
-                                          .read(valuationCurrencyProvider.notifier)
+                                          .read(
+                                            valuationCurrencyProvider.notifier,
+                                          )
                                           .set(code),
                                     ),
                                 ],
@@ -370,17 +375,12 @@ class _TopBarOverflowSheetState extends ConsumerState<_TopBarOverflowSheet> {
     SyncWindow? window,
   }) {
     Navigator.of(context).pop();
-    ref.read(globalRefreshProvider).run(
-      scope: scope,
-      rateMode: mode,
-      window: window,
-    );
+    ref
+        .read(globalRefreshProvider)
+        .run(scope: scope, rateMode: mode, window: window);
   }
 
-  void _runCreateAction(
-    BuildContext context,
-    TopBarCreateActionItem action,
-  ) {
+  void _runCreateAction(BuildContext context, TopBarCreateActionItem action) {
     Navigator.of(context).pop();
     context.push(action.route);
   }
@@ -489,10 +489,7 @@ class _PanelSection extends StatelessWidget {
           ),
           if (expanded) ...[
             Divider(height: 1, color: dividerColor),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: child,
-            ),
+            Padding(padding: const EdgeInsets.all(16), child: child),
           ],
         ],
       ),
@@ -549,10 +546,7 @@ class _PanelInfoCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ],
             ),
@@ -640,7 +634,9 @@ class _PanelChoiceChip extends StatelessWidget {
       title: title,
       selected: selected,
       onTap: onTap,
-      trailing: selected ? Icon(Icons.check, size: 16, color: cs.primary) : null,
+      trailing: selected
+          ? Icon(Icons.check, size: 16, color: cs.primary)
+          : null,
     );
   }
 }
@@ -705,10 +701,7 @@ class _OverflowActionChip extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 6),
-                  trailing!,
-                ],
+                if (trailing != null) ...[const SizedBox(width: 6), trailing!],
               ],
             ),
           ),

@@ -21,9 +21,11 @@ abstract class Account with _$Account {
     required AccountStatus status,
     DateTime? openedAt,
     Map<String, dynamic>? extInfo,
+
     /// FX spread percentage (0–100, e.g. 0.3 = 0.3% loss per conversion).
     /// 0 means this account does not support internal currency exchange.
-    @Default(0) double fxSpreadPercent,
+    required Decimal fxSpreadPercent,
+
     /// Fixed fee per FX conversion (in source currency). Added to
     /// `amount × fxSpreadPercent / 100` to form total FX cost.
     /// Null / absent = zero.

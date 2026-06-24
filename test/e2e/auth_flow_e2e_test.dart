@@ -4,8 +4,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/auth/pin_store.dart';
-import 'package:gwp/core/crypto/password_kdf.dart';
+import 'package:coffer/core/auth/pin_store.dart';
+import 'package:coffer/core/crypto/password_kdf.dart';
 
 void main() {
   late PinStore store;

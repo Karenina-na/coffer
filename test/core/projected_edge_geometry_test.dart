@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/ui/projected_edge_geometry.dart';
+import 'package:coffer/core/ui/projected_edge_geometry.dart';
 
 void main() {
   group('projectEdgeGeometry', () {

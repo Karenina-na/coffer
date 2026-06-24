@@ -1,10 +1,10 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/providers/fx/cached_fx_price_provider.dart';
-import 'package:gwp/data/providers/fx/frankfurter_provider.dart';
-import 'package:gwp/domain/repositories/exchange_rate_repository.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/providers/fx/cached_fx_price_provider.dart';
+import 'package:coffer/data/providers/fx/frankfurter_provider.dart';
+import 'package:coffer/domain/repositories/exchange_rate_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

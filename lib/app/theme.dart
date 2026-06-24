@@ -1,47 +1,48 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/ui/design_tokens.dart';
 
-/// Builds the GWP dark institutional theme from DESIGN.md tokens.
+/// Builds the Coffer dark institutional theme from DESIGN.md tokens.
 ThemeData buildDarkTheme() {
   final colorScheme = ColorScheme(
     brightness: Brightness.dark,
     // Primary
-    primary: GwpColors.actionPrimary,
+    primary: CofferColors.actionPrimary,
     onPrimary: Colors.white,
-    primaryContainer: GwpColors.actionSecondary,
-    onPrimaryContainer: GwpColors.textPrimary,
+    primaryContainer: CofferColors.actionSecondary,
+    onPrimaryContainer: CofferColors.textPrimary,
     // Secondary
-    secondary: GwpColors.info,
-    onSecondary: GwpColors.canvas,
-    secondaryContainer: GwpColors.infoBg,
-    onSecondaryContainer: GwpColors.info,
+    secondary: CofferColors.info,
+    onSecondary: CofferColors.canvas,
+    secondaryContainer: CofferColors.infoBg,
+    onSecondaryContainer: CofferColors.info,
     // Tertiary
-    tertiary: GwpColors.warning,
-    onTertiary: GwpColors.canvas,
-    tertiaryContainer: GwpColors.warningBg,
-    onTertiaryContainer: GwpColors.warning,
+    tertiary: CofferColors.warning,
+    onTertiary: CofferColors.canvas,
+    tertiaryContainer: CofferColors.warningBg,
+    onTertiaryContainer: CofferColors.warning,
     // Error
-    error: GwpColors.negative,
+    error: CofferColors.negative,
     onError: Colors.white,
-    errorContainer: GwpColors.negativeBg,
-    onErrorContainer: GwpColors.negative,
+    errorContainer: CofferColors.negativeBg,
+    onErrorContainer: CofferColors.negative,
     // Surfaces
-    surface: GwpColors.surface1,
-    onSurface: GwpColors.textPrimary,
-    onSurfaceVariant: GwpColors.textSecondary,
-    surfaceContainerLowest: GwpColors.canvas,
-    surfaceContainerLow: GwpColors.surface1,
-    surfaceContainer: GwpColors.surface2,
-    surfaceContainerHigh: GwpColors.surface3,
-    surfaceContainerHighest: GwpColors.borderStrong,
+    surface: CofferColors.surface1,
+    onSurface: CofferColors.textPrimary,
+    onSurfaceVariant: CofferColors.textSecondary,
+    surfaceContainerLowest: CofferColors.canvas,
+    surfaceContainerLow: CofferColors.surface1,
+    surfaceContainer: CofferColors.surface2,
+    surfaceContainerHigh: CofferColors.surface3,
+    surfaceContainerHighest: CofferColors.borderStrong,
     // Outline
-    outline: GwpColors.border,
-    outlineVariant: GwpColors.border,
+    outline: CofferColors.border,
+    outlineVariant: CofferColors.border,
     // Misc
-    inverseSurface: GwpColors.textPrimary,
-    onInverseSurface: GwpColors.canvas,
+    inverseSurface: CofferColors.textPrimary,
+    onInverseSurface: CofferColors.canvas,
     shadow: Colors.black,
     scrim: Colors.black54,
   );
@@ -52,13 +53,13 @@ ThemeData buildDarkTheme() {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: GwpColors.canvas,
+    scaffoldBackgroundColor: CofferColors.canvas,
     textTheme: textTheme,
 
     // ── AppBar ──────────────────────────────────────────────
     appBarTheme: AppBarTheme(
-      backgroundColor: GwpColors.surface1,
-      foregroundColor: GwpColors.textPrimary,
+      backgroundColor: CofferColors.surface1,
+      foregroundColor: CofferColors.textPrimary,
       toolbarHeight: 44,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -69,22 +70,22 @@ ThemeData buildDarkTheme() {
 
     // ── Bottom Navigation ───────────────────────────────────
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: GwpColors.surface1,
+      backgroundColor: CofferColors.surface1,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: GwpColors.actionPrimary.withValues(alpha: 0.15),
+      indicatorColor: CofferColors.actionPrimary.withValues(alpha: 0.15),
       labelTextStyle: WidgetStateProperty.resolveWith((s) {
         final selected = s.contains(WidgetState.selected);
         return TextStyle(
           fontSize: 11,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          color: selected ? GwpColors.actionPrimary : GwpColors.textMuted,
+          color: selected ? CofferColors.actionPrimary : CofferColors.textMuted,
         );
       }),
       iconTheme: WidgetStateProperty.resolveWith((s) {
         final selected = s.contains(WidgetState.selected);
         return IconThemeData(
           size: 22,
-          color: selected ? GwpColors.actionPrimary : GwpColors.textMuted,
+          color: selected ? CofferColors.actionPrimary : CofferColors.textMuted,
         );
       }),
       height: 64,
@@ -92,9 +93,9 @@ ThemeData buildDarkTheme() {
 
     // ── TabBar ──────────────────────────────────────────────
     tabBarTheme: TabBarThemeData(
-      labelColor: GwpColors.textPrimary,
-      unselectedLabelColor: GwpColors.textMuted,
-      indicatorColor: GwpColors.actionPrimary,
+      labelColor: CofferColors.textPrimary,
+      unselectedLabelColor: CofferColors.textMuted,
+      indicatorColor: CofferColors.actionPrimary,
       indicatorSize: TabBarIndicatorSize.label,
       labelStyle: const TextStyle(
         fontSize: 14,
@@ -104,24 +105,24 @@ ThemeData buildDarkTheme() {
         fontSize: 14,
         fontWeight: FontWeight.w400,
       ),
-      dividerColor: GwpColors.border,
+      dividerColor: CofferColors.border,
       dividerHeight: 1,
     ),
 
     // ── Card ────────────────────────────────────────────────
     cardTheme: CardThemeData(
-      color: GwpColors.surface1,
+      color: CofferColors.surface1,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: GwpColors.border, width: 0.5),
+        side: const BorderSide(color: CofferColors.border, width: 0.5),
       ),
       margin: EdgeInsets.zero,
     ),
 
     // ── Divider ─────────────────────────────────────────────
     dividerTheme: const DividerThemeData(
-      color: GwpColors.border,
+      color: CofferColors.border,
       thickness: 0.5,
       space: 0,
     ),
@@ -134,19 +135,19 @@ ThemeData buildDarkTheme() {
       titleTextStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: GwpColors.textPrimary,
+        color: CofferColors.textPrimary,
       ),
       subtitleTextStyle: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w400,
-        color: GwpColors.textSecondary,
+        color: CofferColors.textSecondary,
         height: 1.4,
       ),
     ),
 
     // ── Floating Action Button ──────────────────────────────
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: GwpColors.actionPrimary,
+      backgroundColor: CofferColors.actionPrimary,
       foregroundColor: Colors.white,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -157,9 +158,9 @@ ThemeData buildDarkTheme() {
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((s) {
           if (s.contains(WidgetState.disabled)) {
-            return GwpColors.surface3;
+            return CofferColors.surface3;
           }
-          return GwpColors.actionPrimary;
+          return CofferColors.actionPrimary;
         }),
         foregroundColor: WidgetStateProperty.all(Colors.white),
         minimumSize: WidgetStateProperty.all(const Size(0, 44)),
@@ -172,9 +173,9 @@ ThemeData buildDarkTheme() {
     // ── Outlined Button ─────────────────────────────────────
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: WidgetStateProperty.all(GwpColors.textPrimary),
+        foregroundColor: WidgetStateProperty.all(CofferColors.textPrimary),
         side: WidgetStateProperty.all(
-          const BorderSide(color: GwpColors.border),
+          const BorderSide(color: CofferColors.border),
         ),
         minimumSize: WidgetStateProperty.all(const Size(0, 44)),
         shape: WidgetStateProperty.all(
@@ -186,53 +187,53 @@ ThemeData buildDarkTheme() {
     // ── Text Button ─────────────────────────────────────────
     textButtonTheme: TextButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: WidgetStateProperty.all(GwpColors.actionPrimary),
+        foregroundColor: WidgetStateProperty.all(CofferColors.actionPrimary),
       ),
     ),
 
     // ── Input ───────────────────────────────────────────────
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: GwpColors.surface2,
+      fillColor: CofferColors.surface2,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: GwpColors.border),
+        borderSide: const BorderSide(color: CofferColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: GwpColors.border),
+        borderSide: const BorderSide(color: CofferColors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: GwpColors.actionPrimary, width: 1.5),
+        borderSide: const BorderSide(color: CofferColors.actionPrimary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: GwpColors.negative),
+        borderSide: const BorderSide(color: CofferColors.negative),
       ),
       labelStyle: const TextStyle(
-        color: GwpColors.textSecondary,
+        color: CofferColors.textSecondary,
         fontSize: 14,
       ),
       hintStyle: const TextStyle(
-        color: GwpColors.textMuted,
+        color: CofferColors.textMuted,
         fontSize: 14,
       ),
       helperStyle: const TextStyle(
-        color: GwpColors.textMuted,
+        color: CofferColors.textMuted,
         fontSize: 12,
       ),
     ),
 
     // ── Chip ────────────────────────────────────────────────
     chipTheme: ChipThemeData(
-      backgroundColor: GwpColors.surface2,
-      side: const BorderSide(color: GwpColors.border, width: 0.5),
+      backgroundColor: CofferColors.surface2,
+      side: const BorderSide(color: CofferColors.border, width: 0.5),
       labelStyle: const TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: GwpColors.textPrimary,
+        color: CofferColors.textPrimary,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -243,16 +244,16 @@ ThemeData buildDarkTheme() {
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((s) {
           if (s.contains(WidgetState.selected)) {
-            return GwpColors.actionPrimary.withValues(alpha: 0.18);
+            return CofferColors.actionPrimary.withValues(alpha: 0.18);
           }
-          return GwpColors.surface2;
+          return CofferColors.surface2;
         }),
         foregroundColor: WidgetStateProperty.resolveWith((s) {
-          if (s.contains(WidgetState.selected)) return GwpColors.actionPrimary;
-          return GwpColors.textSecondary;
+          if (s.contains(WidgetState.selected)) return CofferColors.actionPrimary;
+          return CofferColors.textSecondary;
         }),
         side: WidgetStateProperty.all(
-          const BorderSide(color: GwpColors.border),
+          const BorderSide(color: CofferColors.border),
         ),
       ),
     ),
@@ -260,29 +261,29 @@ ThemeData buildDarkTheme() {
     // ── Switch ──────────────────────────────────────────────
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((s) {
-        if (s.contains(WidgetState.selected)) return GwpColors.actionPrimary;
-        return GwpColors.textMuted;
+        if (s.contains(WidgetState.selected)) return CofferColors.actionPrimary;
+        return CofferColors.textMuted;
       }),
       trackColor: WidgetStateProperty.resolveWith((s) {
         if (s.contains(WidgetState.selected)) {
-          return GwpColors.actionPrimary.withValues(alpha: 0.3);
+          return CofferColors.actionPrimary.withValues(alpha: 0.3);
         }
-        return GwpColors.surface3;
+        return CofferColors.surface3;
       }),
     ),
 
     // ── Dialog ──────────────────────────────────────────────
     dialogTheme: DialogThemeData(
-      backgroundColor: GwpColors.surface2,
+      backgroundColor: CofferColors.surface2,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
 
     // ── BottomSheet ─────────────────────────────────────────
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: GwpColors.surface1,
+      backgroundColor: CofferColors.surface1,
       surfaceTintColor: Colors.transparent,
-      dragHandleColor: GwpColors.borderStrong,
+      dragHandleColor: CofferColors.borderStrong,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -290,25 +291,25 @@ ThemeData buildDarkTheme() {
 
     // ── SnackBar ────────────────────────────────────────────
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: GwpColors.surface3,
-      contentTextStyle: const TextStyle(color: GwpColors.textPrimary),
+      backgroundColor: CofferColors.surface3,
+      contentTextStyle: const TextStyle(color: CofferColors.textPrimary),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ),
 
     // ── Icon ────────────────────────────────────────────────
     iconTheme: const IconThemeData(
-      color: GwpColors.textSecondary,
+      color: CofferColors.textSecondary,
       size: 22,
     ),
 
     // ── Tooltip ─────────────────────────────────────────────
     tooltipTheme: TooltipThemeData(
       decoration: BoxDecoration(
-        color: GwpColors.surface3,
+        color: CofferColors.surface3,
         borderRadius: BorderRadius.circular(6),
       ),
-      textStyle: const TextStyle(color: GwpColors.textPrimary, fontSize: 12),
+      textStyle: const TextStyle(color: CofferColors.textPrimary, fontSize: 12),
     ),
 
     // ── Page transitions: restrained ────────────────────────
@@ -319,9 +320,9 @@ ThemeData buildDarkTheme() {
       },
     ),
 
-    hintColor: GwpColors.textMuted,
-    splashColor: GwpColors.actionPrimary.withValues(alpha: 0.08),
-    highlightColor: GwpColors.actionPrimary.withValues(alpha: 0.06),
+    hintColor: CofferColors.textMuted,
+    splashColor: CofferColors.actionPrimary.withValues(alpha: 0.08),
+    highlightColor: CofferColors.actionPrimary.withValues(alpha: 0.06),
   );
 }
 
@@ -333,21 +334,21 @@ TextTheme _buildTextTheme(ColorScheme cs) {
       fontWeight: FontWeight.w700,
       color: cs.onSurface,
       height: 34 / 28,
-      fontFeatures: GwpTypo.tabularFigures,
+      fontFeatures: CofferTypo.tabularFigures,
     ),
     displayMedium: TextStyle(
       fontSize: 24,
       fontWeight: FontWeight.w700,
       color: cs.onSurface,
       height: 30 / 24,
-      fontFeatures: GwpTypo.tabularFigures,
+      fontFeatures: CofferTypo.tabularFigures,
     ),
     displaySmall: TextStyle(
       fontSize: 22,
       fontWeight: FontWeight.w600,
       color: cs.onSurface,
       height: 28 / 22,
-      fontFeatures: GwpTypo.tabularFigures,
+      fontFeatures: CofferTypo.tabularFigures,
     ),
     // headline
     headlineLarge: TextStyle(

@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gwp/core/ui/app_top_bar.dart';
-import 'package:gwp/core/ui/top_search_action.dart';
+import 'package:coffer/app/widgets/app_top_bar.dart';
+import 'package:coffer/core/ui/top_search_action.dart';
 
 Widget _buildHarness({required double width}) {
   return ProviderScope(
@@ -23,7 +23,8 @@ class _TopBarTestScaffold extends ConsumerStatefulWidget {
   final String title;
 
   @override
-  ConsumerState<_TopBarTestScaffold> createState() => _TopBarTestScaffoldState();
+  ConsumerState<_TopBarTestScaffold> createState() =>
+      _TopBarTestScaffoldState();
 }
 
 class _TopBarTestScaffoldState extends ConsumerState<_TopBarTestScaffold> {
@@ -93,7 +94,9 @@ void main() {
     expect(find.text('数据同步'), findsNothing);
     expect(find.text('本位币'), findsNothing);
 
-    await tester.tap(find.byTooltip('更多'));
+    await tester.ensureVisible(find.byTooltip('更多'));
+    await tester.ensureVisible(find.byTooltip('更多'));
+    await tester.tap(find.byTooltip('更多'), warnIfMissed: false);
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -129,10 +132,12 @@ void main() {
     expect(find.text('1年'), findsOneWidget);
     expect(find.text('5年'), findsOneWidget);
 
-    await tester.tapAt(const Offset(20, 20));
+    Navigator.of(tester.element(find.text('更多操作')), rootNavigator: true).pop();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('更多'));
+    await tester.ensureVisible(find.byTooltip('更多'));
+    await tester.ensureVisible(find.byTooltip('更多'));
+    await tester.tap(find.byTooltip('更多'), warnIfMissed: false);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('本位币'));
     await tester.tap(find.text('本位币'));
@@ -154,7 +159,8 @@ void main() {
     expect(find.text('数据同步'), findsNothing);
     expect(find.text('本位币'), findsNothing);
 
-    await tester.tap(find.byTooltip('更多'));
+    await tester.ensureVisible(find.byTooltip('更多'));
+    await tester.tap(find.byTooltip('更多'), warnIfMissed: false);
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -169,7 +175,9 @@ void main() {
     expect(find.text('当前本位币'), findsNothing);
   });
 
-  testWidgets('switching pages does not drop the search action', (tester) async {
+  testWidgets('switching pages does not drop the search action', (
+    tester,
+  ) async {
     final router = _buildRouter();
     addTearDown(router.dispose);
 
@@ -196,7 +204,9 @@ void main() {
     expect(find.byTooltip('更多'), findsOneWidget);
   });
 
-  testWidgets('overflow create section stays stable across pages', (tester) async {
+  testWidgets('overflow create section stays stable across pages', (
+    tester,
+  ) async {
     final router = _buildRouter();
     addTearDown(router.dispose);
 
@@ -211,7 +221,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('更多'));
+    await tester.tap(find.byTooltip('更多'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('账户'), findsOneWidget);
     expect(find.text('事件'), findsOneWidget);
@@ -223,7 +233,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('更多'));
+    await tester.tap(find.byTooltip('更多'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('账户'), findsOneWidget);
     expect(find.text('事件'), findsOneWidget);

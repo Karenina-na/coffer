@@ -1,9 +1,9 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/providers/asset/composite_asset_price_provider.dart';
-import 'package:gwp/domain/providers/asset_price_provider.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/providers/asset/composite_asset_price_provider.dart';
+import 'package:coffer/domain/providers/asset_price_provider.dart';
 
 void main() {
   AssetQuote q(String s, String p) => AssetQuote(

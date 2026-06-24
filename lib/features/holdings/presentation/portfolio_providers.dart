@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/ui/gwp_bar_rank.dart';
-import '../../../core/ui/gwp_radar_chart.dart';
+import '../../../core/ui/coffer_bar_rank.dart';
+import '../../../core/ui/coffer_radar_chart.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
@@ -13,7 +13,7 @@ import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
 import '../../channel/presentation/channel_providers.dart';
 import '../../../data/providers/dict_providers.dart';
-import '../../dashboard/presentation/dashboard_providers.dart';
+import '../../wealth/presentation/wealth_summary_provider.dart';
 
 class _PortfolioInputs {
   const _PortfolioInputs({
@@ -35,9 +35,10 @@ class _PortfolioInputs {
   final List<AccountChannel> accountChannels;
 }
 
-final _portfolioInputsProvider =
-    FutureProvider.autoDispose<_PortfolioInputs>((ref) async {
-  final summary = await ref.watch(dashboardSummaryProvider.future);
+final _portfolioInputsProvider = FutureProvider.autoDispose<_PortfolioInputs>((
+  ref,
+) async {
+  final summary = await ref.watch(wealthSummaryProvider.future);
   final accounts = await ref.watch(accountListProvider.future);
   final assets = await ref.watch(assetListProvider.future);
   final valued = await ref.watch(valuedAssetsProvider.future);
@@ -53,18 +54,20 @@ final _portfolioInputsProvider =
 
 final _portfolioInputsWithChannelsProvider =
     FutureProvider.autoDispose<_PortfolioInputs>((ref) async {
-  final base = await ref.watch(_portfolioInputsProvider.future);
-  final accountChannels = await ref.watch(accountChannelListProvider.future);
-  return _PortfolioInputs(
-    accounts: base.accounts,
-    assets: base.assets,
-    valuedAssets: base.valuedAssets,
-    baseCurrency: base.baseCurrency,
-    netWorth: base.netWorth,
-    missingRateCount: base.missingRateCount,
-    accountChannels: accountChannels,
-  );
-});
+      final base = await ref.watch(_portfolioInputsProvider.future);
+      final accountChannels = await ref.watch(
+        accountChannelListProvider.future,
+      );
+      return _PortfolioInputs(
+        accounts: base.accounts,
+        assets: base.assets,
+        valuedAssets: base.valuedAssets,
+        baseCurrency: base.baseCurrency,
+        netWorth: base.netWorth,
+        missingRateCount: base.missingRateCount,
+        accountChannels: accountChannels,
+      );
+    });
 
 // ──────────────────────────────────────────────────────────────
 // Portfolio snapshot (hero card)
@@ -98,44 +101,45 @@ class PortfolioSnapshot {
   final bool hasGainData;
 }
 
-final portfolioSnapshotProvider =
-    FutureProvider.autoDispose<PortfolioSnapshot>((ref) async {
-  final inputs = await ref.watch(_portfolioInputsProvider.future);
-  final accounts = inputs.accounts;
-  final assets = inputs.assets;
-  final valued = inputs.valuedAssets;
+final portfolioSnapshotProvider = FutureProvider.autoDispose<PortfolioSnapshot>(
+  (ref) async {
+    final inputs = await ref.watch(_portfolioInputsProvider.future);
+    final accounts = inputs.accounts;
+    final assets = inputs.assets;
+    final valued = inputs.valuedAssets;
 
-  final currencies = assets.map((a) => a.currency).toSet();
-  final regions = accounts.map((a) => a.sovereigntyRegion).toSet();
-  final institutions = accounts.map((a) => a.institutionName).toSet();
+    final currencies = assets.map((a) => a.currency).toSet();
+    final regions = accounts.map((a) => a.sovereigntyRegion).toSet();
+    final institutions = accounts.map((a) => a.institutionName).toSet();
 
-  var totalGain = Decimal.zero;
-  var totalCostBasis = Decimal.zero;
-  var gainable = false;
-  for (final a in valued) {
-    if (a.valuedAmount != null &&
-        a.valuedCostBasis != null &&
-        a.valuedCostBasis! > Decimal.zero) {
-      totalGain += a.valuedAmount! - a.valuedCostBasis!;
-      totalCostBasis += a.valuedCostBasis!;
-      gainable = true;
+    var totalGain = Decimal.zero;
+    var totalCostBasis = Decimal.zero;
+    var gainable = false;
+    for (final a in valued) {
+      if (a.valuedAmount != null &&
+          a.valuedCostBasis != null &&
+          a.valuedCostBasis! > Decimal.zero) {
+        totalGain += a.valuedAmount! - a.valuedCostBasis!;
+        totalCostBasis += a.valuedCostBasis!;
+        gainable = true;
+      }
     }
-  }
 
-  return PortfolioSnapshot(
-    netWorth: inputs.netWorth,
-    baseCurrency: inputs.baseCurrency,
-    accountCount: accounts.length,
-    assetCount: assets.length,
-    currencyCount: currencies.length,
-    regionCount: regions.length,
-    institutionCount: institutions.length,
-    missingRateCount: inputs.missingRateCount,
-    totalGain: totalGain,
-    totalCostBasis: totalCostBasis,
-    hasGainData: gainable,
-  );
-});
+    return PortfolioSnapshot(
+      netWorth: inputs.netWorth,
+      baseCurrency: inputs.baseCurrency,
+      accountCount: accounts.length,
+      assetCount: assets.length,
+      currencyCount: currencies.length,
+      regionCount: regions.length,
+      institutionCount: institutions.length,
+      missingRateCount: inputs.missingRateCount,
+      totalGain: totalGain,
+      totalCostBasis: totalCostBasis,
+      hasGainData: gainable,
+    );
+  },
+);
 
 // ──────────────────────────────────────────────────────────────
 // Allocation slices (shared model for donut triptych & explorer)
@@ -171,73 +175,78 @@ List<AllocationSlice> _groupAndSlice(
   final entries = totals.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
   return entries
-      .map((e) => AllocationSlice(
-            label: e.key,
-            value: e.value,
-            percentage: e.value / grand * 100,
-          ))
+      .map(
+        (e) => AllocationSlice(
+          label: e.key,
+          value: e.value,
+          percentage: e.value / grand * 100,
+        ),
+      )
       .toList();
 }
 
 /// Asset allocation grouped by asset type.
 final portfolioByTypeProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final inputs = await ref.watch(_portfolioInputsProvider.future);
-  return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.assetType.name);
-});
+      final inputs = await ref.watch(_portfolioInputsProvider.future);
+      return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.assetType.name);
+    });
 
 /// Asset allocation grouped by currency.
 final portfolioByCurrencyProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final inputs = await ref.watch(_portfolioInputsProvider.future);
-  return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.currency);
-});
+      final inputs = await ref.watch(_portfolioInputsProvider.future);
+      return _groupAndSlice(inputs.valuedAssets, (a) => a.asset.currency);
+    });
 
 /// Asset allocation grouped by sovereignty region parent aggregate (e.g. EU).
 final portfolioByRegionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final inputs = await ref.watch(_portfolioInputsProvider.future);
-  final accounts = inputs.accounts;
-  final assets = inputs.valuedAssets;
-  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
-  final map = {for (final a in accounts) a.id: a.sovereigntyRegion};
-  return _groupAndSlice(
-    assets,
-    (a) => regionAggregateLabel(
-      regionIndex,
-      map[a.asset.accountId] ?? '未知',
-    ),
-  );
-});
+      final inputs = await ref.watch(_portfolioInputsProvider.future);
+      final accounts = inputs.accounts;
+      final assets = inputs.valuedAssets;
+      final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+      final map = {for (final a in accounts) a.id: a.sovereigntyRegion};
+      return _groupAndSlice(
+        assets,
+        (a) =>
+            regionAggregateLabel(regionIndex, map[a.asset.accountId] ?? '未知'),
+      );
+    });
 
 /// Asset allocation grouped by institution (via account join).
 final portfolioByInstitutionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final inputs = await ref.watch(_portfolioInputsProvider.future);
-  final accounts = inputs.accounts;
-  final assets = inputs.valuedAssets;
-  final map = {for (final a in accounts) a.id: a.institutionName};
-  return _groupAndSlice(assets, (a) => map[a.asset.accountId] ?? '未知');
-});
+      final inputs = await ref.watch(_portfolioInputsProvider.future);
+      final accounts = inputs.accounts;
+      final assets = inputs.valuedAssets;
+      final map = {for (final a in accounts) a.id: a.institutionName};
+      return _groupAndSlice(assets, (a) => map[a.asset.accountId] ?? '未知');
+    });
 
 // ──────────────────────────────────────────────────────────────
 // Asset Top 10 ranking
 // ──────────────────────────────────────────────────────────────
 
 /// Top 10 assets by market value, for the horizontal bar chart.
-final assetTop10Provider =
-    FutureProvider.autoDispose<List<RankItem>>((ref) async {
+final assetTop10Provider = FutureProvider.autoDispose<List<RankItem>>((
+  ref,
+) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final assets = inputs.valuedAssets;
 
-  final ranked = assets
-      .where((a) => a.valuedAmount != null && a.valuedAmount! > Decimal.zero)
-      .toList()
-    ..sort((a, b) => b.valuedAmount!.compareTo(a.valuedAmount!));
+  final ranked =
+      assets
+          .where(
+            (a) => a.valuedAmount != null && a.valuedAmount! > Decimal.zero,
+          )
+          .toList()
+        ..sort((a, b) => b.valuedAmount!.compareTo(a.valuedAmount!));
 
   return ranked.take(10).map((a) {
     return RankItem(
-      label: a.asset.assetCode ??
+      label:
+          a.asset.assetCode ??
           (a.asset.id.length >= 6 ? a.asset.id.substring(0, 6) : a.asset.id),
       value: a.valuedAmount!.toDouble(),
     );
@@ -264,41 +273,45 @@ class StackedSegment {
 /// Per-account asset composition for the stacked bar chart.
 final accountStackedProvider =
     FutureProvider.autoDispose<List<StackedBarGroup>>((ref) async {
-  final inputs = await ref.watch(_portfolioInputsProvider.future);
-  final accounts = inputs.accounts;
-  final assets = inputs.valuedAssets;
+      final inputs = await ref.watch(_portfolioInputsProvider.future);
+      final accounts = inputs.accounts;
+      final assets = inputs.valuedAssets;
 
-  final accountAssets = <String, Map<String, double>>{};
-  for (final asset in assets) {
-    final mv = asset.valuedAmount;
-    if (mv == null || mv <= Decimal.zero) continue;
-    final typeName = asset.asset.assetType.name;
-    accountAssets
-        .putIfAbsent(asset.asset.accountId, () => {})
-        .update(typeName, (v) => v + mv.toDouble(), ifAbsent: () => mv.toDouble());
-  }
+      final accountAssets = <String, Map<String, double>>{};
+      for (final asset in assets) {
+        final mv = asset.valuedAmount;
+        if (mv == null || mv <= Decimal.zero) continue;
+        final typeName = asset.asset.assetType.name;
+        accountAssets
+            .putIfAbsent(asset.asset.accountId, () => {})
+            .update(
+              typeName,
+              (v) => v + mv.toDouble(),
+              ifAbsent: () => mv.toDouble(),
+            );
+      }
 
-  final accountMap = {for (final a in accounts) a.id: a};
-  final groups = <StackedBarGroup>[];
-  for (final entry in accountAssets.entries) {
-    final account = accountMap[entry.key];
-    if (account == null) continue;
-    final segs = entry.value.entries
-        .map((e) => StackedSegment(key: e.key, value: e.value))
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    groups.add(StackedBarGroup(
-      label: account.institutionName,
-      segments: segs,
-    ));
-  }
-  groups.sort((a, b) {
-    final aTotal = a.segments.fold<double>(0, (s, seg) => s + seg.value);
-    final bTotal = b.segments.fold<double>(0, (s, seg) => s + seg.value);
-    return bTotal.compareTo(aTotal);
-  });
-  return groups;
-});
+      final accountMap = {for (final a in accounts) a.id: a};
+      final groups = <StackedBarGroup>[];
+      for (final entry in accountAssets.entries) {
+        final account = accountMap[entry.key];
+        if (account == null) continue;
+        final segs =
+            entry.value.entries
+                .map((e) => StackedSegment(key: e.key, value: e.value))
+                .toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
+        groups.add(
+          StackedBarGroup(label: account.institutionName, segments: segs),
+        );
+      }
+      groups.sort((a, b) {
+        final aTotal = a.segments.fold<double>(0, (s, seg) => s + seg.value);
+        final bTotal = b.segments.fold<double>(0, (s, seg) => s + seg.value);
+        return bTotal.compareTo(aTotal);
+      });
+      return groups;
+    });
 
 // ──────────────────────────────────────────────────────────────
 // Currency exposure heat matrix
@@ -318,8 +331,9 @@ class HeatMatrixData {
 }
 
 /// Currency exposure matrix: accounts × currencies.
-final currencyExposureProvider =
-    FutureProvider.autoDispose<HeatMatrixData>((ref) async {
+final currencyExposureProvider = FutureProvider.autoDispose<HeatMatrixData>((
+  ref,
+) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts;
   final assets = inputs.valuedAssets;
@@ -373,8 +387,9 @@ class ConcentrationMetrics {
   final double largestShare; // 0–1
 }
 
-final concentrationProvider =
-    FutureProvider.autoDispose<ConcentrationMetrics>((ref) async {
+final concentrationProvider = FutureProvider.autoDispose<ConcentrationMetrics>((
+  ref,
+) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final accounts = inputs.accounts.cast<dynamic>();
   final assets = inputs.valuedAssets;
@@ -389,7 +404,8 @@ final concentrationProvider =
     final mv = a.valuedAmount?.toDouble() ?? 0;
     if (mv <= 0) continue;
     grandTotal += mv;
-    final label = a.asset.assetCode ??
+    final label =
+        a.asset.assetCode ??
         (a.asset.id.length >= 6 ? a.asset.id.substring(0, 6) : a.asset.id);
     assetVals[label] = (assetVals[label] ?? 0) + mv;
     currencyVals[a.asset.currency] = (currencyVals[a.asset.currency] ?? 0) + mv;
@@ -419,8 +435,9 @@ final concentrationProvider =
     top3Share: grandTotal > 0 ? top3Total / grandTotal : 0,
     top3Labels: top3.map((e) => e.key).toList(),
     largestLabel: sorted.isNotEmpty ? sorted.first.key : '-',
-    largestShare:
-        grandTotal > 0 && sorted.isNotEmpty ? sorted.first.value / grandTotal : 0,
+    largestShare: grandTotal > 0 && sorted.isNotEmpty
+        ? sorted.first.value / grandTotal
+        : 0,
   );
 });
 
@@ -449,8 +466,9 @@ class LiquidityProfile {
 const _highLiquidityTypes = {AssetType.fxAsset, AssetType.cd};
 const _medLiquidityTypes = {AssetType.stock, AssetType.fund, AssetType.crypto};
 
-final liquidityProvider =
-    FutureProvider.autoDispose<LiquidityProfile>((ref) async {
+final liquidityProvider = FutureProvider.autoDispose<LiquidityProfile>((
+  ref,
+) async {
   final inputs = await ref.watch(_portfolioInputsProvider.future);
   final assets = inputs.valuedAssets;
   double high = 0, med = 0, low = 0;
@@ -478,8 +496,9 @@ final liquidityProvider =
 // ──────────────────────────────────────────────────────────────
 
 /// Computes the 5-dimension financial health radar scores.
-final healthScoreProvider =
-    FutureProvider.autoDispose<List<RadarDimension>>((ref) async {
+final healthScoreProvider = FutureProvider.autoDispose<List<RadarDimension>>((
+  ref,
+) async {
   final inputs = await ref.watch(_portfolioInputsWithChannelsProvider.future);
   final accounts = inputs.accounts;
   final assets = inputs.valuedAssets;
@@ -493,7 +512,8 @@ final healthScoreProvider =
   for (final a in assets) {
     final mv = a.valuedAmount?.toDouble() ?? 0;
     if (mv > 0) {
-      currencyTotals[a.asset.currency] = (currencyTotals[a.asset.currency] ?? 0) + mv;
+      currencyTotals[a.asset.currency] =
+          (currencyTotals[a.asset.currency] ?? 0) + mv;
       grandTotal += mv;
     }
   }
@@ -514,7 +534,9 @@ final healthScoreProvider =
       cashLike += a.valuedAmount?.toDouble() ?? 0;
     }
   }
-  final liquidity = grandTotal > 0 ? (cashLike / grandTotal).clamp(0.0, 1.0) : 0.0;
+  final liquidity = grandTotal > 0
+      ? (cashLike / grandTotal).clamp(0.0, 1.0)
+      : 0.0;
 
   // 3. Channel Coverage = accounts with channel bindings / total accounts
   final linkedAccounts = acLinks.map((l) => l.accountId).toSet();
@@ -530,7 +552,9 @@ final healthScoreProvider =
       freshCount++;
     }
   }
-  final freshness = inputs.assets.isNotEmpty ? freshCount / inputs.assets.length : 0.0;
+  final freshness = inputs.assets.isNotEmpty
+      ? freshCount / inputs.assets.length
+      : 0.0;
 
   // 5. Concentration Risk = 1 - (largest single asset / total)
   double maxSingle = 0;

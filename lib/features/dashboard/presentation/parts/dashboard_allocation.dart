@@ -64,11 +64,11 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
     final theme = Theme.of(context);
     final dataAsync = ref.watch(_provider);
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.sm),
+      padding: const EdgeInsets.all(CofferSpacing.sm),
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         children: [
@@ -76,13 +76,13 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
             current: _mode,
             onPick: (m) => setState(() => _mode = m),
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           dataAsync.when(
             loading: () => const SizedBox(
               height: 140,
               child: Center(
                 child: CircularProgressIndicator(
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                   strokeWidth: 2,
                 ),
               ),
@@ -90,7 +90,7 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
             error: (_, _) => const SizedBox(
               height: 140,
               child: Center(
-                child: Icon(Icons.error_outline, color: GwpColors.textMuted),
+                child: Icon(Icons.error_outline, color: CofferColors.textMuted),
               ),
             ),
             data: (slices) {
@@ -100,7 +100,7 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
                   child: Center(
                     child: Text('暂无数据',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: GwpColors.textMuted,
+                          color: CofferColors.textMuted,
                         )),
                   ),
                 );
@@ -117,14 +117,14 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GwpDonutChart(
+                  CofferDonutChart(
                     segments: segments,
                     centerLabel: '${slices.length}',
                     centerSubLabel: _centerUnit,
                     size: 110,
                     strokeWidth: 18,
                   ),
-                  const SizedBox(width: GwpSpacing.base),
+                  const SizedBox(width: CofferSpacing.base),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,7 +142,7 @@ class _AllocationSectionState extends ConsumerState<_AllocationSection> {
                               '等 ${slices.length} 项',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 10,
-                                color: GwpColors.textMuted,
+                                color: CofferColors.textMuted,
                               ),
                             ),
                           ),
@@ -175,7 +175,7 @@ class _AllocTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: GwpColors.surface3,
+        color: CofferColors.surface3,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -189,7 +189,7 @@ class _AllocTabs extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
                     color: current == m
-                        ? GwpColors.actionPrimary
+                        ? CofferColors.actionPrimary
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -201,7 +201,7 @@ class _AllocTabs extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: current == m
                           ? Colors.white
-                          : GwpColors.textSecondary,
+                          : CofferColors.textSecondary,
                     ),
                   ),
                 ),
@@ -239,7 +239,7 @@ class _AllocLegendRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 12,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -249,8 +249,8 @@ class _AllocLegendRow extends StatelessWidget {
             '${(pct * 100).toStringAsFixed(2)}%',
             style: const TextStyle(
               fontSize: 11,
-              fontFamily: GwpTypo.monoFont,
-              color: GwpColors.textPrimary,
+              fontFamily: CofferTypo.monoFont,
+              color: CofferColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),

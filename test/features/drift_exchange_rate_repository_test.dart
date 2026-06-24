@@ -1,12 +1,12 @@
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/data/repositories/drift_exchange_rate_repository.dart';
-import 'package:gwp/domain/entities/exchange_rate.dart';
-import 'package:gwp/domain/entities/exchange_rate_enums.dart';
-import 'package:gwp/domain/utils/pair_key.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/data/repositories/drift_exchange_rate_repository.dart';
+import 'package:coffer/domain/entities/exchange_rate.dart';
+import 'package:coffer/domain/entities/exchange_rate_enums.dart';
+import 'package:coffer/domain/utils/pair_key.dart';
 
 void main() {
   late AppDatabase db;

@@ -1,13 +1,13 @@
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/data/repositories/drift_exchange_rate_repository.dart';
-import 'package:gwp/domain/providers/fx_rate_provider.dart';
-import 'package:gwp/domain/usecases/refresh_pair_rate.dart';
-import 'package:gwp/domain/valuation/asset_valuator.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/data/repositories/drift_exchange_rate_repository.dart';
+import 'package:coffer/domain/providers/fx_rate_provider.dart';
+import 'package:coffer/domain/usecases/refresh_pair_rate.dart';
+import 'package:coffer/domain/valuation/asset_valuator.dart';
 
 void main() {
   late AppDatabase db;

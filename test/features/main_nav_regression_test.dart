@@ -4,36 +4,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:gwp/app/router.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/core/ui/gwp_bar_rank.dart';
-import 'package:gwp/core/ui/gwp_node_map.dart';
-import 'package:gwp/core/ui/gwp_radar_chart.dart';
-import 'package:gwp/core/ui/horizontal_gesture_guard.dart';
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/account.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/card.dart';
-import 'package:gwp/domain/entities/card_enums.dart';
-import 'package:gwp/domain/entities/domain_event.dart';
-import 'package:gwp/domain/entities/event_enums.dart';
-import 'package:gwp/domain/entities/exchange_rate.dart';
-import 'package:gwp/domain/entities/exchange_rate_enums.dart';
-import 'package:gwp/domain/entities/watched_pair.dart';
-import 'package:gwp/domain/events/event_bus.dart';
-import 'package:gwp/domain/repositories/asset_repository.dart';
-import 'package:gwp/domain/repositories/event_repository.dart';
-import 'package:gwp/domain/repositories/exchange_rate_repository.dart';
-import 'package:gwp/domain/usecases/check_asset_sync_outdated.dart';
-import 'package:gwp/features/account/presentation/account_providers.dart';
-import 'package:gwp/features/asset/presentation/asset_providers.dart';
-import 'package:gwp/features/card/presentation/card_providers.dart';
-import 'package:gwp/features/dashboard/presentation/dashboard_providers.dart';
-import 'package:gwp/features/event/presentation/event_providers.dart';
-import 'package:gwp/features/exchange_rate/presentation/exchange_rate_providers.dart';
-import 'package:gwp/features/holdings/presentation/portfolio_providers.dart' as holdings;
+import 'package:coffer/app/router.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/core/ui/coffer_bar_rank.dart';
+import 'package:coffer/core/ui/coffer_node_map.dart';
+import 'package:coffer/core/ui/coffer_radar_chart.dart';
+import 'package:coffer/core/ui/horizontal_gesture_guard.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/account.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/card.dart';
+import 'package:coffer/domain/entities/card_enums.dart';
+import 'package:coffer/domain/entities/domain_event.dart';
+import 'package:coffer/domain/entities/event_enums.dart';
+import 'package:coffer/domain/entities/exchange_rate.dart';
+import 'package:coffer/domain/entities/exchange_rate_enums.dart';
+import 'package:coffer/domain/entities/watched_pair.dart';
+import 'package:coffer/domain/events/event_bus.dart';
+import 'package:coffer/domain/repositories/asset_repository.dart';
+import 'package:coffer/domain/repositories/event_repository.dart';
+import 'package:coffer/domain/repositories/exchange_rate_repository.dart';
+import 'package:coffer/domain/usecases/check_asset_sync_outdated.dart';
+import 'package:coffer/features/account/presentation/account_providers.dart';
+import 'package:coffer/features/asset/presentation/asset_providers.dart';
+import 'package:coffer/features/card/presentation/card_providers.dart';
+import 'package:coffer/features/dashboard/presentation/dashboard_providers.dart';
+import 'package:coffer/features/event/presentation/event_providers.dart';
+import 'package:coffer/features/exchange_rate/presentation/exchange_rate_providers.dart';
+import 'package:coffer/features/holdings/presentation/portfolio_providers.dart'
+    as holdings;
+import 'package:coffer/features/wealth/presentation/wealth_summary_provider.dart';
+import 'package:coffer/features/wealth/presentation/wealth_trend_provider.dart';
 
 Future<void> _settleNav(WidgetTester tester) async {
   await tester.pump();
@@ -135,12 +138,16 @@ Future<GoRouter> _pumpShell(
         ),
         cardListProvider.overrideWith(
           (ref) => Stream.value(
-            seedDashboardBills ? <BankCard>[_dashboardTestCard] : const <BankCard>[],
+            seedDashboardBills
+                ? <BankCard>[_dashboardTestCard]
+                : const <BankCard>[],
           ),
         ),
         watchedPairListProvider.overrideWith(
           (ref) => Stream.value(
-            seedRatesList ? <WatchedPair>[_ratesTestPair] : const <WatchedPair>[],
+            seedRatesList
+                ? <WatchedPair>[_ratesTestPair]
+                : const <WatchedPair>[],
           ),
         ),
         exchangeRateRepositoryProvider.overrideWith(
@@ -156,7 +163,9 @@ Future<GoRouter> _pumpShell(
         ),
         recentEventsProvider.overrideWith(
           (ref) => Stream.value(
-            seedEventCalendar ? <DomainEvent>[_eventCalendarSeed] : const <DomainEvent>[],
+            seedEventCalendar
+                ? <DomainEvent>[_eventCalendarSeed]
+                : const <DomainEvent>[],
           ),
         ),
         checkAssetSyncOutdatedUseCaseProvider.overrideWith(
@@ -168,8 +177,8 @@ Future<GoRouter> _pumpShell(
             now: DateTime.now,
           ),
         ),
-        dashboardSummaryProvider.overrideWith(
-          (ref) async => DashboardSummary(
+        wealthSummaryProvider.overrideWith(
+          (ref) async => WealthSummary(
             baseCurrency: 'CNY',
             total: Decimal.zero,
             accountCount: 0,
@@ -214,14 +223,14 @@ Future<GoRouter> _pumpShell(
           (ref) async => const <AllocationSlice>[],
         ),
         nodeMapDataProvider.overrideWith(
-          (ref) async => const NodeMapData(nodes: <MapNode>[], edges: <MapEdge>[]),
+          (ref) async =>
+              const NodeMapData(nodes: <MapNode>[], edges: <MapEdge>[]),
         ),
         nodeMapAggregateDataProvider.overrideWith(
-          (ref) async => const NodeMapData(nodes: <MapNode>[], edges: <MapEdge>[]),
+          (ref) async =>
+              const NodeMapData(nodes: <MapNode>[], edges: <MapEdge>[]),
         ),
-        netWorthTrendProvider.overrideWith(
-          (ref) async => const <TrendPoint>[],
-        ),
+        netWorthTrendProvider.overrideWith((ref) async => const <TrendPoint>[]),
         trendDeltaProvider.overrideWith(
           (ref) async => const TrendDelta(
             points: <TrendPoint>[],
@@ -391,7 +400,8 @@ class _FakeEventRepository implements EventRepository {
       Stream.value(const <DomainEvent>[]);
 
   @override
-  Future<Result<DomainEvent, AppError>> record(DomainEvent event) async => Ok(event);
+  Future<Result<DomainEvent, AppError>> record(DomainEvent event) async =>
+      Ok(event);
 
   @override
   Future<Result<void, AppError>> updateHandling({
@@ -482,18 +492,26 @@ void main() {
     expect(find.text('USD/CNY'), findsWidgets);
     expect(router.routeInformationProvider.value.uri.toString(), '/rates');
 
-    await tester.drag(find.byType(ReorderableListView).first, const Offset(18, -280));
+    await tester.drag(
+      find.byType(ReorderableListView).first,
+      const Offset(18, -280),
+    );
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/rates');
     expect(find.text('USD/CNY'), findsWidgets);
   });
 
-  testWidgets('holdings deep link restores selected secondary tab', (tester) async {
+  testWidgets('holdings deep link restores selected secondary tab', (
+    tester,
+  ) async {
     final router = await _pumpShell(tester, initialLocation: '/holdings?tab=3');
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
     expect(find.text('分析'), findsWidgets);
     expect(find.text('资产 Top 10'), findsOneWidget);
   });
@@ -513,11 +531,16 @@ void main() {
     expect(find.text('失败'), findsNothing);
   });
 
-  testWidgets('analysis tab drag keeps nested tab state when returning', (tester) async {
+  testWidgets('analysis tab drag keeps nested tab state when returning', (
+    tester,
+  ) async {
     final router = await _pumpShell(tester, initialLocation: '/holdings?tab=3');
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
     expect(find.text('资产 Top 10'), findsOneWidget);
 
     await tester.drag(find.text('资产 Top 10'), const Offset(-220, 0));
@@ -526,7 +549,10 @@ void main() {
 
     await tester.dragFrom(const Offset(180, 700), const Offset(220, 0));
     await _settleNav(tester);
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
     expect(find.text('资产 Top 10'), findsOneWidget);
   });
 
@@ -551,7 +577,9 @@ void main() {
     expect(router.routeInformationProvider.value.uri.toString(), '/events');
   });
 
-  testWidgets('rapid analysis drags do not freeze nested handoff', (tester) async {
+  testWidgets('rapid analysis drags do not freeze nested handoff', (
+    tester,
+  ) async {
     final router = await _pumpShell(tester, initialLocation: '/holdings?tab=3');
     await _settleNav(tester);
 
@@ -561,14 +589,19 @@ void main() {
 
     await tester.dragFrom(const Offset(180, 700), const Offset(220, 0));
     await _settleNav(tester);
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
 
     await tester.drag(find.text('资产 Top 10'), const Offset(-220, 0));
     await _settleNav(tester);
     expect(router.routeInformationProvider.value.uri.toString(), '/events');
   });
 
-  testWidgets('dashboard bills strip drag does not switch top-level pages', (tester) async {
+  testWidgets('dashboard bills strip drag does not switch top-level pages', (
+    tester,
+  ) async {
     final router = await _pumpShell(
       tester,
       initialLocation: '/dashboard',
@@ -581,14 +614,19 @@ void main() {
     expect(find.text('即将到来的账单'), findsOneWidget);
     expect(router.routeInformationProvider.value.uri.toString(), '/dashboard');
 
-    await tester.drag(find.byType(HorizontalGestureGuard).first, const Offset(-220, 0));
+    await tester.drag(
+      find.byType(HorizontalGestureGuard).first,
+      const Offset(-220, 0),
+    );
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/dashboard');
     expect(find.text('即将到来的账单'), findsOneWidget);
   });
 
-  testWidgets('event calendar swipe changes month without switching page', (tester) async {
+  testWidgets('event calendar swipe changes month without switching page', (
+    tester,
+  ) async {
     final router = await _pumpShell(
       tester,
       initialLocation: '/events',
@@ -604,14 +642,20 @@ void main() {
     final before = tester.widget<Text>(find.textContaining('年').first).data!;
 
     // Month grid's guard is now the first (only) one that claims horizontal drag.
-    await tester.drag(find.byType(HorizontalGestureGuard).first, const Offset(-220, 0));
+    await tester.drag(
+      find.byType(HorizontalGestureGuard).first,
+      const Offset(-220, 0),
+    );
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/events');
     final after = tester.widget<Text>(find.textContaining('年').first).data!;
     expect(after, isNot(before));
 
-    await tester.drag(find.byType(HorizontalGestureGuard).first, const Offset(220, 0));
+    await tester.drag(
+      find.byType(HorizontalGestureGuard).first,
+      const Offset(220, 0),
+    );
     await _settleNav(tester);
 
     expect(router.routeInformationProvider.value.uri.toString(), '/events');
@@ -619,27 +663,44 @@ void main() {
     expect(afterBack, isNot(after));
   });
 
-  testWidgets('holdings analysis horizontal area drag does not switch page', (tester) async {
+  testWidgets('holdings analysis horizontal area drag does not switch page', (
+    tester,
+  ) async {
     final router = await _pumpShell(tester, initialLocation: '/holdings?tab=3');
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
     expect(find.text('配置分布'), findsOneWidget);
 
     await tester.drag(find.byType(TabBarView).last, const Offset(0, -500));
     await _settleNav(tester);
     expect(find.text('币种敞口热力图'), findsOneWidget);
 
-    await tester.drag(find.byType(HorizontalGestureGuard).last, const Offset(-220, 0));
+    await tester.drag(
+      find.byType(HorizontalGestureGuard).last,
+      const Offset(-220, 0),
+    );
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
     expect(find.text('币种敞口热力图'), findsOneWidget);
 
-    await tester.drag(find.byType(HorizontalGestureGuard).last, const Offset(220, 0));
+    await tester.drag(
+      find.byType(HorizontalGestureGuard).last,
+      const Offset(220, 0),
+    );
     await _settleNav(tester);
 
-    expect(router.routeInformationProvider.value.uri.toString(), '/holdings?tab=3');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/holdings?tab=3',
+    );
     expect(find.text('币种敞口热力图'), findsOneWidget);
   });
 }

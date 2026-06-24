@@ -18,8 +18,8 @@ class CreateAccountUseCase {
     this._repo, {
     required String Function() idGenerator,
     required DateTime Function() now,
-  })  : _idGen = idGenerator,
-        _now = now;
+  }) : _idGen = idGenerator,
+       _now = now;
 
   final AccountRepository _repo;
   final String Function() _idGen;
@@ -34,7 +34,7 @@ class CreateAccountUseCase {
     AccountTypeInfo? typeInfo,
     Map<String, dynamic>? extInfo,
     AccountStatus status = AccountStatus.active,
-    double fxSpreadPercent = 0,
+    Decimal? fxSpreadPercent,
     Decimal? fxFixedFee,
   }) {
     if (sovereigntyRegion.trim().isEmpty) {
@@ -58,7 +58,7 @@ class CreateAccountUseCase {
       status: status,
       openedAt: openedAt,
       extInfo: mergedExt,
-      fxSpreadPercent: fxSpreadPercent,
+      fxSpreadPercent: fxSpreadPercent ?? Decimal.zero,
       fxFixedFee: fxFixedFee,
       createdAt: now,
       updatedAt: now,

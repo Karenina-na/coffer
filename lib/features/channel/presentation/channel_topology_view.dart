@@ -109,19 +109,19 @@ class _ChannelTopologySectionState
           borderRadius: BorderRadius.circular(8),
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: GwpSpacing.sm),
+            padding: const EdgeInsets.symmetric(vertical: CofferSpacing.sm),
             child: Row(
               children: [
                 Icon(
                   _expanded ? Icons.expand_less : Icons.hub_outlined,
                   size: 18,
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Text(
                   '通道拓扑',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
@@ -129,14 +129,14 @@ class _ChannelTopologySectionState
                 Icon(
                   _expanded ? Icons.expand_less : Icons.expand_more,
                   size: 18,
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                 ),
               ],
             ),
           ),
         ),
         if (_expanded) ...[
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           _TopologyGraph(
             sourceId: widget.sourceId,
             targetId: widget.targetId,
@@ -160,9 +160,9 @@ class _TopologyGraph extends ConsumerWidget {
       loading: () => Container(
         height: 120,
         decoration: BoxDecoration(
-          color: GwpColors.surface1,
+          color: CofferColors.surface1,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: GwpColors.border, width: 0.5),
+          border: Border.all(color: CofferColors.border, width: 0.5),
         ),
         child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
@@ -170,12 +170,12 @@ class _TopologyGraph extends ConsumerWidget {
         height: 120,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: GwpColors.surface1,
+          color: CofferColors.surface1,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: GwpColors.border, width: 0.5),
+          border: Border.all(color: CofferColors.border, width: 0.5),
         ),
         child: Text('加载失败: ${errorToMessage(e)}',
-            style: const TextStyle(color: GwpColors.negative, fontSize: 12)),
+            style: const TextStyle(color: CofferColors.negative, fontSize: 12)),
       ),
       data: (groups) {
         if (groups.isEmpty) {
@@ -183,13 +183,13 @@ class _TopologyGraph extends ConsumerWidget {
             height: 120,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: GwpColors.surface1,
+              color: CofferColors.surface1,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: GwpColors.border, width: 0.5),
+              border: Border.all(color: CofferColors.border, width: 0.5),
             ),
             child: const Text(
               '至少需要两个账户绑定同一通道',
-              style: TextStyle(color: GwpColors.textMuted, fontSize: 12),
+              style: TextStyle(color: CofferColors.textMuted, fontSize: 12),
             ),
           );
         }
@@ -244,7 +244,7 @@ class _TopologyCardList extends StatelessWidget {
               sourceId: sourceId,
               targetId: targetId,
             ),
-            if (i < groups.length - 1) const SizedBox(height: GwpSpacing.sm),
+            if (i < groups.length - 1) const SizedBox(height: CofferSpacing.sm),
           ],
         ],
       ),
@@ -281,7 +281,7 @@ class _ChannelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ch = group.channel;
     final protoColor =
-        _protocolColors[ch.transferProtocol] ?? GwpColors.actionPrimary;
+        _protocolColors[ch.transferProtocol] ?? CofferColors.actionPrimary;
     final protoName = protocolDisplayName(protocolIndex, ch.transferProtocol);
     final hasBoth = sourceId != null &&
         targetId != null &&
@@ -290,12 +290,12 @@ class _ChannelCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: hasBoth
-              ? GwpColors.positive.withValues(alpha: 0.4)
-              : GwpColors.border,
+              ? CofferColors.positive.withValues(alpha: 0.4)
+              : CofferColors.border,
           width: hasBoth ? 1 : 0.5,
         ),
       ),
@@ -306,12 +306,12 @@ class _ChannelCard extends StatelessWidget {
           // Channel header
           Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: GwpSpacing.md,
-              vertical: GwpSpacing.sm,
+              horizontal: CofferSpacing.md,
+              vertical: CofferSpacing.sm,
             ),
             decoration: BoxDecoration(
               color: hasBoth
-                  ? GwpColors.positiveBg
+                  ? CofferColors.positiveBg
                   : protoColor.withValues(alpha: 0.06),
             ),
             child: Row(
@@ -320,18 +320,18 @@ class _ChannelCard extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: hasBoth ? GwpColors.positive : protoColor,
+                    color: hasBoth ? CofferColors.positive : protoColor,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Expanded(
                   child: Text(
                     ch.name,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: hasBoth ? GwpColors.positive : GwpColors.textPrimary,
+                      color: hasBoth ? CofferColors.positive : CofferColors.textPrimary,
                     ),
                   ),
                 ),
@@ -358,7 +358,7 @@ class _ChannelCard extends StatelessWidget {
           ),
           // Account chips row
           Padding(
-            padding: const EdgeInsets.all(GwpSpacing.sm),
+            padding: const EdgeInsets.all(CofferSpacing.sm),
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -402,15 +402,15 @@ class _AccountChip extends StatelessWidget {
         : '';
     final borderColor = highlighted
         ? role == '源'
-            ? GwpColors.negative
-            : GwpColors.positive
-        : GwpColors.border;
+            ? CofferColors.negative
+            : CofferColors.positive
+        : CofferColors.border;
     final bgColor = highlighted
-        ? (role == '源' ? GwpColors.negativeBg : GwpColors.positiveBg)
-        : GwpColors.surface2;
+        ? (role == '源' ? CofferColors.negativeBg : CofferColors.positiveBg)
+        : CofferColors.surface2;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.sm, vertical: GwpSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: CofferSpacing.sm, vertical: CofferSpacing.xs),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
@@ -426,8 +426,8 @@ class _AccountChip extends StatelessWidget {
                 fontSize: 8,
                 fontWeight: FontWeight.w700,
                 color: highlighted
-                    ? (role == '源' ? GwpColors.negative : GwpColors.positive)
-                    : GwpColors.textMuted,
+                    ? (role == '源' ? CofferColors.negative : CofferColors.positive)
+                    : CofferColors.textMuted,
               ),
             ),
             const SizedBox(width: 4),
@@ -437,7 +437,7 @@ class _AccountChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
-              color: highlighted ? borderColor : GwpColors.textPrimary,
+              color: highlighted ? borderColor : CofferColors.textPrimary,
             ),
           ),
           if (region.isNotEmpty) ...[
@@ -446,7 +446,7 @@ class _AccountChip extends StatelessWidget {
               region,
               style: TextStyle(
                 fontSize: 8,
-                color: highlighted ? borderColor : GwpColors.textMuted,
+                color: highlighted ? borderColor : CofferColors.textMuted,
               ),
             ),
           ],

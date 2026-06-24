@@ -20,24 +20,24 @@ class _TrendBody extends ConsumerWidget {
     final deltaAsync = ref.watch(trendDeltaProvider);
     final range = ref.watch(trendRangeProvider);
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.sm),
+      padding: const EdgeInsets.all(CofferSpacing.sm),
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(
-                left: 4, right: 0, top: 2, bottom: GwpSpacing.xs),
+                left: 4, right: 0, top: 2, bottom: CofferSpacing.xs),
             child: Row(
               children: [
                 Text(
                   '净资产趋势',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                   ),
@@ -56,7 +56,7 @@ class _TrendBody extends ConsumerWidget {
               height: 140,
               child: Center(
                 child: CircularProgressIndicator(
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                   strokeWidth: 2,
                 ),
               ),
@@ -64,7 +64,7 @@ class _TrendBody extends ConsumerWidget {
             error: (_, _) => const SizedBox(
               height: 140,
               child: Center(
-                child: Icon(Icons.error_outline, color: GwpColors.textMuted),
+                child: Icon(Icons.error_outline, color: CofferColors.textMuted),
               ),
             ),
             data: (delta) {
@@ -75,7 +75,7 @@ class _TrendBody extends ConsumerWidget {
                     child: Text(
                       '数据不足，估值事件记录后将显示趋势',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                   ),
@@ -85,7 +85,7 @@ class _TrendBody extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _TrendHeaderStats(delta: delta),
-                  const SizedBox(height: GwpSpacing.xs),
+                  const SizedBox(height: CofferSpacing.xs),
                   SizedBox(height: 120, child: _TrendChart(delta: delta)),
                 ],
               );
@@ -118,7 +118,7 @@ class _TrendHeaderStats extends StatelessWidget {
             label: '区间变动',
             value:
                 '${delta.isUp ? '+' : ''}${(delta.deltaPct * 100).toStringAsFixed(2)}%',
-            color: delta.isUp ? GwpColors.positive : GwpColors.negative,
+            color: delta.isUp ? CofferColors.positive : CofferColors.negative,
           ),
         ),
       ],
@@ -145,16 +145,16 @@ class _KvStat extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
         ),
         const SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
-            fontFamily: GwpTypo.monoFont,
+            fontFamily: CofferTypo.monoFont,
             fontSize: emphasize ? 15 : 13,
             fontWeight: FontWeight.w700,
-            color: color ?? GwpColors.textPrimary,
+            color: color ?? CofferColors.textPrimary,
           ),
         ),
       ],
@@ -170,7 +170,7 @@ class _TrendChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final points = delta.points;
     final isUp = delta.isUp;
-    final lineColor = isUp ? GwpColors.positive : GwpColors.negative;
+    final lineColor = isUp ? CofferColors.positive : CofferColors.negative;
     final spots = <FlSpot>[
       for (var i = 0; i < points.length; i++)
         FlSpot(i.toDouble(), points[i].value),
@@ -189,7 +189,7 @@ class _TrendChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: range > 0 ? range / 3 : 1,
           getDrawingHorizontalLine: (_) => FlLine(
-            color: GwpColors.border.withValues(alpha: 0.3),
+            color: CofferColors.border.withValues(alpha: 0.3),
             strokeWidth: 0.5,
           ),
         ),
@@ -207,9 +207,9 @@ class _TrendChart extends StatelessWidget {
                   child: Text(
                     _compactNum(value),
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 9,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                 );
@@ -228,7 +228,7 @@ class _TrendChart extends StatelessWidget {
           horizontalLines: [
             HorizontalLine(
               y: refValue,
-              color: GwpColors.textMuted.withValues(alpha: 0.3),
+              color: CofferColors.textMuted.withValues(alpha: 0.3),
               strokeWidth: 1,
               dashArray: [4, 3],
             ),
@@ -236,7 +236,7 @@ class _TrendChart extends StatelessWidget {
         ),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => GwpColors.surface3,
+            getTooltipColor: (_) => CofferColors.surface3,
             getTooltipItems: (spots) => spots.map((s) {
               final idx = s.x.toInt().clamp(0, points.length - 1);
               final p = points[idx];
@@ -245,7 +245,7 @@ class _TrendChart extends StatelessWidget {
               return LineTooltipItem(
                 '$dateStr\n${_compactNum(p.value)}',
                 TextStyle(
-                  fontFamily: GwpTypo.monoFont,
+                  fontFamily: CofferTypo.monoFont,
                   fontSize: 11,
                   color: lineColor,
                   fontWeight: FontWeight.w600,
@@ -335,7 +335,7 @@ class _RangeChips extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: selected == days
-                      ? GwpColors.actionPrimary.withValues(alpha: 0.2)
+                      ? CofferColors.actionPrimary.withValues(alpha: 0.2)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -346,8 +346,8 @@ class _RangeChips extends StatelessWidget {
                     fontWeight:
                         selected == days ? FontWeight.w700 : FontWeight.w500,
                     color: selected == days
-                        ? GwpColors.actionPrimary
-                        : GwpColors.textMuted,
+                        ? CofferColors.actionPrimary
+                        : CofferColors.textMuted,
                   ),
                 ),
               ),

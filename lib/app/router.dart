@@ -9,8 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../core/errors.dart';
 import '../core/result.dart';
 import '../core/ui/design_tokens.dart';
-import '../core/ui/global_search_delegate.dart';
-import '../core/ui/gwp_empty_state.dart';
+import '../features/search/presentation/global_search_delegate.dart';
+import '../core/ui/coffer_empty_state.dart';
 import '../core/ui/horizontal_gesture_guard.dart';
 import '../core/ui/horizontal_swipe_action.dart';
 import '../core/ui/top_search_action.dart';
@@ -40,159 +40,136 @@ import '../features/settings/presentation/settings_page.dart';
 import '../features/topology/presentation/topology_page.dart';
 
 GoRouter buildRouter({String initialLocation = '/dashboard'}) => GoRouter(
-      initialLocation: initialLocation,
-      // 非法深链接或路由匹配失败时给空态页，避免白屏/崩溃。
-      errorBuilder: (context, state) => Scaffold(
-        appBar: AppBar(),
-        body: GwpEmptyState.error(
-          message: '页面不存在: ${state.matchedLocation}',
-          onRetry: () => context.go('/dashboard'),
-        ),
-      ),
+  initialLocation: initialLocation,
+  // 非法深链接或路由匹配失败时给空态页，避免白屏/崩溃。
+  errorBuilder: (context, state) => Scaffold(
+    appBar: AppBar(),
+    body: CofferEmptyState.error(
+      message: '页面不存在: ${state.matchedLocation}',
+      onRetry: () => context.go('/dashboard'),
+    ),
+  ),
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) =>
+          _HomeShell(location: state.uri.toString(), child: child),
       routes: [
-        ShellRoute(
-          builder: (context, state, child) => _HomeShell(
-            location: state.uri.toString(),
-            child: child,
-          ),
-          routes: [
-            GoRoute(
-              path: '/dashboard',
-              builder: (_, _) => const DashboardPage(),
-            ),
-            GoRoute(
-              path: '/holdings',
-              builder: (_, state) {
-                final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '');
-                return HoldingsPage(initialTab: tab);
-              },
-            ),
-            GoRoute(
-              path: '/cards',
-              builder: (_, _) => const CardListPage(),
-            ),
-            GoRoute(
-              path: '/rates',
-              builder: (_, _) => const ExchangeRateListPage(),
-            ),
-            GoRoute(
-              path: '/events',
-              builder: (_, _) => const EventListPage(),
-            ),
-          ],
-        ),
+        GoRoute(path: '/dashboard', builder: (_, _) => const DashboardPage()),
         GoRoute(
-          path: '/accounts/new',
-          builder: (_, _) => const AccountCreatePage(),
-        ),
-        GoRoute(
-          path: '/accounts/:id/edit',
-          builder: (_, state) => _EntityEditLoader(
-            load: (ref) => ref
-                .read(accountRepositoryProvider)
-                .findById(state.pathParameters['id']!),
-            pageBuilder: (entity) => AccountCreatePage(initial: entity),
-          ),
-        ),
-        GoRoute(
-          path: '/accounts/:id',
-          builder: (_, state) =>
-              AccountDetailPage(accountId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: '/assets/new',
-          builder: (_, state) => AssetCreatePage(
-            initialAccountId: state.uri.queryParameters['accountId'],
-            lockAccountSelection: state.uri.queryParameters['lockAccount'] == '1',
-          ),
-        ),
-        GoRoute(
-          path: '/assets/:id/edit',
-          builder: (_, state) => _EntityEditLoader(
-            load: (ref) => ref
-                .read(assetRepositoryProvider)
-                .findById(state.pathParameters['id']!),
-            pageBuilder: (entity) => AssetCreatePage(initial: entity),
-          ),
-        ),
-        GoRoute(
-          path: '/assets/:id',
-          builder: (_, state) =>
-              AssetDetailPage(assetId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: '/cards/new',
-          builder: (_, state) => CardCreatePage(
-            initialAccountId: state.uri.queryParameters['accountId'],
-            lockAccountSelection: state.uri.queryParameters['lockAccount'] == '1',
-          ),
-        ),
-        GoRoute(
-          path: '/cards/:id/edit',
-          builder: (_, state) => _EntityEditLoader(
-            load: (ref) => ref
-                .read(cardRepositoryProvider)
-                .findById(state.pathParameters['id']!),
-            pageBuilder: (entity) => CardCreatePage(initial: entity),
-          ),
-        ),
-        GoRoute(
-          path: '/channels',
-          builder: (_, _) => const ChannelListPage(),
-        ),
-        GoRoute(
-          path: '/channels/new',
-          builder: (_, _) => const ChannelCreatePage(),
-        ),
-        GoRoute(
-          path: '/channels/:id/edit',
-          builder: (_, state) => _EntityEditLoader(
-            load: (ref) => ref
-                .read(channelRepositoryProvider)
-                .findById(state.pathParameters['id']!),
-            pageBuilder: (entity) => ChannelCreatePage(initial: entity),
-          ),
-        ),
-        GoRoute(
-          path: '/channels/:id',
-          builder: (_, state) =>
-              ChannelDetailPage(channelId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: '/topology',
-          builder: (_, _) => const TopologyPage(),
-        ),
-        GoRoute(
-          path: '/backup',
-          builder: (_, _) => const BackupPage(),
-        ),
-        GoRoute(
-          path: '/backup/export',
-          builder: (_, _) => const BackupExportPage(),
-        ),
-        GoRoute(
-          path: '/backup/restore',
-          builder: (_, _) => const BackupRestorePage(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (_, _) => const SettingsPage(),
-        ),
-        GoRoute(
-          path: '/events/new',
+          path: '/holdings',
           builder: (_, state) {
-            final d = state.uri.queryParameters['day'];
-            DateTime? initial;
-            if (d != null) {
-              try {
-                initial = DateTime.parse(d);
-              } catch (_) {}
-            }
-            return EventCreatePage(initialDay: initial);
+            final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '');
+            return HoldingsPage(initialTab: tab);
           },
         ),
+        GoRoute(path: '/cards', builder: (_, _) => const CardListPage()),
+        GoRoute(
+          path: '/rates',
+          builder: (_, _) => const ExchangeRateListPage(),
+        ),
+        GoRoute(path: '/events', builder: (_, _) => const EventListPage()),
       ],
-    );
+    ),
+    GoRoute(
+      path: '/accounts/new',
+      builder: (_, _) => const AccountCreatePage(),
+    ),
+    GoRoute(
+      path: '/accounts/:id/edit',
+      builder: (_, state) => _EntityEditLoader(
+        load: (ref) => ref
+            .read(accountRepositoryProvider)
+            .findById(state.pathParameters['id']!),
+        pageBuilder: (entity) => AccountCreatePage(initial: entity),
+      ),
+    ),
+    GoRoute(
+      path: '/accounts/:id',
+      builder: (_, state) =>
+          AccountDetailPage(accountId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/assets/new',
+      builder: (_, state) => AssetCreatePage(
+        initialAccountId: state.uri.queryParameters['accountId'],
+        lockAccountSelection: state.uri.queryParameters['lockAccount'] == '1',
+      ),
+    ),
+    GoRoute(
+      path: '/assets/:id/edit',
+      builder: (_, state) => _EntityEditLoader(
+        load: (ref) => ref
+            .read(assetRepositoryProvider)
+            .findById(state.pathParameters['id']!),
+        pageBuilder: (entity) => AssetCreatePage(initial: entity),
+      ),
+    ),
+    GoRoute(
+      path: '/assets/:id',
+      builder: (_, state) =>
+          AssetDetailPage(assetId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/cards/new',
+      builder: (_, state) => CardCreatePage(
+        initialAccountId: state.uri.queryParameters['accountId'],
+        lockAccountSelection: state.uri.queryParameters['lockAccount'] == '1',
+      ),
+    ),
+    GoRoute(
+      path: '/cards/:id/edit',
+      builder: (_, state) => _EntityEditLoader(
+        load: (ref) => ref
+            .read(cardRepositoryProvider)
+            .findById(state.pathParameters['id']!),
+        pageBuilder: (entity) => CardCreatePage(initial: entity),
+      ),
+    ),
+    GoRoute(path: '/channels', builder: (_, _) => const ChannelListPage()),
+    GoRoute(
+      path: '/channels/new',
+      builder: (_, _) => const ChannelCreatePage(),
+    ),
+    GoRoute(
+      path: '/channels/:id/edit',
+      builder: (_, state) => _EntityEditLoader(
+        load: (ref) => ref
+            .read(channelRepositoryProvider)
+            .findById(state.pathParameters['id']!),
+        pageBuilder: (entity) => ChannelCreatePage(initial: entity),
+      ),
+    ),
+    GoRoute(
+      path: '/channels/:id',
+      builder: (_, state) =>
+          ChannelDetailPage(channelId: state.pathParameters['id']!),
+    ),
+    GoRoute(path: '/topology', builder: (_, _) => const TopologyPage()),
+    GoRoute(path: '/backup', builder: (_, _) => const BackupPage()),
+    GoRoute(
+      path: '/backup/export',
+      builder: (_, _) => const BackupExportPage(),
+    ),
+    GoRoute(
+      path: '/backup/restore',
+      builder: (_, _) => const BackupRestorePage(),
+    ),
+    GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+    GoRoute(
+      path: '/events/new',
+      builder: (_, state) {
+        final d = state.uri.queryParameters['day'];
+        DateTime? initial;
+        if (d != null) {
+          try {
+            initial = DateTime.parse(d);
+          } catch (_) {}
+        }
+        return EventCreatePage(initialDay: initial);
+      },
+    ),
+  ],
+);
 
 class _HomeShell extends ConsumerStatefulWidget {
   const _HomeShell({required this.location, required this.child});
@@ -226,7 +203,9 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
   @override
   void initState() {
     super.initState();
-    _mainNavigationSwipeAction = ref.read(mainNavigationSwipeActionProvider.notifier);
+    _mainNavigationSwipeAction = ref.read(
+      mainNavigationSwipeActionProvider.notifier,
+    );
     _rememberLocation(widget.location);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -280,10 +259,7 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
     _pendingTabIndex = null;
   }
 
-  bool _requestMainTabChange(
-    BuildContext context,
-    int targetIndex,
-  ) {
+  bool _requestMainTabChange(BuildContext context, int targetIndex) {
     if (targetIndex < 0 || targetIndex >= _tabs.length) return false;
     if (targetIndex == _index) return false;
     if (_pendingTabIndex == targetIndex) return false;
@@ -331,43 +307,43 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
       child: Focus(
         autofocus: true,
         onKeyEvent: (_, event) => KeyEventResult.ignored,
-          child: Scaffold(
-            body: Stack(
-              fit: StackFit.expand,
-              children: [
-                (horizontalSwipeHandler == null)
-                    ? _ShellBodySwipeSurface(
-                        onHorizontalSwipe: (direction) =>
-                            _dispatchHorizontalSwipe(
-                              context,
-                              horizontalSwipeHandler,
-                              direction,
-                            ),
-                        child: widget.child,
-                      )
-                    : widget.child,
-                if (showNav)
-                  Positioned(
-                    left: _navHorizontalMargin,
-                    right: _navHorizontalMargin,
-                    bottom: bottomSafeArea + _navBottomGap,
-                    child: _FloatingNavBar(
-                      selectedIndex: _index,
-                      tabs: _tabs,
-                      unreadBadge: unread > 0,
-                      onHorizontalSwipe: (direction) async {
-                        await _dispatchHorizontalSwipe(
-                          context,
-                          horizontalSwipeHandler,
-                          direction,
-                        );
-                      },
-                      onTap: (i) => _requestMainTabChange(context, i),
-                    ),
+        child: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              (horizontalSwipeHandler == null)
+                  ? _ShellBodySwipeSurface(
+                      onHorizontalSwipe: (direction) =>
+                          _dispatchHorizontalSwipe(
+                            context,
+                            horizontalSwipeHandler,
+                            direction,
+                          ),
+                      child: widget.child,
+                    )
+                  : widget.child,
+              if (showNav)
+                Positioned(
+                  left: _navHorizontalMargin,
+                  right: _navHorizontalMargin,
+                  bottom: bottomSafeArea + _navBottomGap,
+                  child: _FloatingNavBar(
+                    selectedIndex: _index,
+                    tabs: _tabs,
+                    unreadBadge: unread > 0,
+                    onHorizontalSwipe: (direction) async {
+                      await _dispatchHorizontalSwipe(
+                        context,
+                        horizontalSwipeHandler,
+                        direction,
+                      );
+                    },
+                    onTap: (i) => _requestMainTabChange(context, i),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
+        ),
       ),
     );
   }
@@ -410,7 +386,7 @@ class _ShellBodySwipeSurface extends StatefulWidget {
   });
 
   final Future<void> Function(HorizontalSwipeDirection direction)
-      onHorizontalSwipe;
+  onHorizontalSwipe;
   final Widget child;
 
   @override
@@ -427,7 +403,9 @@ class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
     _swipeTriggered = false;
   }
 
-  bool _handleGuardNotification(HorizontalGestureGuardNotification notification) {
+  bool _handleGuardNotification(
+    HorizontalGestureGuardNotification notification,
+  ) {
     if (notification.active) {
       _guardedPointers.add(notification.pointer);
     } else {
@@ -438,7 +416,9 @@ class _ShellBodySwipeSurfaceState extends State<_ShellBodySwipeSurface> {
 
   void _handleHorizontalDragUpdate(DragUpdateDetails details) {
     final startX = _dragStartX;
-    if (startX == null || _swipeTriggered || _guardedPointers.isNotEmpty) return;
+    if (startX == null || _swipeTriggered || _guardedPointers.isNotEmpty) {
+      return;
+    }
     final delta = details.globalPosition.dx - startX;
     if (delta.abs() < _HomeShellState._shellSwipeDistanceThreshold) return;
     _swipeTriggered = true;
@@ -492,7 +472,7 @@ class _FloatingNavBar extends StatefulWidget {
   final bool unreadBadge;
   final ValueChanged<int> onTap;
   final Future<void> Function(HorizontalSwipeDirection direction)
-      onHorizontalSwipe;
+  onHorizontalSwipe;
 
   static const _pillRadius = 24.0;
   static const _barHeight = 64.0;
@@ -554,8 +534,10 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
               height: _FloatingNavBar._barHeight,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: GwpColors.surface1.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(_FloatingNavBar._pillRadius),
+                color: CofferColors.surface1.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(
+                  _FloatingNavBar._pillRadius,
+                ),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.14),
                   width: 0.6,
@@ -608,7 +590,10 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOutCubic,
                       alignment: Alignment(
-                        _alignmentXForIndex(widget.selectedIndex, widget.tabs.length),
+                        _alignmentXForIndex(
+                          widget.selectedIndex,
+                          widget.tabs.length,
+                        ),
                         0,
                       ),
                       child: FractionallySizedBox(
@@ -618,7 +603,9 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              color: GwpColors.actionPrimary.withValues(alpha: 0.13),
+                              color: CofferColors.actionPrimary.withValues(
+                                alpha: 0.13,
+                              ),
                               borderRadius: BorderRadius.circular(
                                 _FloatingNavBar._itemRadius,
                               ),
@@ -643,7 +630,8 @@ class _FloatingNavBarState extends State<_FloatingNavBar> {
                               icon: widget.tabs[i].$2,
                               label: widget.tabs[i].$3,
                               isSelected: i == widget.selectedIndex,
-                              showBadge: widget.unreadBadge &&
+                              showBadge:
+                                  widget.unreadBadge &&
                                   widget.tabs[i].$1 == '/events',
                               onTap: () => widget.onTap(i),
                             ),
@@ -689,7 +677,9 @@ class _NavItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-            color: isSelected ? GwpColors.textSecondary : GwpColors.textMuted,
+            color: isSelected
+                ? CofferColors.textSecondary
+                : CofferColors.textMuted,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -698,21 +688,21 @@ class _NavItem extends StatelessWidget {
               const SizedBox(height: 8),
               showBadge
                   ? Badge(
-                      backgroundColor: GwpColors.negative,
+                      backgroundColor: CofferColors.negative,
                       child: Icon(
                         icon,
                         size: 22,
                         color: isSelected
-                            ? GwpColors.actionPrimaryHover
-                            : GwpColors.textMuted,
+                            ? CofferColors.actionPrimaryHover
+                            : CofferColors.textMuted,
                       ),
                     )
                   : Icon(
                       icon,
                       size: 22,
                       color: isSelected
-                          ? GwpColors.actionPrimaryHover
-                          : GwpColors.textMuted,
+                          ? CofferColors.actionPrimaryHover
+                          : CofferColors.textMuted,
                     ),
               const SizedBox(height: 4),
               Text(label, overflow: TextOverflow.ellipsis),
@@ -730,10 +720,7 @@ class _NavItem extends StatelessWidget {
 /// - [load] 在 provider 上下文里取得实体（使用 `ref.read` 避免重复触发）。
 /// - [pageBuilder] 拿到实体后构造编辑页（通常是 *CreatePage(initial: entity)）。
 class _EntityEditLoader<T> extends ConsumerStatefulWidget {
-  const _EntityEditLoader({
-    required this.load,
-    required this.pageBuilder,
-  });
+  const _EntityEditLoader({required this.load, required this.pageBuilder});
 
   final Future<Result<T, AppError>> Function(WidgetRef ref) load;
   final Widget Function(T entity) pageBuilder;
@@ -761,7 +748,7 @@ class _EntityEditLoaderState<T> extends ConsumerState<_EntityEditLoader<T>> {
           ok: widget.pageBuilder,
           err: (e) => Scaffold(
             appBar: AppBar(),
-            body: GwpEmptyState.error(
+            body: CofferEmptyState.error(
               message: '加载失败: ${e.message}',
               onRetry: () => setState(() {
                 _future = widget.load(ref);

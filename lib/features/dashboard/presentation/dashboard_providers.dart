@@ -3,37 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/money/money.dart';
 import '../../../core/ui/region_meta.dart';
-import '../../../core/valuation/valuation_currency_provider.dart';
-import '../../../core/ui/gwp_node_map.dart';
-import '../../../domain/entities/asset_price_history_point.dart';
+import '../../../core/ui/coffer_node_map.dart';
 import '../../../domain/entities/card.dart';
 import '../../../domain/entities/card_enums.dart';
 import '../../../domain/entities/domain_event.dart';
 import '../../../domain/entities/event_enums.dart';
-import '../../../domain/events/event_bus.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
 import '../../card/presentation/card_providers.dart';
 import '../../channel/presentation/channel_providers.dart';
 import '../../event/presentation/event_providers.dart';
 import '../../../data/providers/dict_providers.dart';
-import '../../../data/providers/exchange_rate_providers.dart';
-
-class DashboardSummary {
-  const DashboardSummary({
-    required this.baseCurrency,
-    required this.total,
-    required this.accountCount,
-    required this.assetCount,
-    required this.missingAssetIds,
-  });
-
-  final String baseCurrency;
-  final Decimal total;
-  final int accountCount;
-  final int assetCount;
-  final List<String> missingAssetIds;
-}
 
 double computeCreditUsedRatio(Decimal limitSum, Decimal availSum) {
   if (limitSum <= Decimal.zero) return 0;
@@ -43,21 +23,6 @@ double computeCreditUsedRatio(Decimal limitSum, Decimal availSum) {
   if (usedDouble.isNaN || usedDouble.isInfinite) return 0;
   return usedDouble.clamp(0, 1);
 }
-
-final dashboardSummaryProvider =
-    FutureProvider.autoDispose<DashboardSummary>((ref) async {
-  final base = ref.watch(valuationCurrencyProvider);
-  final accounts = await ref.watch(accountListProvider.future);
-  final valued = await ref.watch(valuedAssetsProvider.future);
-
-  return DashboardSummary(
-      baseCurrency: base,
-      total: valued.total,
-      accountCount: accounts.length,
-      assetCount: valued.assets.length,
-      missingAssetIds: valued.missingAssetIds,
-  );
-});
 
 class DashboardKpi {
   const DashboardKpi({
@@ -81,8 +46,9 @@ class DashboardKpi {
   final Set<String> regionSet;
 }
 
-final dashboardKpiProvider =
-    FutureProvider.autoDispose<DashboardKpi>((ref) async {
+final dashboardKpiProvider = FutureProvider.autoDispose<DashboardKpi>((
+  ref,
+) async {
   final valued = await ref.watch(valuedAssetsProvider.future);
   final accounts = await ref.watch(accountListProvider.future);
   final cards = await ref.watch(cardListProvider.future);
@@ -116,10 +82,7 @@ final dashboardKpiProvider =
 });
 
 class AllocationSlice {
-  const AllocationSlice({
-    required this.key,
-    required this.value,
-  });
+  const AllocationSlice({required this.key, required this.value});
 
   final String key;
   final double value;
@@ -128,10 +91,8 @@ class AllocationSlice {
 List<AllocationSlice> _toSortedSlices(Map<String, Decimal> bucket) {
   return bucket.entries
       .map(
-        (entry) => AllocationSlice(
-          key: entry.key,
-          value: entry.value.toDouble(),
-        ),
+        (entry) =>
+            AllocationSlice(key: entry.key, value: entry.value.toDouble()),
       )
       .toList(growable: false)
     ..sort((a, b) => b.value.compareTo(a.value));
@@ -139,69 +100,66 @@ List<AllocationSlice> _toSortedSlices(Map<String, Decimal> bucket) {
 
 final allocationByCurrencyProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final valued = await ref.watch(valuedAssetsProvider.future);
-  final bucket = <String, Decimal>{};
-  for (final item in valued.assets) {
-    final marketValue = item.valuedAmount;
-    if (marketValue == null) continue;
-    bucket[item.asset.currency] =
-        (bucket[item.asset.currency] ?? Decimal.zero) + marketValue;
-  }
-  return _toSortedSlices(bucket);
-});
+      final valued = await ref.watch(valuedAssetsProvider.future);
+      final bucket = <String, Decimal>{};
+      for (final item in valued.assets) {
+        final marketValue = item.valuedAmount;
+        if (marketValue == null) continue;
+        bucket[item.asset.currency] =
+            (bucket[item.asset.currency] ?? Decimal.zero) + marketValue;
+      }
+      return _toSortedSlices(bucket);
+    });
 
 final allocationByTypeProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final valued = await ref.watch(valuedAssetsProvider.future);
-  final bucket = <String, Decimal>{};
-  for (final item in valued.assets) {
-    final marketValue = item.valuedAmount;
-    if (marketValue == null) continue;
-    final key = item.asset.assetType.name;
-    bucket[key] = (bucket[key] ?? Decimal.zero) + marketValue;
-  }
-  return _toSortedSlices(bucket);
-});
+      final valued = await ref.watch(valuedAssetsProvider.future);
+      final bucket = <String, Decimal>{};
+      for (final item in valued.assets) {
+        final marketValue = item.valuedAmount;
+        if (marketValue == null) continue;
+        final key = item.asset.assetType.name;
+        bucket[key] = (bucket[key] ?? Decimal.zero) + marketValue;
+      }
+      return _toSortedSlices(bucket);
+    });
 
 final allocationByRegionProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final valued = await ref.watch(valuedAssetsProvider.future);
-  final accounts = await ref.watch(accountListProvider.future);
-  final accountById = {for (final account in accounts) account.id: account};
-  final bucket = <String, Decimal>{};
-  for (final item in valued.assets) {
-    final marketValue = item.valuedAmount;
-    if (marketValue == null) continue;
-    final region =
-        accountById[item.asset.accountId]?.sovereigntyRegion ?? 'UNKNOWN';
-    bucket[region] = (bucket[region] ?? Decimal.zero) + marketValue;
-  }
-  return _toSortedSlices(bucket);
-});
+      final valued = await ref.watch(valuedAssetsProvider.future);
+      final accounts = await ref.watch(accountListProvider.future);
+      final accountById = {for (final account in accounts) account.id: account};
+      final bucket = <String, Decimal>{};
+      for (final item in valued.assets) {
+        final marketValue = item.valuedAmount;
+        if (marketValue == null) continue;
+        final region =
+            accountById[item.asset.accountId]?.sovereigntyRegion ?? 'UNKNOWN';
+        bucket[region] = (bucket[region] ?? Decimal.zero) + marketValue;
+      }
+      return _toSortedSlices(bucket);
+    });
 
 final allocationByRegionAggregateProvider =
     FutureProvider.autoDispose<List<AllocationSlice>>((ref) async {
-  final valued = await ref.watch(valuedAssetsProvider.future);
-  final accounts = await ref.watch(accountListProvider.future);
-  final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
-  final accountById = {for (final account in accounts) account.id: account};
-  final bucket = <String, Decimal>{};
-  for (final item in valued.assets) {
-    final marketValue = item.valuedAmount;
-    if (marketValue == null) continue;
-    final region =
-        accountById[item.asset.accountId]?.sovereigntyRegion ?? 'UNKNOWN';
-    final aggregate = regionAggregateKey(regionIndex, region);
-    bucket[aggregate] = (bucket[aggregate] ?? Decimal.zero) + marketValue;
-  }
-  return _toSortedSlices(bucket);
-});
+      final valued = await ref.watch(valuedAssetsProvider.future);
+      final accounts = await ref.watch(accountListProvider.future);
+      final regionIndex = ref.watch(regionMetaIndexProvider).value ?? const {};
+      final accountById = {for (final account in accounts) account.id: account};
+      final bucket = <String, Decimal>{};
+      for (final item in valued.assets) {
+        final marketValue = item.valuedAmount;
+        if (marketValue == null) continue;
+        final region =
+            accountById[item.asset.accountId]?.sovereigntyRegion ?? 'UNKNOWN';
+        final aggregate = regionAggregateKey(regionIndex, region);
+        bucket[aggregate] = (bucket[aggregate] ?? Decimal.zero) + marketValue;
+      }
+      return _toSortedSlices(bucket);
+    });
 
 class NodeMapData {
-  const NodeMapData({
-    required this.nodes,
-    required this.edges,
-  });
+  const NodeMapData({required this.nodes, required this.edges});
 
   final List<MapNode> nodes;
   final List<MapEdge> edges;
@@ -222,7 +180,8 @@ Future<NodeMapData> _buildNodeMapData(
     final marketValue = item.valuedAmount;
     if (marketValue == null) continue;
     assetTotalsByAccount[item.asset.accountId] =
-        (assetTotalsByAccount[item.asset.accountId] ?? Decimal.zero) + marketValue;
+        (assetTotalsByAccount[item.asset.accountId] ?? Decimal.zero) +
+        marketValue;
   }
 
   final regionTotals = <String, Decimal>{};
@@ -233,22 +192,24 @@ Future<NodeMapData> _buildNodeMapData(
         ? regionAggregateKey(regionIndex, account.sovereigntyRegion)
         : account.sovereigntyRegion;
     regionByAccountId[account.id] = region;
-    regionTotals[region] = (regionTotals[region] ?? Decimal.zero) +
+    regionTotals[region] =
+        (regionTotals[region] ?? Decimal.zero) +
         (assetTotalsByAccount[account.id] ?? Decimal.zero);
     regionAccountCounts[region] = (regionAccountCounts[region] ?? 0) + 1;
   }
 
-  final nodes = regionTotals.entries
-      .map(
-        (entry) => MapNode(
-          regionCode: entry.key,
-          label: entry.value.toString(),
-          value: entry.value.toDouble(),
-          accountCount: regionAccountCounts[entry.key] ?? 0,
-        ),
-      )
-      .toList(growable: false)
-    ..sort((a, b) => b.value.compareTo(a.value));
+  final nodes =
+      regionTotals.entries
+          .map(
+            (entry) => MapNode(
+              regionCode: entry.key,
+              label: entry.value.toString(),
+              value: entry.value.toDouble(),
+              accountCount: regionAccountCounts[entry.key] ?? 0,
+            ),
+          )
+          .toList(growable: false)
+        ..sort((a, b) => b.value.compareTo(a.value));
 
   final activeChannelIds = channels.map((channel) => channel.id).toSet();
   final accountsByChannel = <String, Set<String>>{};
@@ -259,12 +220,13 @@ Future<NodeMapData> _buildNodeMapData(
 
   final edgeCounts = <(String, String), int>{};
   for (final accountIds in accountsByChannel.values) {
-    final regions = accountIds
-        .map((accountId) => regionByAccountId[accountId])
-        .whereType<String>()
-        .toSet()
-        .toList(growable: false)
-      ..sort();
+    final regions =
+        accountIds
+            .map((accountId) => regionByAccountId[accountId])
+            .whereType<String>()
+            .toSet()
+            .toList(growable: false)
+          ..sort();
     for (var i = 0; i < regions.length; i++) {
       for (var j = i + 1; j < regions.length; j++) {
         final key = (regions[i], regions[j]);
@@ -290,8 +252,9 @@ final nodeMapDataProvider = FutureProvider.autoDispose<NodeMapData>((ref) {
   return _buildNodeMapData(ref, aggregateParents: false);
 });
 
-final nodeMapAggregateDataProvider =
-    FutureProvider.autoDispose<NodeMapData>((ref) {
+final nodeMapAggregateDataProvider = FutureProvider.autoDispose<NodeMapData>((
+  ref,
+) {
   return _buildNodeMapData(ref, aggregateParents: true);
 });
 
@@ -332,8 +295,9 @@ int _daysBetween(DateTime from, DateTime to) {
   return end.difference(start).inDays;
 }
 
-final upcomingBillsProvider =
-    FutureProvider.autoDispose<List<UpcomingBill>>((ref) async {
+final upcomingBillsProvider = FutureProvider.autoDispose<List<UpcomingBill>>((
+  ref,
+) async {
   final cards = await ref.watch(cardListProvider.future);
   final now = DateTime.now();
   final bills = <UpcomingBill>[];
@@ -374,322 +338,9 @@ final upcomingBillsProvider =
   return bills;
 });
 
-final recentActivitiesProvider =
-    FutureProvider.autoDispose<List<DomainEvent>>((ref) async {
-  final events = await ref.watch(recentEventsProvider.future);
-  return [...events]
-    ..sort((a, b) => b.triggerTime.compareTo(a.triggerTime));
-});
-
-class TrendPoint {
-  const TrendPoint(this.date, this.value);
-
-  final DateTime date;
-  final double value;
-}
-
-List<TrendPoint> buildTrendPoints({
-  required Iterable<AssetPriceHistoryPoint> history,
-  required Decimal currentTotal,
-}) {
-  final perDayAsset = <DateTime, Map<String, Decimal>>{};
-  final allDays = <DateTime>{};
-
-  for (final point in history) {
-    final day = DateTime(
-      point.triggerTime.year,
-      point.triggerTime.month,
-      point.triggerTime.day,
-    );
-    final marketValue = point.marketValue;
-    if (marketValue == null) continue;
-    (perDayAsset[day] ??= {})[point.assetId] = marketValue;
-    allDays.add(day);
-  }
-
-  final points = <TrendPoint>[];
-  if (allDays.isNotEmpty) {
-    final sortedDays = allDays.toList()..sort();
-    final carry = <String, Decimal>{};
-    for (final day in sortedDays) {
-      carry.addAll(perDayAsset[day]!);
-      final total = carry.values.fold<Decimal>(
-        Decimal.zero,
-        (sum, value) => sum + value,
-      );
-      points.add(TrendPoint(day, total.toDouble()));
-    }
-  }
-
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final currentValue = currentTotal.toDouble();
-  if (points.isEmpty || points.last.date != today) {
-    points.add(TrendPoint(today, currentValue));
-  } else {
-    points[points.length - 1] = TrendPoint(today, currentValue);
-  }
-  return points;
-}
-
-DateTime? _sinceForRange(int rangeDays) {
-  if (rangeDays == 0) return null;
-  final now = DateTime.now();
-  final day = DateTime(now.year, now.month, now.day);
-  return day.subtract(Duration(days: rangeDays));
-}
-
-List<TrendPoint> _pointsForRange(List<TrendPoint> all, int rangeDays) {
-  if (rangeDays == 0) return all;
-  final since = _sinceForRange(rangeDays)!;
-  return all.where((point) => !point.date.isBefore(since)).toList(growable: false);
-}
-
-final netWorthTrendProvider =
-    FutureProvider.autoDispose<List<TrendPoint>>((ref) async {
-  final range = ref.watch(trendRangeProvider);
-  final base = ref.watch(valuationCurrencyProvider);
-  final history = await ref.watch(assetPriceHistoryRepositoryProvider).listForTrend(
-        since: _sinceForRange(range),
-      );
-  final summary = await ref.watch(dashboardSummaryProvider.future);
-
-  // Collect asset → currency mapping from history.
-  final assetCurrency = <String, String>{};
-  for (final p in history) {
-    assetCurrency[p.assetId] = p.currency.toUpperCase();
-  }
-
-  // If all assets share the base currency, skip FX conversion.
-  final needsConversion =
-      assetCurrency.values.any((c) => c != base);
-  if (!needsConversion) {
-    return buildTrendPoints(history: history, currentTotal: summary.total);
-  }
-
-  // Per-day conversion: carry-forward per-asset values (converted to base).
-  final rateRepo = ref.watch(exchangeRateRepositoryProvider);
-  final sortedDays = <DateTime>[];
-  final sortedDaysSet = <DateTime>{};
-  final perDayConverted = <DateTime, Map<String, Decimal>>{};
-
-  for (final p in history) {
-    final marketValue = p.marketValue;
-    if (marketValue == null) continue;
-    final day = DateTime(p.triggerTime.year, p.triggerTime.month, p.triggerTime.day);
-    final ccy = p.currency.toUpperCase();
-    var valueInBase = marketValue;
-    if (ccy != base) {
-      final rate = await rateRepo.latestFor(
-        baseCurrency: ccy,
-        quoteCurrency: base,
-      );
-      if (rate.isOk && rate.valueOrNull!.rate > Decimal.zero) {
-        valueInBase = marketValue * rate.valueOrNull!.rate;
-      } else {
-        continue;
-      }
-    }
-    (perDayConverted[day] ??= {})[p.assetId] = valueInBase;
-    if (sortedDaysSet.add(day)) sortedDays.add(day);
-  }
-  sortedDays.sort();
-
-  final points = <TrendPoint>[];
-  if (sortedDays.isNotEmpty) {
-    final carry = <String, Decimal>{};
-    for (final day in sortedDays) {
-      carry.addAll(perDayConverted[day]!);
-      final total = carry.values.fold<Decimal>(
-        Decimal.zero,
-        (sum, value) => sum + value,
-      );
-      points.add(TrendPoint(day, total.toDouble()));
-    }
-  }
-
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final currentValue = summary.total.toDouble();
-  if (points.isEmpty || points.last.date != today) {
-    points.add(TrendPoint(today, currentValue));
-  } else {
-    points[points.length - 1] = TrendPoint(today, currentValue);
-  }
-  return points;
-});
-
-class TrendRangeNotifier extends Notifier<int> {
-  @override
-  int build() => 30;
-
-  void set(int value) => state = value;
-}
-
-final trendRangeProvider =
-    NotifierProvider<TrendRangeNotifier, int>(TrendRangeNotifier.new);
-
-class TrendDelta {
-  const TrendDelta({
-    required this.points,
-    required this.startValue,
-    required this.endValue,
-    required this.minValue,
-    required this.maxValue,
-  });
-
-  final List<TrendPoint> points;
-  final double startValue;
-  final double endValue;
-  final double minValue;
-  final double maxValue;
-
-  double get deltaAbs => endValue - startValue;
-  double get deltaPct =>
-      startValue == 0 ? 0 : (endValue - startValue) / startValue;
-  bool get isUp => deltaAbs >= 0;
-  bool get hasEnoughData => points.length >= 2;
-}
-
-TrendDelta _buildTrendDelta(List<TrendPoint> points) {
-  if (points.isEmpty) {
-    return const TrendDelta(
-      points: [],
-      startValue: 0,
-      endValue: 0,
-      minValue: 0,
-      maxValue: 0,
-    );
-  }
-
-  var minValue = points.first.value;
-  var maxValue = points.first.value;
-  for (final point in points) {
-    if (point.value < minValue) minValue = point.value;
-    if (point.value > maxValue) maxValue = point.value;
-  }
-
-  return TrendDelta(
-    points: points,
-    startValue: points.first.value,
-    endValue: points.last.value,
-    minValue: minValue,
-    maxValue: maxValue,
-  );
-}
-
-final trendDeltaProvider = FutureProvider.autoDispose<TrendDelta>((ref) async {
-  final all = await ref.watch(netWorthTrendProvider.future);
-  final range = ref.watch(trendRangeProvider);
-  return _buildTrendDelta(_pointsForRange(all, range));
-});
-
-final accountNetWorthTrendProvider =
-    FutureProvider.autoDispose.family<List<TrendPoint>, String>((
+final recentActivitiesProvider = FutureProvider.autoDispose<List<DomainEvent>>((
   ref,
-  accountId,
 ) async {
-  final assets = await ref.watch(assetsByAccountProvider(accountId).future);
-  final valuedAssets = await ref.watch(valuedAssetsByAccountProvider(accountId).future);
-  final assetIds = assets.map((asset) => asset.id).toSet();
-  if (assetIds.isEmpty) return const [];
-
-  final range = ref.watch(trendRangeProvider);
-  final base = ref.watch(valuationCurrencyProvider);
-  final history = await ref.watch(assetPriceHistoryRepositoryProvider).listForTrend(
-        since: _sinceForRange(range),
-        assetIds: assetIds,
-      );
-
-  // Collect asset → currency mapping.
-  final assetCurrency = <String, String>{};
-  for (final p in history) {
-    assetCurrency[p.assetId] = p.currency.toUpperCase();
-  }
-
-  final currentTotal = valuedAssets.total;
-
-  // If all assets share the base currency, skip FX conversion.
-  final needsConversion =
-      assetCurrency.values.any((c) => c != base);
-  if (!needsConversion) {
-    return buildTrendPoints(history: history, currentTotal: currentTotal);
-  }
-
-  // Per-day conversion with carry-forward.
-  final rateRepo = ref.watch(exchangeRateRepositoryProvider);
-  final sortedDays = <DateTime>[];
-  final sortedDaysSet = <DateTime>{};
-  final perDayConverted = <DateTime, Map<String, Decimal>>{};
-
-  for (final p in history) {
-    final marketValue = p.marketValue;
-    if (marketValue == null) continue;
-    final day = DateTime(p.triggerTime.year, p.triggerTime.month, p.triggerTime.day);
-    final ccy = p.currency.toUpperCase();
-    var valueInBase = marketValue;
-    if (ccy != base) {
-      final rate = await rateRepo.latestFor(
-        baseCurrency: ccy,
-        quoteCurrency: base,
-      );
-      if (rate.isOk && rate.valueOrNull!.rate > Decimal.zero) {
-        valueInBase = marketValue * rate.valueOrNull!.rate;
-      } else {
-        continue;
-      }
-    }
-    (perDayConverted[day] ??= {})[p.assetId] = valueInBase;
-    if (sortedDaysSet.add(day)) sortedDays.add(day);
-  }
-  sortedDays.sort();
-
-  final points = <TrendPoint>[];
-  if (sortedDays.isNotEmpty) {
-    final carry = <String, Decimal>{};
-    for (final day in sortedDays) {
-      carry.addAll(perDayConverted[day]!);
-      final total = carry.values.fold<Decimal>(
-        Decimal.zero,
-        (sum, value) => sum + value,
-      );
-      points.add(TrendPoint(day, total.toDouble()));
-    }
-  }
-
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final currentValue = currentTotal.toDouble();
-  if (points.isEmpty || points.last.date != today) {
-    points.add(TrendPoint(today, currentValue));
-  } else {
-    points[points.length - 1] = TrendPoint(today, currentValue);
-  }
-  return points;
-});
-
-final accountTrendDeltaProvider =
-    FutureProvider.autoDispose.family<TrendDelta, (String, int)>((
-  ref,
-  args,
-) async {
-  final (accountId, range) = args;
-  final all = await ref.watch(accountNetWorthTrendProvider(accountId).future);
-  return _buildTrendDelta(_pointsForRange(all, range));
-});
-
-final todaysRateAlertsProvider =
-    FutureProvider.autoDispose<List<DomainEvent>>((ref) async {
-  final now = DateTime.now();
-  final startOfDay = DateTime(now.year, now.month, now.day);
   final events = await ref.watch(recentEventsProvider.future);
-  final todays = events
-      .where(
-        (event) =>
-            event.eventType == DomainEventTypes.rateAlert &&
-            !event.triggerTime.isBefore(startOfDay),
-      )
-      .toList(growable: false)
-    ..sort((a, b) => b.triggerTime.compareTo(a.triggerTime));
-  return todays;
+  return [...events]..sort((a, b) => b.triggerTime.compareTo(a.triggerTime));
 });

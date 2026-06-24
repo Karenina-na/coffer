@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/ui/sync_window_menu_button.dart';
+import 'package:coffer/core/ui/sync_window_menu_button.dart';
 
 void main() {
   testWidgets('sync window menu button shows unified windows', (tester) async {

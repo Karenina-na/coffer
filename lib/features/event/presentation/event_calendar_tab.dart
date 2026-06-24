@@ -16,64 +16,61 @@ enum _EventFilter {
 
 extension on _EventFilter {
   String get label => switch (this) {
-        _EventFilter.all => '全部',
-        _EventFilter.account => '账户',
-        _EventFilter.asset => '资产',
-        _EventFilter.card => '卡片',
-        _EventFilter.channel => '渠道',
-        _EventFilter.rateAlert => '汇率预警',
-        _EventFilter.highPriority => '仅高优',
-        _EventFilter.pendingAck => '待确认',
-        _EventFilter.failed => '失败',
-      };
+    _EventFilter.all => '全部',
+    _EventFilter.account => '账户',
+    _EventFilter.asset => '资产',
+    _EventFilter.card => '卡片',
+    _EventFilter.channel => '渠道',
+    _EventFilter.rateAlert => '汇率预警',
+    _EventFilter.highPriority => '仅高优',
+    _EventFilter.pendingAck => '待确认',
+    _EventFilter.failed => '失败',
+  };
 
   IconData get icon => switch (this) {
-        _EventFilter.all => Icons.list_alt_outlined,
-        _EventFilter.account => Icons.account_balance_outlined,
-        _EventFilter.asset => Icons.show_chart_outlined,
-        _EventFilter.card => Icons.credit_card_outlined,
-        _EventFilter.channel => Icons.swap_horiz_outlined,
-        _EventFilter.rateAlert => Icons.notifications_active_outlined,
-        _EventFilter.highPriority => Icons.priority_high,
-        _EventFilter.pendingAck => Icons.pending_actions_outlined,
-        _EventFilter.failed => Icons.error_outline,
-      };
+    _EventFilter.all => Icons.list_alt_outlined,
+    _EventFilter.account => Icons.account_balance_outlined,
+    _EventFilter.asset => Icons.show_chart_outlined,
+    _EventFilter.card => Icons.credit_card_outlined,
+    _EventFilter.channel => Icons.swap_horiz_outlined,
+    _EventFilter.rateAlert => Icons.notifications_active_outlined,
+    _EventFilter.highPriority => Icons.priority_high,
+    _EventFilter.pendingAck => Icons.pending_actions_outlined,
+    _EventFilter.failed => Icons.error_outline,
+  };
 
   bool match(DomainEvent e) => switch (this) {
-        _EventFilter.all => true,
-        _EventFilter.account => e.relatedModel == RelatedModel.account &&
-            e.eventType != DomainEventTypes.rateAlert,
-        _EventFilter.asset => e.relatedModel == RelatedModel.asset,
-        _EventFilter.card => e.relatedModel == RelatedModel.card,
-        _EventFilter.channel => e.relatedModel == RelatedModel.channel,
-        _EventFilter.rateAlert => e.eventType == DomainEventTypes.rateAlert,
-        _EventFilter.highPriority =>
-          e.priority == EventPriority.high ||
-              e.priority == EventPriority.critical,
-        _EventFilter.pendingAck =>
-          e.ackRequirement == AckRequirement.required_ &&
-              e.ackStatus == AckStatus.pending,
-        _EventFilter.failed => e.handlingStatus == HandlingStatus.failed,
-      };
+    _EventFilter.all => true,
+    _EventFilter.account =>
+      e.relatedModel == RelatedModel.account &&
+          e.eventType != DomainEventTypes.rateAlert,
+    _EventFilter.asset => e.relatedModel == RelatedModel.asset,
+    _EventFilter.card => e.relatedModel == RelatedModel.card,
+    _EventFilter.channel => e.relatedModel == RelatedModel.channel,
+    _EventFilter.rateAlert => e.eventType == DomainEventTypes.rateAlert,
+    _EventFilter.highPriority =>
+      e.priority == EventPriority.high || e.priority == EventPriority.critical,
+    _EventFilter.pendingAck =>
+      e.ackRequirement == AckRequirement.required_ &&
+          e.ackStatus == AckStatus.pending,
+    _EventFilter.failed => e.handlingStatus == HandlingStatus.failed,
+  };
 
   /// Whether this filter shows events across all days (not just the selected day).
-  bool get isGlobal => this == _EventFilter.pendingAck || this == _EventFilter.failed;
+  bool get isGlobal =>
+      this == _EventFilter.pendingAck || this == _EventFilter.failed;
 }
 
 // ==============================  事件排序维度  ==============================
 
-enum _EventSort {
-  timeDesc,
-  priorityDesc,
-  groupedByModel,
-}
+enum _EventSort { timeDesc, priorityDesc, groupedByModel }
 
 extension on _EventSort {
   String get label => switch (this) {
-        _EventSort.timeDesc => '时间↓',
-        _EventSort.priorityDesc => '优先级↓',
-        _EventSort.groupedByModel => '按类型',
-      };
+    _EventSort.timeDesc => '时间↓',
+    _EventSort.priorityDesc => '优先级↓',
+    _EventSort.groupedByModel => '按类型',
+  };
 }
 
 // ==============================  日历 Tab  ==============================
@@ -120,10 +117,14 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
 
   void _goMonth(int delta) {
     setState(() {
-      _visibleMonth =
-          DateTime(_visibleMonth.year, _visibleMonth.month + delta, 1);
+      _visibleMonth = DateTime(
+        _visibleMonth.year,
+        _visibleMonth.month + delta,
+        1,
+      );
       final maxDay = _daysInMonth(_visibleMonth);
-      if (_selectedDay.day > maxDay || _selectedDay.month != _visibleMonth.month) {
+      if (_selectedDay.day > maxDay ||
+          _selectedDay.month != _visibleMonth.month) {
         _selectedDay = DateTime(
           _visibleMonth.year,
           _visibleMonth.month,
@@ -136,8 +137,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
 
   void _goWeek(int delta) {
     setState(() {
-      _visibleWeekStart =
-          _visibleWeekStart.add(Duration(days: delta * 7));
+      _visibleWeekStart = _visibleWeekStart.add(Duration(days: delta * 7));
     });
   }
 
@@ -152,8 +152,11 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
     setState(() {
       _calendarExpanded = !_calendarExpanded;
       if (_calendarExpanded) {
-        _visibleMonth =
-            DateTime(_visibleWeekStart.year, _visibleWeekStart.month, 1);
+        _visibleMonth = DateTime(
+          _visibleWeekStart.year,
+          _visibleWeekStart.month,
+          1,
+        );
       }
     });
   }
@@ -165,10 +168,10 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: GwpColors.surface2,
+        backgroundColor: CofferColors.surface2,
         title: const Text(
           '选择年份',
-          style: TextStyle(color: GwpColors.textPrimary),
+          style: TextStyle(color: CofferColors.textPrimary),
         ),
         content: SizedBox(
           width: 280,
@@ -183,18 +186,26 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
               final isCurrent = year == currentYear;
               return FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor:
-                      isCurrent ? GwpColors.actionPrimary : GwpColors.surface3,
+                  backgroundColor: isCurrent
+                      ? CofferColors.actionPrimary
+                      : CofferColors.surface3,
                 ),
                 onPressed: () {
                   setState(() {
                     _visibleMonth = DateTime(year, _visibleMonth.month, 1);
                     final maxDay = _daysInMonth(_visibleMonth);
                     if (_selectedDay.day > maxDay) {
-                      _selectedDay = DateTime(year, _visibleMonth.month, maxDay);
+                      _selectedDay = DateTime(
+                        year,
+                        _visibleMonth.month,
+                        maxDay,
+                      );
                     } else if (_selectedDay.month != _visibleMonth.month) {
-                      _selectedDay = DateTime(year, _visibleMonth.month,
-                          _selectedDay.day.clamp(1, maxDay));
+                      _selectedDay = DateTime(
+                        year,
+                        _visibleMonth.month,
+                        _selectedDay.day.clamp(1, maxDay),
+                      );
                     }
                     _visibleWeekStart = _weekStart(_selectedDay);
                   });
@@ -203,7 +214,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                 child: Text(
                   '$year',
                   style: TextStyle(
-                    color: isCurrent ? Colors.white : GwpColors.textPrimary,
+                    color: isCurrent ? Colors.white : CofferColors.textPrimary,
                   ),
                 ),
               );
@@ -250,9 +261,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
     if (!mounted) return;
     setState(() => _batchAcking = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(fail == 0 ? '已确认 $ok 条' : '已确认 $ok 条，失败 $fail 条'),
-      ),
+      SnackBar(content: Text(fail == 0 ? '已确认 $ok 条' : '已确认 $ok 条，失败 $fail 条')),
     );
   }
 
@@ -261,8 +270,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
     return DateTime(d.year, d.month, d.day - (wd - 1));
   }
 
-  static int _daysInMonth(DateTime d) =>
-      DateTime(d.year, d.month + 1, 0).day;
+  static int _daysInMonth(DateTime d) => DateTime(d.year, d.month + 1, 0).day;
 
   String _formatWeekRange(DateTime weekStart) {
     final end = weekStart.add(const Duration(days: 6));
@@ -278,9 +286,9 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
     final events = ref.watch(recentEventsProvider);
     return events.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+        child: CircularProgressIndicator(color: CofferColors.actionPrimary),
       ),
-      error: (e, _) => GwpEmptyState.error(
+      error: (e, _) => CofferEmptyState.error(
         message: '加载失败: ${errorToMessage(e)}',
         onRetry: () => ref.invalidate(recentEventsProvider),
       ),
@@ -313,18 +321,14 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                 return b.triggerTime.compareTo(a.triggerTime);
               });
             case _EventFilter.failed:
-              dayEvents.sort(
-                  (a, b) => b.triggerTime.compareTo(a.triggerTime));
+              dayEvents.sort((a, b) => b.triggerTime.compareTo(a.triggerTime));
             case _:
               break;
           }
-          headerLabel =
-              '${_filter.label} · ${dayEvents.length} 条';
+          headerLabel = '${_filter.label} · ${dayEvents.length} 条';
         } else {
-          final rawDayEvents =
-              byDay[_dayKey(_selectedDay)] ?? const [];
-          dayEvents =
-              rawDayEvents.where((e) => _filter.match(e)).toList();
+          final rawDayEvents = byDay[_dayKey(_selectedDay)] ?? const [];
+          dayEvents = rawDayEvents.where((e) => _filter.match(e)).toList();
           _applySort(dayEvents);
         }
 
@@ -334,16 +338,13 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
             SliverToBoxAdapter(
               child: _CalendarHeader(
                 month: _visibleMonth,
-                onPrev: () =>
-                    _calendarExpanded ? _goMonth(-1) : _goWeek(-1),
-                onNext: () =>
-                    _calendarExpanded ? _goMonth(1) : _goWeek(1),
+                onPrev: () => _calendarExpanded ? _goMonth(-1) : _goWeek(-1),
+                onNext: () => _calendarExpanded ? _goMonth(1) : _goWeek(1),
                 onToday: () {
                   final now = DateTime.now();
                   setState(() {
                     _visibleMonth = DateTime(now.year, now.month, 1);
-                    _selectedDay =
-                        DateTime(now.year, now.month, now.day);
+                    _selectedDay = DateTime(now.year, now.month, now.day);
                     _visibleWeekStart = _weekStart(_selectedDay);
                     _calendarExpanded = true;
                   });
@@ -384,8 +385,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                         eventsByDay: byDay,
                         onTapDay: (d) {
                           setState(() {
-                            _selectedDay =
-                                DateTime(d.year, d.month, d.day);
+                            _selectedDay = DateTime(d.year, d.month, d.day);
                           });
                         },
                         onSwipeWeek: (delta) => _goWeek(delta),
@@ -416,7 +416,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _filter.isGlobal
-                    ? GwpEmptyState(
+                    ? CofferEmptyState(
                         icon: _filter == _EventFilter.pendingAck
                             ? Icons.check_circle_outline
                             : Icons.verified_outlined,
@@ -428,36 +428,37 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
                             : '所有自动化流程当前状态正常',
                       )
                     : allEvents
-                            .where((e) => e.triggerTime
-                                .toLocal()
-                                .difference(_selectedDay)
-                                .inDays ==
-                                0)
-                            .isEmpty
-                        ? _EmptyDayState(day: _selectedDay)
-                        : const GwpEmptyState(
-                            icon: Icons.filter_alt_outlined,
-                            title: '当前筛选下无事件',
-                            subtitle: '清除筛选或切换到"全部"查看',
-                          ),
+                          .where(
+                            (e) =>
+                                e.triggerTime
+                                    .toLocal()
+                                    .difference(_selectedDay)
+                                    .inDays ==
+                                0,
+                          )
+                          .isEmpty
+                    ? _EmptyDayState(day: _selectedDay)
+                    : const CofferEmptyState(
+                        icon: Icons.filter_alt_outlined,
+                        title: '当前筛选下无事件',
+                        subtitle: '清除筛选或切换到"全部"查看',
+                      ),
               )
             else
               SliverPadding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: GwpSpacing.base,
+                  horizontal: CofferSpacing.base,
                 ),
                 sliver: SliverList.builder(
                   itemCount: groups.length,
                   itemBuilder: (_, i) {
                     final g = groups[i];
-                    final gap =
-                        i < groups.length - 1 ? GwpSpacing.sm : 0.0;
+                    final gap = i < groups.length - 1 ? CofferSpacing.sm : 0.0;
                     final child = g.events.length == 1
                         ? _EventCard(event: g.events.first)
                         : _BatchCard(
                             group: g,
-                            expanded:
-                                _expandedBatches.contains(g.batchId),
+                            expanded: _expandedBatches.contains(g.batchId),
                             onToggle: () => setState(() {
                               if (_expandedBatches.contains(g.batchId)) {
                                 _expandedBatches.remove(g.batchId);
@@ -475,8 +476,7 @@ class _CalendarTabState extends ConsumerState<_CalendarTab>
               ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height:
-                    FloatingNavLayout.totalFloatingHeight(context) + 24,
+                height: FloatingNavLayout.totalFloatingHeight(context) + 24,
               ),
             ),
           ],
@@ -559,8 +559,10 @@ class _CalendarHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left,
-                color: GwpColors.textSecondary),
+            icon: const Icon(
+              Icons.chevron_left,
+              color: CofferColors.textSecondary,
+            ),
             onPressed: onPrev,
             tooltip: expanded ? '上个月' : '上一周',
           ),
@@ -573,22 +575,24 @@ class _CalendarHeader extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
+                    color: CofferColors.textPrimary,
                   ),
                 ),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right,
-                color: GwpColors.textSecondary),
+            icon: const Icon(
+              Icons.chevron_right,
+              color: CofferColors.textSecondary,
+            ),
             onPressed: onNext,
             tooltip: expanded ? '下个月' : '下一周',
           ),
           IconButton(
             icon: Icon(
               expanded ? Icons.expand_less : Icons.expand_more,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
               size: 20,
             ),
             onPressed: onToggleExpanded,
@@ -596,8 +600,8 @@ class _CalendarHeader extends StatelessWidget {
           ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: GwpColors.textSecondary,
-              side: const BorderSide(color: GwpColors.border),
+              foregroundColor: CofferColors.textSecondary,
+              side: const BorderSide(color: CofferColors.border),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               minimumSize: const Size(0, 32),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -644,8 +648,7 @@ class _WeekStrip extends StatelessWidget {
       child: HorizontalGestureGuard(
         swipeThreshold: 48,
         onSwipe: (direction) {
-          onSwipeWeek(
-              direction == HorizontalSwipeDirection.forward ? 1 : -1);
+          onSwipeWeek(direction == HorizontalSwipeDirection.forward ? 1 : -1);
         },
         child: Row(
           children: List.generate(7, (i) {
@@ -654,8 +657,7 @@ class _WeekStrip extends StatelessWidget {
             final isSelected = key == selectedKey;
             final isToday = key == todayKey;
             final isWeekend = d.weekday == 6 || d.weekday == 7;
-            final dayEvents =
-                eventsByDay[key] ?? const <DomainEvent>[];
+            final dayEvents = eventsByDay[key] ?? const <DomainEvent>[];
             final modelCounts = <RelatedModel, int>{};
             for (final e in dayEvents) {
               modelCounts[e.relatedModel] =
@@ -669,12 +671,13 @@ class _WeekStrip extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: isSelected ? GwpColors.actionPrimary : null,
+                    color: isSelected ? CofferColors.actionPrimary : null,
                     borderRadius: BorderRadius.circular(10),
                     border: isToday && !isSelected
                         ? Border.all(
-                            color: GwpColors.actionPrimary
-                                .withValues(alpha: 0.5),
+                            color: CofferColors.actionPrimary.withValues(
+                              alpha: 0.5,
+                            ),
                           )
                         : null,
                   ),
@@ -689,8 +692,8 @@ class _WeekStrip extends StatelessWidget {
                           color: isSelected
                               ? Colors.white70
                               : isWeekend
-                                  ? GwpColors.textMuted.withValues(alpha: 0.5)
-                                  : GwpColors.textMuted,
+                              ? CofferColors.textMuted.withValues(alpha: 0.5)
+                              : CofferColors.textMuted,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -704,8 +707,8 @@ class _WeekStrip extends StatelessWidget {
                           color: isSelected
                               ? Colors.white
                               : isWeekend
-                                  ? GwpColors.textMuted
-                                  : GwpColors.textPrimary,
+                              ? CofferColors.textMuted
+                              : CofferColors.textPrimary,
                         ),
                       ),
                       if (modelCounts.isNotEmpty)
@@ -767,18 +770,20 @@ class _MonthGrid extends StatelessWidget {
         children: [
           Row(
             children: _weekdayLabels
-                .map((l) => Expanded(
-                      child: Center(
-                        child: Text(
-                          l,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: GwpColors.textMuted,
-                          ),
+                .map(
+                  (l) => Expanded(
+                    child: Center(
+                      child: Text(
+                        l,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: CofferColors.textMuted,
                         ),
                       ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 4),
@@ -798,9 +803,9 @@ class _MonthGrid extends StatelessWidget {
                 final isSelected = key == selectedKey;
                 final isToday = key == todayKey;
                 final isWeekend =
-                    d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
-                final dayEvents =
-                    eventsByDay[key] ?? const <DomainEvent>[];
+                    d.weekday == DateTime.saturday ||
+                    d.weekday == DateTime.sunday;
+                final dayEvents = eventsByDay[key] ?? const <DomainEvent>[];
                 final modelCounts = <RelatedModel, int>{};
                 for (final e in dayEvents) {
                   modelCounts[e.relatedModel] =
@@ -850,17 +855,17 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = !inMonth
-        ? GwpColors.textMuted.withValues(alpha: 0.35)
+        ? CofferColors.textMuted.withValues(alpha: 0.35)
         : isSelected
-            ? Colors.white
-            : isWeekend
-                ? GwpColors.textMuted
-                : GwpColors.textPrimary;
+        ? Colors.white
+        : isWeekend
+        ? CofferColors.textMuted
+        : CofferColors.textPrimary;
     final bg = isSelected
-        ? GwpColors.actionPrimary
+        ? CofferColors.actionPrimary
         : (isToday
-            ? GwpColors.actionPrimary.withValues(alpha: 0.15)
-            : Colors.transparent);
+              ? CofferColors.actionPrimary.withValues(alpha: 0.15)
+              : Colors.transparent);
 
     return InkWell(
       onTap: onTap,
@@ -872,7 +877,8 @@ class _DayCell extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: isToday && !isSelected
               ? Border.all(
-                  color: GwpColors.actionPrimary.withValues(alpha: 0.5))
+                  color: CofferColors.actionPrimary.withValues(alpha: 0.5),
+                )
               : null,
         ),
         child: Stack(
@@ -883,8 +889,9 @@ class _DayCell extends StatelessWidget {
               style: TextStyle(
                 color: textColor,
                 fontSize: 14,
-                fontWeight:
-                    isToday || isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isToday || isSelected
+                    ? FontWeight.w700
+                    : FontWeight.w500,
               ),
             ),
             if (modelCounts.isNotEmpty)
@@ -946,9 +953,10 @@ class _SelectedDayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = overriddenLabel ??
+    final label =
+        overriddenLabel ??
         '${day.year}-${day.month.toString().padLeft(2, '0')}-'
-        '${day.day.toString().padLeft(2, '0')}';
+            '${day.day.toString().padLeft(2, '0')}';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(
@@ -958,7 +966,7 @@ class _SelectedDayHeader extends StatelessWidget {
                 ? Icons.filter_list_outlined
                 : Icons.today_outlined,
             size: 16,
-            color: GwpColors.textMuted,
+            color: CofferColors.textMuted,
           ),
           const SizedBox(width: 8),
           Text(
@@ -966,17 +974,14 @@ class _SelectedDayHeader extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
-              fontFamily: GwpTypo.monoFont,
+              color: CofferColors.textPrimary,
+              fontFamily: CofferTypo.monoFont,
             ),
           ),
           const Spacer(),
           Text(
             '$count 条事件',
-            style: const TextStyle(
-              fontSize: 12,
-              color: GwpColors.textMuted,
-            ),
+            style: const TextStyle(fontSize: 12, color: CofferColors.textMuted),
           ),
         ],
       ),
@@ -1010,8 +1015,9 @@ class _FilterChipRow extends StatelessWidget {
             child: HorizontalGestureGuard(
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: GwpSpacing.base),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CofferSpacing.base,
+                ),
                 itemCount: _EventFilter.values.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (_, i) {
@@ -1022,22 +1028,26 @@ class _FilterChipRow extends StatelessWidget {
                     avatar: Icon(
                       f.icon,
                       size: 14,
-                      color: selected ? Colors.white : GwpColors.textSecondary,
+                      color: selected
+                          ? Colors.white
+                          : CofferColors.textSecondary,
                     ),
                     selected: selected,
                     showCheckmark: false,
                     onSelected: (_) => onChanged(f),
-                    selectedColor: GwpColors.actionPrimary,
+                    selectedColor: CofferColors.actionPrimary,
                     labelStyle: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: selected ? Colors.white : GwpColors.textSecondary,
+                      color: selected
+                          ? Colors.white
+                          : CofferColors.textSecondary,
                     ),
-                    backgroundColor: GwpColors.surface2,
+                    backgroundColor: CofferColors.surface2,
                     side: BorderSide(
                       color: selected
-                          ? GwpColors.actionPrimary
-                          : GwpColors.border,
+                          ? CofferColors.actionPrimary
+                          : CofferColors.border,
                       width: 0.5,
                     ),
                     visualDensity: VisualDensity.compact,
@@ -1054,30 +1064,34 @@ class _FilterChipRow extends StatelessWidget {
               child: InkWell(
                 borderRadius: BorderRadius.circular(6),
                 onTap: () {
-                  final next = _EventSort.values[
-                      (sort.index + 1) % _EventSort.values.length];
+                  final next = _EventSort
+                      .values[(sort.index + 1) % _EventSort.values.length];
                   onSortChanged(next);
                 },
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: GwpColors.surface2,
+                    color: CofferColors.surface2,
                     borderRadius: BorderRadius.circular(6),
-                    border:
-                        Border.all(color: GwpColors.border, width: 0.5),
+                    border: Border.all(color: CofferColors.border, width: 0.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.sort,
-                          size: 14, color: GwpColors.textSecondary),
+                      const Icon(
+                        Icons.sort,
+                        size: 14,
+                        color: CofferColors.textSecondary,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         sort.label,
                         style: const TextStyle(
                           fontSize: 11,
-                          color: GwpColors.textSecondary,
+                          color: CofferColors.textSecondary,
                         ),
                       ),
                     ],
@@ -1130,7 +1144,7 @@ class _StickyFilterDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: GwpColors.canvas,
+      color: CofferColors.canvas,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1180,28 +1194,31 @@ class _BatchConfirmBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.sm,
+        horizontal: CofferSpacing.base,
+        vertical: CofferSpacing.sm,
       ),
-      color: GwpColors.warningBg,
+      color: CofferColors.warningBg,
       child: Row(
         children: [
-          const Icon(Icons.pending_actions_outlined,
-              size: 16, color: GwpColors.warning),
+          const Icon(
+            Icons.pending_actions_outlined,
+            size: 16,
+            color: CofferColors.warning,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               '共 $count 条待确认',
               style: const TextStyle(
                 fontSize: 12,
-                color: GwpColors.warning,
+                color: CofferColors.warning,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
           TextButton.icon(
             style: TextButton.styleFrom(
-              foregroundColor: GwpColors.warning,
+              foregroundColor: CofferColors.warning,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: const Size(0, 32),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1213,7 +1230,7 @@ class _BatchConfirmBar extends StatelessWidget {
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: GwpColors.warning,
+                      color: CofferColors.warning,
                     ),
                   )
                 : const Icon(Icons.done_all, size: 16),
@@ -1235,7 +1252,8 @@ class _EmptyDayState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dayStr = '${day.year}-${day.month.toString().padLeft(2, '0')}-'
+    final dayStr =
+        '${day.year}-${day.month.toString().padLeft(2, '0')}-'
         '${day.day.toString().padLeft(2, '0')}';
 
     return Center(
@@ -1244,29 +1262,29 @@ class _EmptyDayState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inbox_outlined,
-                size: 48, color: GwpColors.textMuted),
+            const Icon(
+              Icons.inbox_outlined,
+              size: 48,
+              color: CofferColors.textMuted,
+            ),
             const SizedBox(height: 16),
             const Text(
               '当日无事件',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
             const Text(
               '选择其他日期查看',
-              style: TextStyle(
-                fontSize: 13,
-                color: GwpColors.textMuted,
-              ),
+              style: TextStyle(fontSize: 13, color: CofferColors.textMuted),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: GwpColors.actionPrimary,
+                backgroundColor: CofferColors.actionPrimary,
               ),
               onPressed: () => context.push('/events/new?day=$dayStr'),
               icon: const Icon(Icons.add, size: 18),
@@ -1284,26 +1302,26 @@ class _EmptyDayState extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 Color _modelColor(RelatedModel m) => switch (m) {
-      RelatedModel.account => const Color(0xFF64748B),
-      RelatedModel.asset => const Color(0xFF22C55E),
-      RelatedModel.card => const Color(0xFFEC4899),
-      RelatedModel.channel => const Color(0xFFF59E0B),
-    };
+  RelatedModel.account => const Color(0xFF64748B),
+  RelatedModel.asset => const Color(0xFF22C55E),
+  RelatedModel.card => const Color(0xFFEC4899),
+  RelatedModel.channel => const Color(0xFFF59E0B),
+};
 
 IconData _modelIcon(RelatedModel m) => switch (m) {
-      RelatedModel.account => Icons.account_balance_outlined,
-      RelatedModel.asset => Icons.show_chart_outlined,
-      RelatedModel.card => Icons.credit_card_outlined,
-      RelatedModel.channel => Icons.swap_horiz_outlined,
-    };
+  RelatedModel.account => Icons.account_balance_outlined,
+  RelatedModel.asset => Icons.show_chart_outlined,
+  RelatedModel.card => Icons.credit_card_outlined,
+  RelatedModel.channel => Icons.swap_horiz_outlined,
+};
 
 double _priorityAlpha(EventPriority? p) => switch (p) {
-      EventPriority.critical => 1.0,
-      EventPriority.high => 0.85,
-      EventPriority.medium => 0.65,
-      EventPriority.low => 0.45,
-      null => 0.55,
-    };
+  EventPriority.critical => 1.0,
+  EventPriority.high => 0.85,
+  EventPriority.medium => 0.65,
+  EventPriority.low => 0.45,
+  null => 0.55,
+};
 
 (String, Color)? _dueStateText(DateTime? dueAt) {
   if (dueAt == null) return null;
@@ -1312,10 +1330,10 @@ double _priorityAlpha(EventPriority? p) => switch (p) {
   final diff = due.difference(now);
   if (diff.isNegative) {
     final days = (-diff).inDays;
-    return (days == 0 ? '已逾期' : '逾期$days天', GwpColors.negative);
+    return (days == 0 ? '已逾期' : '逾期$days天', CofferColors.negative);
   }
-  if (diff.inDays == 0) return ('今日到期', GwpColors.warning);
-  if (diff.inDays <= 3) return ('${diff.inDays}天内到期', GwpColors.warning);
+  if (diff.inDays == 0) return ('今日到期', CofferColors.warning);
+  if (diff.inDays <= 3) return ('${diff.inDays}天内到期', CofferColors.warning);
   return null;
 }
 
@@ -1332,9 +1350,11 @@ class _EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseColor = _modelColor(event.relatedModel);
     final accent = baseColor.withValues(alpha: _priorityAlpha(event.priority));
-    final isHighPri = event.priority == EventPriority.critical ||
+    final isHighPri =
+        event.priority == EventPriority.critical ||
         event.priority == EventPriority.high;
-    final pendingReq = event.ackRequirement == AckRequirement.required_ &&
+    final pendingReq =
+        event.ackRequirement == AckRequirement.required_ &&
         event.ackStatus == AckStatus.pending;
     final failed = event.handlingStatus == HandlingStatus.failed;
     final dueInfo = _dueStateText(event.dueAt);
@@ -1352,12 +1372,12 @@ class _EventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           decoration: BoxDecoration(
-            color: GwpColors.surface1,
+            color: CofferColors.surface1,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: pendingReq
-                  ? GwpColors.warning.withValues(alpha: 0.6)
-                  : GwpColors.border,
+                  ? CofferColors.warning.withValues(alpha: 0.6)
+                  : CofferColors.border,
               width: pendingReq ? 1.0 : 0.5,
             ),
           ),
@@ -1374,10 +1394,11 @@ class _EventCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.md),
+                const SizedBox(width: CofferSpacing.md),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: GwpSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: CofferSpacing.md,
+                  ),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -1404,11 +1425,11 @@ class _EventCard extends StatelessWidget {
                             height: 12,
                             decoration: BoxDecoration(
                               color: event.priority == EventPriority.critical
-                                  ? GwpColors.negative
-                                  : GwpColors.warning,
+                                  ? CofferColors.negative
+                                  : CofferColors.warning,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: GwpColors.surface1,
+                                color: CofferColors.surface1,
                                 width: 2,
                               ),
                             ),
@@ -1417,11 +1438,12 @@ class _EventCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.md),
+                const SizedBox(width: CofferSpacing.md),
                 Expanded(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: GwpSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: CofferSpacing.md,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -1431,7 +1453,7 @@ class _EventCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: GwpColors.textPrimary,
+                            color: CofferColors.textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1444,7 +1466,7 @@ class _EventCard extends StatelessWidget {
                                 '${event.relatedModel.labelZh} · ${_fmtDayTime(event.triggerTime)}',
                                 style: const TextStyle(
                                   fontSize: 12,
-                                  color: GwpColors.textMuted,
+                                  color: CofferColors.textMuted,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1453,7 +1475,9 @@ class _EventCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1),
+                                  horizontal: 6,
+                                  vertical: 1,
+                                ),
                                 decoration: BoxDecoration(
                                   color: dueInfo.$2.withValues(alpha: 0.14),
                                   borderRadius: BorderRadius.circular(4),
@@ -1474,10 +1498,11 @@ class _EventCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: GwpSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: CofferSpacing.md,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1485,7 +1510,7 @@ class _EventCard extends StatelessWidget {
                       _eventStatusBadge(event.status),
                       if (failed) ...[
                         const SizedBox(height: 4),
-                        const GwpStatusBadge(
+                        const CofferStatusBadge(
                           label: 'FAILED',
                           variant: StatusVariant.negative,
                         ),
@@ -1493,7 +1518,7 @@ class _EventCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.md),
+                const SizedBox(width: CofferSpacing.md),
               ],
             ),
           ),
@@ -1533,19 +1558,21 @@ class _BatchCard extends StatelessWidget {
     final dominantModel = _dominantModel(group.events);
     final accent = _modelColor(dominantModel);
     final pendingCount = group.events
-        .where((e) =>
-            e.ackRequirement == AckRequirement.required_ &&
-            e.ackStatus == AckStatus.pending)
+        .where(
+          (e) =>
+              e.ackRequirement == AckRequirement.required_ &&
+              e.ackStatus == AckStatus.pending,
+        )
         .length;
     final typeLabel = _summaryLabel(group.events);
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: pendingCount > 0
-              ? GwpColors.warning.withValues(alpha: 0.6)
-              : GwpColors.border,
+              ? CofferColors.warning.withValues(alpha: 0.6)
+              : CofferColors.border,
           width: pendingCount > 0 ? 1.0 : 0.5,
         ),
       ),
@@ -1569,12 +1596,13 @@ class _BatchCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: GwpSpacing.md),
+                    const SizedBox(width: CofferSpacing.md),
                     Container(
                       width: 36,
                       height: 36,
                       margin: const EdgeInsets.symmetric(
-                          vertical: GwpSpacing.md),
+                        vertical: CofferSpacing.md,
+                      ),
                       decoration: BoxDecoration(
                         color: accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
@@ -1589,11 +1617,12 @@ class _BatchCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: GwpSpacing.md),
+                    const SizedBox(width: CofferSpacing.md),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            vertical: GwpSpacing.md),
+                          vertical: CofferSpacing.md,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -1603,7 +1632,7 @@ class _BatchCard extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: GwpColors.textPrimary,
+                                color: CofferColors.textPrimary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1614,7 +1643,7 @@ class _BatchCard extends StatelessWidget {
                               '${pendingCount > 0 ? " · 待确认 $pendingCount" : ""}',
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: GwpColors.textMuted,
+                                color: CofferColors.textMuted,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1625,24 +1654,28 @@ class _BatchCard extends StatelessWidget {
                     ),
                     Icon(
                       expanded ? Icons.expand_less : Icons.expand_more,
-                      color: GwpColors.textSecondary,
+                      color: CofferColors.textSecondary,
                     ),
-                    const SizedBox(width: GwpSpacing.md),
+                    const SizedBox(width: CofferSpacing.md),
                   ],
                 ),
               ),
             ),
           ),
           if (expanded) ...[
-            const Divider(height: 1, color: GwpColors.border),
+            const Divider(height: 1, color: CofferColors.border),
             ...group.events.map(
               (e) => Padding(
-                padding: const EdgeInsets.fromLTRB(GwpSpacing.sm,
-                    GwpSpacing.xs, GwpSpacing.sm, GwpSpacing.xs),
+                padding: const EdgeInsets.fromLTRB(
+                  CofferSpacing.sm,
+                  CofferSpacing.xs,
+                  CofferSpacing.sm,
+                  CofferSpacing.xs,
+                ),
                 child: _EventCard(event: e),
               ),
             ),
-            const SizedBox(height: GwpSpacing.xs),
+            const SizedBox(height: CofferSpacing.xs),
           ],
         ],
       ),
@@ -1676,7 +1709,7 @@ Widget _eventStatusBadge(EventStatus status) {
     EventStatus.resolved => ('RESOLVED', StatusVariant.positive),
     EventStatus.closed => ('CLOSED', StatusVariant.muted),
   };
-  return GwpStatusBadge(label: label, variant: variant);
+  return CofferStatusBadge(label: label, variant: variant);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1729,7 +1762,8 @@ class _EventDetailSheet extends ConsumerWidget {
     final note = _prettyJson(event.handlingNote);
     final routePrefix = _modelRoutePrefix[event.relatedModel];
     final isRateAlert = event.eventType == DomainEventTypes.rateAlert;
-    final canOpen = isRateAlert ||
+    final canOpen =
+        isRateAlert ||
         event.relatedModel == RelatedModel.card ||
         (routePrefix != null && event.relatedId.isNotEmpty);
     Future<void> openRelated() async {
@@ -1784,14 +1818,14 @@ class _EventDetailSheet extends ConsumerWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: GwpColors.surface3,
+                      color: CofferColors.surface3,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
                     child: Icon(
                       _modelIcon(event.relatedModel),
                       size: 20,
-                      color: GwpColors.textSecondary,
+                      color: CofferColors.textSecondary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1805,7 +1839,7 @@ class _EventDetailSheet extends ConsumerWidget {
                           _fmtFull(event.triggerTime),
                           style: const TextStyle(
                             fontSize: 12,
-                            color: GwpColors.textMuted,
+                            color: CofferColors.textMuted,
                           ),
                         ),
                       ],
@@ -1829,7 +1863,8 @@ class _EventDetailSheet extends ConsumerWidget {
                     _MetaChip(
                       icon: Icons.flag_outlined,
                       label: '优先级 · ${event.priority!.code}',
-                      emphasis: event.priority == EventPriority.critical ||
+                      emphasis:
+                          event.priority == EventPriority.critical ||
                           event.priority == EventPriority.high,
                     ),
                   if (event.handlingStatus != null)
@@ -1848,8 +1883,8 @@ class _EventDetailSheet extends ConsumerWidget {
                       icon: _ackIcon(event.ackStatus),
                       label:
                           '${event.ackRequirement.labelZh} · ${event.ackStatus.labelZh}',
-                      emphasis: event.ackRequirement ==
-                              AckRequirement.required_ &&
+                      emphasis:
+                          event.ackRequirement == AckRequirement.required_ &&
                           event.ackStatus == AckStatus.pending,
                     ),
                   if (dueInfo != null)
@@ -1861,8 +1896,7 @@ class _EventDetailSheet extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              _KvRow(
-                  label: '关联模型', value: event.relatedModel.labelBilingual),
+              _KvRow(label: '关联模型', value: event.relatedModel.labelBilingual),
               _KvRow(
                 label: '关联 ID',
                 value: event.relatedId,
@@ -1879,10 +1913,7 @@ class _EventDetailSheet extends ConsumerWidget {
               if (event.dueAt != null)
                 _KvRow(label: '截止时间', value: _fmtFull(event.dueAt!)),
               if ((event.batchId ?? '').isNotEmpty)
-                _KvRow(
-                    label: '批次 ID',
-                    value: event.batchId!,
-                    copyable: true),
+                _KvRow(label: '批次 ID', value: event.batchId!, copyable: true),
               _KvRow(label: '创建时间', value: _fmtFull(event.createdAt)),
               _KvRow(label: '更新时间', value: _fmtFull(event.updatedAt)),
               if ((event.ackNote ?? '').isNotEmpty)
@@ -1894,7 +1925,7 @@ class _EventDetailSheet extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.actionPrimary,
+                    color: CofferColors.actionPrimary,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -1916,7 +1947,7 @@ class _EventDetailSheet extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.actionPrimary,
+                    color: CofferColors.actionPrimary,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -1925,17 +1956,17 @@ class _EventDetailSheet extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: GwpColors.surface2,
+                    color: CofferColors.surface2,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: GwpColors.border, width: 0.5),
+                    border: Border.all(color: CofferColors.border, width: 0.5),
                   ),
                   child: SelectableText(
                     note,
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 12,
                       height: 1.4,
-                      color: GwpColors.textSecondary,
+                      color: CofferColors.textSecondary,
                     ),
                   ),
                 ),
@@ -1978,18 +2009,18 @@ class _EventDetailSheet extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    final r = await ref.read(eventRepositoryProvider).softDelete(event.id);
+    final r = await ref.read(deleteEventUseCaseProvider)(event.id);
     if (!context.mounted) return;
     r.when(
       ok: (_) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已删除事件')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已删除事件')));
       },
-      err: (e) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('删除失败: ${errorToMessage(e)}')),
-      ),
+      err: (e) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('删除失败: ${errorToMessage(e)}'))),
     );
   }
 
@@ -2039,12 +2070,11 @@ class _RefChips extends StatelessWidget {
                 : () => Clipboard.setData(ClipboardData(text: e.value)),
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: GwpColors.surface3,
+                color: CofferColors.surface3,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: GwpColors.border, width: 0.5),
+                border: Border.all(color: CofferColors.border, width: 0.5),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -2053,7 +2083,7 @@ class _RefChips extends StatelessWidget {
                     '${e.key}:',
                     style: const TextStyle(
                       fontSize: 11,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -2062,14 +2092,17 @@ class _RefChips extends StatelessWidget {
                     e.value,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: GwpColors.textPrimary,
-                      fontFamily: GwpTypo.monoFont,
+                      color: CofferColors.textPrimary,
+                      fontFamily: CofferTypo.monoFont,
                     ),
                   ),
                   if (canJump) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.open_in_new,
-                        size: 12, color: GwpColors.textMuted),
+                    const Icon(
+                      Icons.open_in_new,
+                      size: 12,
+                      color: CofferColors.textMuted,
+                    ),
                   ],
                 ],
               ),
@@ -2122,7 +2155,7 @@ class _KvRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 12,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
             ),
           ),
@@ -2132,14 +2165,14 @@ class _KvRow extends StatelessWidget {
                     value,
                     style: const TextStyle(
                       fontSize: 13,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                   )
                 : Text(
                     value,
                     style: const TextStyle(
                       fontSize: 13,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                   ),
           ),
@@ -2162,8 +2195,8 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = emphasis ? GwpColors.negativeBg : GwpColors.surface3;
-    final fg = emphasis ? GwpColors.negative : GwpColors.textSecondary;
+    final bg = emphasis ? CofferColors.negativeBg : CofferColors.surface3;
+    final fg = emphasis ? CofferColors.negative : CofferColors.textSecondary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -2190,10 +2223,10 @@ class _MetaChip extends StatelessWidget {
 }
 
 IconData _ackIcon(AckStatus s) => switch (s) {
-      AckStatus.pending => Icons.pending_outlined,
-      AckStatus.confirmed => Icons.check_circle_outline,
-      AckStatus.dismissed => Icons.do_not_disturb_on_outlined,
-    };
+  AckStatus.pending => Icons.pending_outlined,
+  AckStatus.confirmed => Icons.check_circle_outline,
+  AckStatus.dismissed => Icons.do_not_disturb_on_outlined,
+};
 
 bool _canRetry(DomainEvent e) =>
     e.handlingStatus == HandlingStatus.failed &&
@@ -2225,21 +2258,19 @@ class _RetryButtonState extends ConsumerState<_RetryButton> {
       final res = await useCase.refreshLatest(widget.event.relatedId);
       if (!mounted) return;
       if (res.isOk) {
-        await ref.read(eventRepositoryProvider).updateHandling(
-              id: widget.event.id,
-              status: HandlingStatus.handled,
-              note: 'retry_success',
-            );
+        await ref.read(updateEventHandlingUseCaseProvider)(
+          id: widget.event.id,
+          status: HandlingStatus.handled,
+          note: 'retry_success',
+        );
         if (!mounted) return;
         nav.pop();
-        messenger.showSnackBar(
-          const SnackBar(content: Text('重试成功，已刷新最新估值')),
-        );
+        messenger.showSnackBar(const SnackBar(content: Text('重试成功，已刷新最新估值')));
       } else {
         messenger.showSnackBar(
           SnackBar(
             content: Text('重试失败：${errorToMessage(res.errorOrNull)}'),
-            backgroundColor: GwpColors.negative,
+            backgroundColor: CofferColors.negative,
           ),
         );
       }
@@ -2291,23 +2322,27 @@ class _AckBarState extends ConsumerState<_AckBar> {
     setState(() => _busy = true);
     final useCase = ref.read(ackEventUseCaseProvider);
     final r = confirm
-        ? await useCase.confirm(widget.event.id,
-            note: note.isEmpty ? null : note)
-        : await useCase.dismiss(widget.event.id,
-            note: note.isEmpty ? null : note);
+        ? await useCase.confirm(
+            widget.event.id,
+            note: note.isEmpty ? null : note,
+          )
+        : await useCase.dismiss(
+            widget.event.id,
+            note: note.isEmpty ? null : note,
+          );
     if (!mounted) return;
     setState(() => _busy = false);
     r.when(
       ok: (_) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(confirm ? '已确认' : '已忽略')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(confirm ? '已确认' : '已忽略')));
       },
       err: (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败: ${errorToMessage(e)}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('操作失败: ${errorToMessage(e)}')));
       },
     );
   }
@@ -2321,19 +2356,22 @@ class _AckBarState extends ConsumerState<_AckBar> {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: GwpColors.surface2,
+          color: CofferColors.surface2,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: GwpColors.border, width: 0.5),
+          border: Border.all(color: CofferColors.border, width: 0.5),
         ),
         child: Row(
           children: [
-            Icon(_ackIcon(e.ackStatus),
-                size: 18, color: GwpColors.textSecondary),
+            Icon(
+              _ackIcon(e.ackStatus),
+              size: 18,
+              color: CofferColors.textSecondary,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 '${e.ackStatus == AckStatus.confirmed ? '已确认' : '已忽略'}$ts',
-                style: const TextStyle(color: GwpColors.textPrimary),
+                style: const TextStyle(color: CofferColors.textPrimary),
               ),
             ),
           ],
@@ -2370,8 +2408,10 @@ class _AckBarState extends ConsumerState<_AckBar> {
     );
   }
 
-  Future<String?> _askNote(BuildContext context,
-      {required bool confirm}) async {
+  Future<String?> _askNote(
+    BuildContext context, {
+    required bool confirm,
+  }) async {
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,

@@ -1,14 +1,13 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/entities/asset_type_info.dart';
-import 'package:gwp/domain/valuation/asset_valuator.dart';
-import 'package:gwp/domain/valuation/strategies/fixed_income_valuator.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/entities/asset_type_info.dart';
+import 'package:coffer/domain/valuation/strategies/fixed_income_valuator.dart';
 
 void main() {
   /// Build a CD asset with the given typeInfo and a fixed creation time.
-  Asset _cd({
+  Asset cd({
     required DateTime createdAt,
     required AssetTypeInfo typeInfo,
     String currency = 'CNY',
@@ -28,7 +27,7 @@ void main() {
   }
 
   // ── Helper: make a CD with fixed income params ──
-  Asset _fiAsset({
+  Asset fiAsset({
     required AssetType type,
     required DateTime createdAt,
     Decimal? annualRate,
@@ -37,7 +36,7 @@ void main() {
     String? compounding,
     int? dayCount,
   }) {
-    return _cd(
+    return cd(
       createdAt: createdAt,
       typeInfo: FixedIncomeInfo(
         annualRate: annualRate,
@@ -54,7 +53,7 @@ void main() {
 
     test('简单计息：完整一年', () async {
       final now = DateTime.utc(2026, 1, 1);
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.035'),
@@ -75,7 +74,7 @@ void main() {
 
     test('简单计息：半年', () async {
       final now = DateTime.utc(2025, 7, 1); // 181 days (Jan 1 to Jul 1 in non-leap)
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.0365'),
@@ -97,7 +96,7 @@ void main() {
 
     test('简单计息：起息日缺省用 createdAt', () async {
       final now = DateTime.utc(2026, 1, 2); // 366 days after creation
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.0365'),
@@ -116,7 +115,7 @@ void main() {
 
     test('到期后停止计息', () async {
       final now = DateTime.utc(2026, 7, 1); // well past maturity
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.03'),
@@ -139,7 +138,7 @@ void main() {
 
     test('起息日之前价格为 1', () async {
       final now = DateTime.utc(2024, 6, 1);
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.05'),
@@ -156,7 +155,7 @@ void main() {
 
     test('利率为 0 时价格为 1', () async {
       final now = DateTime.utc(2026, 1, 1);
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.zero,
@@ -175,7 +174,7 @@ void main() {
 
     test('按年复利', () async {
       final now = DateTime.utc(2027, 1, 1); // 2 years
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.05'),
@@ -193,7 +192,7 @@ void main() {
 
     test('按日复利', () async {
       final now = DateTime.utc(2026, 1, 1); // 365 days
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.0365'),
@@ -215,7 +214,7 @@ void main() {
 
     test('按月复利', () async {
       final now = DateTime.utc(2026, 1, 1); // 365 days
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.06'),
@@ -237,7 +236,7 @@ void main() {
 
     test('360 天计息基准比 365 积累更多利息', () async {
       final now = DateTime.utc(2026, 1, 1);
-      final asset360 = _fiAsset(
+      final asset360 = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.036'),
@@ -245,7 +244,7 @@ void main() {
         compounding: 'simple',
         dayCount: 360,
       );
-      final asset365 = _fiAsset(
+      final asset365 = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.036'),
@@ -271,7 +270,7 @@ void main() {
 
     test('valueHistory 按日生成估值点', () async {
       final start = DateTime.utc(2025, 1, 1);
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: start,
         annualRate: Decimal.parse('0.0365'),
@@ -304,7 +303,7 @@ void main() {
     // ── typeInfo integration ──
 
     test('从 Asset.typeInfo 正确读取固收参数', () {
-      final asset = _fiAsset(
+      final asset = fiAsset(
         type: AssetType.cd,
         createdAt: DateTime.utc(2025, 1, 1),
         annualRate: Decimal.parse('0.035'),
@@ -367,8 +366,8 @@ void main() {
 
     test('supports CD 和 BOND，不 supports 其他', () {
       final valuator = FixedIncomeValuator();
-      final cd = _fiAsset(type: AssetType.cd, createdAt: DateTime.utc(2025, 1, 1));
-      final bond = _fiAsset(type: AssetType.bond, createdAt: DateTime.utc(2025, 1, 1));
+      final cd = fiAsset(type: AssetType.cd, createdAt: DateTime.utc(2025, 1, 1));
+      final bond = fiAsset(type: AssetType.bond, createdAt: DateTime.utc(2025, 1, 1));
       final stock = Asset(
         id: 's',
         accountId: 'a',

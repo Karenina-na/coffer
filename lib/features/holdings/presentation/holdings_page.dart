@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/ui/app_top_bar.dart';
-import '../../../core/ui/global_search_delegate.dart';
+import '../../../app/widgets/app_top_bar.dart';
+import '../../search/presentation/global_search_delegate.dart';
 import '../../../core/ui/horizontal_gesture_guard.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
@@ -104,7 +104,9 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
     _syncingTabToRoute = false;
   }
 
-  bool _handleGuardNotification(HorizontalGestureGuardNotification notification) {
+  bool _handleGuardNotification(
+    HorizontalGestureGuardNotification notification,
+  ) {
     if (notification.active) {
       _guardedPointers.add(notification.pointer);
       _blockedPointers.add(notification.pointer);
@@ -253,5 +255,4 @@ class _HoldingsPageState extends ConsumerState<HoldingsPage>
       },
     );
   }
-
 }

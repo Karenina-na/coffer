@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/data/providers/dict_providers.dart';
-import 'package:gwp/domain/entities/account.dart';
-import 'package:gwp/domain/entities/account_enums.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/usecases/value_assets_in_currency.dart';
-import 'package:gwp/features/account/presentation/account_list_page.dart';
-import 'package:gwp/features/account/presentation/account_providers.dart';
-import 'package:gwp/features/asset/presentation/asset_providers.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/data/providers/dict_providers.dart';
+import 'package:coffer/domain/entities/account.dart';
+import 'package:coffer/domain/entities/account_enums.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/usecases/value_assets_in_currency.dart';
+import 'package:coffer/features/account/presentation/account_list_page.dart';
+import 'package:coffer/features/account/presentation/account_providers.dart';
+import 'package:coffer/features/asset/presentation/asset_providers.dart';
 
 void main() {
   Future<void> pumpAccountList(
@@ -41,11 +41,11 @@ void main() {
               missingAssetIds: const [],
             ),
           ),
-          regionMetaIndexProvider.overrideWith((ref) => Stream.value(regionIndex)),
+          regionMetaIndexProvider.overrideWith(
+            (ref) => Stream.value(regionIndex),
+          ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AccountListBody()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AccountListBody())),
       ),
     );
     await tester.pump();
@@ -75,6 +75,7 @@ void main() {
       sovereigntyRegion: region,
       institutionName: name,
       status: AccountStatus.active,
+      fxSpreadPercent: Decimal.zero,
       createdAt: now,
       updatedAt: now,
     );
@@ -106,7 +107,11 @@ void main() {
     required String accountId,
     required Decimal marketValue,
   }) {
-    final asset = buildAsset(id: id, accountId: accountId, marketValue: marketValue);
+    final asset = buildAsset(
+      id: id,
+      accountId: accountId,
+      marketValue: marketValue,
+    );
     return ValuedAsset(
       asset: asset,
       valuationCurrency: 'USD',
@@ -123,14 +128,41 @@ void main() {
     tester,
   ) async {
     final accounts = [
-      buildAccount(id: 'gb-bank', type: AccountType.bank, region: 'GB', name: 'HSBC'),
-      buildAccount(id: 'gb-broker', type: AccountType.broker, region: 'GB', name: 'IBKR UK'),
-      buildAccount(id: 'us-bank', type: AccountType.bank, region: 'US', name: 'Chase'),
+      buildAccount(
+        id: 'gb-bank',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'HSBC',
+      ),
+      buildAccount(
+        id: 'gb-broker',
+        type: AccountType.broker,
+        region: 'GB',
+        name: 'IBKR UK',
+      ),
+      buildAccount(
+        id: 'us-bank',
+        type: AccountType.bank,
+        region: 'US',
+        name: 'Chase',
+      ),
     ];
     final valuedAssets = [
-      buildValuedAsset(id: 'a1', accountId: 'gb-bank', marketValue: Decimal.fromInt(1000)),
-      buildValuedAsset(id: 'a2', accountId: 'gb-broker', marketValue: Decimal.fromInt(600)),
-      buildValuedAsset(id: 'a3', accountId: 'us-bank', marketValue: Decimal.fromInt(500)),
+      buildValuedAsset(
+        id: 'a1',
+        accountId: 'gb-bank',
+        marketValue: Decimal.fromInt(1000),
+      ),
+      buildValuedAsset(
+        id: 'a2',
+        accountId: 'gb-broker',
+        marketValue: Decimal.fromInt(600),
+      ),
+      buildValuedAsset(
+        id: 'a3',
+        accountId: 'us-bank',
+        marketValue: Decimal.fromInt(500),
+      ),
     ];
     final regionIndex = <String, RegionMeta>{
       'GB': const RegionMeta(code: 'GB', displayName: '英国'),
@@ -168,20 +200,67 @@ void main() {
     expect(hsbcTopLeft.dy, lessThan(ibkrTopLeft.dy));
   });
 
-  testWidgets('renders all accounts in each type subgroup by default', (tester) async {
+  testWidgets('renders all accounts in each type subgroup by default', (
+    tester,
+  ) async {
     final accounts = [
-      buildAccount(id: 'gb-bank-1', type: AccountType.bank, region: 'GB', name: 'Bank A'),
-      buildAccount(id: 'gb-bank-2', type: AccountType.bank, region: 'GB', name: 'Bank B'),
-      buildAccount(id: 'gb-bank-3', type: AccountType.bank, region: 'GB', name: 'Bank C'),
-      buildAccount(id: 'gb-bank-4', type: AccountType.bank, region: 'GB', name: 'Bank D'),
-      buildAccount(id: 'gb-broker-1', type: AccountType.broker, region: 'GB', name: 'Broker A'),
+      buildAccount(
+        id: 'gb-bank-1',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'Bank A',
+      ),
+      buildAccount(
+        id: 'gb-bank-2',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'Bank B',
+      ),
+      buildAccount(
+        id: 'gb-bank-3',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'Bank C',
+      ),
+      buildAccount(
+        id: 'gb-bank-4',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'Bank D',
+      ),
+      buildAccount(
+        id: 'gb-broker-1',
+        type: AccountType.broker,
+        region: 'GB',
+        name: 'Broker A',
+      ),
     ];
     final valuedAssets = [
-      buildValuedAsset(id: 'b1', accountId: 'gb-bank-1', marketValue: Decimal.fromInt(400)),
-      buildValuedAsset(id: 'b2', accountId: 'gb-bank-2', marketValue: Decimal.fromInt(300)),
-      buildValuedAsset(id: 'b3', accountId: 'gb-bank-3', marketValue: Decimal.fromInt(200)),
-      buildValuedAsset(id: 'b4', accountId: 'gb-bank-4', marketValue: Decimal.fromInt(100)),
-      buildValuedAsset(id: 'b5', accountId: 'gb-broker-1', marketValue: Decimal.fromInt(50)),
+      buildValuedAsset(
+        id: 'b1',
+        accountId: 'gb-bank-1',
+        marketValue: Decimal.fromInt(400),
+      ),
+      buildValuedAsset(
+        id: 'b2',
+        accountId: 'gb-bank-2',
+        marketValue: Decimal.fromInt(300),
+      ),
+      buildValuedAsset(
+        id: 'b3',
+        accountId: 'gb-bank-3',
+        marketValue: Decimal.fromInt(200),
+      ),
+      buildValuedAsset(
+        id: 'b4',
+        accountId: 'gb-bank-4',
+        marketValue: Decimal.fromInt(100),
+      ),
+      buildValuedAsset(
+        id: 'b5',
+        accountId: 'gb-broker-1',
+        marketValue: Decimal.fromInt(50),
+      ),
     ];
     final regionIndex = <String, RegionMeta>{
       'GB': const RegionMeta(code: 'GB', displayName: '英国'),
@@ -207,14 +286,34 @@ void main() {
     expect(find.textContaining('展开剩余'), findsNothing);
   });
 
-  testWidgets('collapsing a region hides subgroup headers and cards', (tester) async {
+  testWidgets('collapsing a region hides subgroup headers and cards', (
+    tester,
+  ) async {
     final accounts = [
-      buildAccount(id: 'gb-bank', type: AccountType.bank, region: 'GB', name: 'HSBC'),
-      buildAccount(id: 'gb-broker', type: AccountType.broker, region: 'GB', name: 'IBKR UK'),
+      buildAccount(
+        id: 'gb-bank',
+        type: AccountType.bank,
+        region: 'GB',
+        name: 'HSBC',
+      ),
+      buildAccount(
+        id: 'gb-broker',
+        type: AccountType.broker,
+        region: 'GB',
+        name: 'IBKR UK',
+      ),
     ];
     final valuedAssets = [
-      buildValuedAsset(id: 'c1', accountId: 'gb-bank', marketValue: Decimal.fromInt(1000)),
-      buildValuedAsset(id: 'c2', accountId: 'gb-broker', marketValue: Decimal.fromInt(500)),
+      buildValuedAsset(
+        id: 'c1',
+        accountId: 'gb-bank',
+        marketValue: Decimal.fromInt(1000),
+      ),
+      buildValuedAsset(
+        id: 'c2',
+        accountId: 'gb-broker',
+        marketValue: Decimal.fromInt(500),
+      ),
     ];
     final regionIndex = <String, RegionMeta>{
       'GB': const RegionMeta(code: 'GB', displayName: '英国'),

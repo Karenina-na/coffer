@@ -1,14 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/ui/finance_map_projection.dart';
+import 'package:coffer/core/ui/finance_map_projection.dart';
 
 void main() {
   group('FinanceProjectionFrame', () {
     test('frame exposes essential params', () {
       expect(FinanceMapProjection.frame.hemisphereWidthLeft, greaterThan(1.0));
       expect(FinanceMapProjection.frame.hemisphereWidthRight, lessThan(1.05));
-      expect(FinanceMapProjection.frame.northSpan, lessThan(0.5));
+      expect(FinanceMapProjection.frame.northSpan, inInclusiveRange(0.5, 0.6));
       expect(FinanceMapProjection.frame.mapSideInset, greaterThan(0));
     });
   });
@@ -16,12 +16,12 @@ void main() {
   group('projectPoint', () {
     const size = Size(360, 196);
 
-    test('center sits higher than lateral points at same latitude', () {
+    test('center sits lower than lateral points at same latitude', () {
       final left = FinanceMapProjection.projectPoint(size, (0.1, 0.4));
       final center = FinanceMapProjection.projectPoint(size, (0.5, 0.4));
       final right = FinanceMapProjection.projectPoint(size, (0.9, 0.4));
-      expect(center.dy, lessThan(left.dy));
-      expect(center.dy, lessThan(right.dy));
+      expect(center.dy, greaterThan(left.dy));
+      expect(center.dy, greaterThan(right.dy));
     });
 
     test('projected x remains monotonic', () {
@@ -50,10 +50,10 @@ void main() {
       expect(north.dy, lessThan(south.dy));
     });
 
-    test('edge sits lower than center (hemisphere curvature)', () {
+    test('edge sits higher than center (hemisphere curvature)', () {
       final center = FinanceMapProjection.projectPoint(size, (0.5, 0.35));
       final edge = FinanceMapProjection.projectPoint(size, (0.0, 0.35));
-      expect(center.dy, lessThan(edge.dy));
+      expect(edge.dy, lessThan(center.dy));
     });
   });
 
@@ -92,14 +92,20 @@ void main() {
   });
 
   group('projectCryptoShelf', () {
-    test('positions nodes evenly at bottom', () {
+    test('positions nodes around crypto hub', () {
       const size = Size(360, 300);
       final a = FinanceMapProjection.projectCryptoShelf(size, 0, 2);
       final b = FinanceMapProjection.projectCryptoShelf(size, 1, 2);
-      expect(a.dx, lessThan(b.dx));
-      // Both near bottom
-      expect(a.dy, greaterThan(size.height * 0.80));
-      expect(b.dy, greaterThan(size.height * 0.80));
+      final hub = FinanceMapProjection.projectPoint(
+        size,
+        FinanceMapProjection.cryptoHubCenter,
+      );
+      expect(a.dx, closeTo(hub.dx, 0.0001));
+      expect(b.dx, closeTo(hub.dx, 0.0001));
+      expect(a.dy, lessThan(hub.dy));
+      expect(b.dy, greaterThan(hub.dy));
+      expect(a.dy, inInclusiveRange(0.0, size.height));
+      expect(b.dy, inInclusiveRange(0.0, size.height));
     });
   });
 }

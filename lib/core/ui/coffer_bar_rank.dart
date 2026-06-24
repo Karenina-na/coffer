@@ -13,8 +13,8 @@ class RankItem {
 }
 
 /// Horizontal bar chart showing a ranked list of items (e.g. asset Top 10).
-class GwpBarRank extends StatelessWidget {
-  const GwpBarRank({
+class CofferBarRank extends StatelessWidget {
+  const CofferBarRank({
     super.key,
     required this.items,
     this.maxBars = 10,
@@ -36,7 +36,7 @@ class GwpBarRank extends StatelessWidget {
         child: Text(
           '暂无数据',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
         ),
       );
@@ -58,7 +58,7 @@ class GwpBarRank extends StatelessWidget {
                 BarChartRodData(
                   toY: display[i].value,
                   color: display[i].color ??
-                      GwpColors.actionPrimary.withValues(alpha: 0.7),
+                      CofferColors.actionPrimary.withValues(alpha: 0.7),
                   width: barHeight,
                   borderRadius: const BorderRadius.horizontal(
                     right: Radius.circular(4),
@@ -83,7 +83,7 @@ class GwpBarRank extends StatelessWidget {
                     display[idx].label,
                     style: const TextStyle(
                       fontSize: 10,
-                      color: GwpColors.textSecondary,
+                      color: CofferColors.textSecondary,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -108,10 +108,10 @@ class GwpBarRank extends StatelessWidget {
                   child: Text(
                     fmt,
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
+                      fontFamily: CofferTypo.monoFont,
+                      fontFeatures: CofferTypo.tabularFigures,
                       fontSize: 10,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                 );
@@ -135,16 +135,16 @@ class GwpBarRank extends StatelessWidget {
             }
           },
           touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (_) => GwpColors.surface3,
+            getTooltipColor: (_) => CofferColors.surface3,
             getTooltipItem: (group, groupIdx, rod, rodIdx) {
               final item = display[group.x];
               final fmt = formatValue?.call(item.value) ?? _compact(item.value);
               return BarTooltipItem(
                 '${item.label}\n$fmt',
                 const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
+                  fontFamily: CofferTypo.monoFont,
                   fontSize: 11,
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                 ),
               );
             },

@@ -34,7 +34,7 @@ class YahooFinanceProvider implements AssetPriceProvider {
 
     try {
       final resp = await _client
-          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (GWP)'})
+          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (Coffer)'})
           .timeout(_timeout);
       final body = resp.body;
       final contentType = resp.headers['content-type'] ?? '';
@@ -132,7 +132,7 @@ class YahooFinanceProvider implements AssetPriceProvider {
 
     try {
       final resp = await _client
-          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (GWP)'})
+          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (Coffer)'})
           .timeout(_timeout);
       final body = resp.body;
       final contentType = resp.headers['content-type'] ?? '';

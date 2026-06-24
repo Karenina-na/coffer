@@ -6,14 +6,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/money/money.dart';
 import '../../../core/valuation/valuation_currency_provider.dart';
+import '../../../core/ui/async_value_view.dart';
 import '../../../core/ui/format_utils.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/region_meta.dart';
-import '../../../core/ui/error_localizer.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_number_text.dart';
-import '../../../core/ui/gwp_status_badge.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_number_text.dart';
+import '../../../core/ui/coffer_status_badge.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_enums.dart';
 import '../../../domain/usecases/value_assets_in_currency.dart';
@@ -31,22 +31,16 @@ class AccountListBody extends ConsumerWidget {
     final accountsAsync = ref.watch(accountListProvider);
     final assetsAsync = ref.watch(valuedAssetsProvider);
     final valuationCurrency = ref.watch(valuationCurrencyProvider);
-    return accountsAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+    return CofferAsyncValueView<List<Account>>(
+      value: accountsAsync,
+      onRetry: () => ref.invalidate(accountListProvider),
+      isEmpty: (accounts) => accounts.isEmpty,
+      empty: (_, _) => const CofferEmptyState(
+        icon: Icons.account_balance_outlined,
+        title: '还没有账户',
+        subtitle: '从右上「更多 → 新建」添加第一个账户',
       ),
-      error: (e, _) => GwpEmptyState.error(
-        message: '加载失败: ${errorToMessage(e)}',
-        onRetry: () => ref.invalidate(accountListProvider),
-      ),
-      data: (accounts) {
-        if (accounts.isEmpty) {
-          return const GwpEmptyState(
-            icon: Icons.account_balance_outlined,
-            title: '还没有账户',
-            subtitle: '从右上「更多 → 新建」添加第一个账户',
-          );
-        }
+      data: (_, accounts) {
         final assets = assetsAsync.when(
           data: (valued) => valued.assets,
           loading: () => <ValuedAsset>[],
@@ -192,7 +186,10 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
           regionNetWorth[a] ?? Decimal.zero,
         );
         if (valueCmp != 0) return valueCmp;
-        return regionLabel(regionIndex, a).compareTo(regionLabel(regionIndex, b));
+        return regionLabel(
+          regionIndex,
+          a,
+        ).compareTo(regionLabel(regionIndex, b));
       });
     _regionOrder.removeWhere((code) => !grouped.containsKey(code));
     for (final code in fallbackRegions) {
@@ -255,7 +252,8 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
                       accountType: accountType,
                       accountCount: grouped[region]![accountType]!.length,
                       netWorth:
-                          typeNetWorthByRegion[region]?[accountType] ?? Decimal.zero,
+                          typeNetWorthByRegion[region]?[accountType] ??
+                          Decimal.zero,
                     ),
                     for (final account in grouped[region]![accountType]!)
                       _AccountCard(
@@ -263,7 +261,8 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
                         netWorth: netWorth[account.id],
                         assetCount: assetCount[account.id] ?? 0,
                         totalNetWorth: totalD,
-                        accountAssets: assetsByAccountId[account.id] ?? const [],
+                        accountAssets:
+                            assetsByAccountId[account.id] ?? const [],
                       ),
                   ],
                 ]
@@ -300,16 +299,13 @@ class _AccountListViewState extends ConsumerState<_AccountListView> {
   ) {
     final types = byType.keys.toList();
     types.sort((a, b) {
-      final valueCmp =
-          (typeNetWorthByRegion[region]?[b] ?? Decimal.zero).compareTo(
-            typeNetWorthByRegion[region]?[a] ?? Decimal.zero,
-          );
+      final valueCmp = (typeNetWorthByRegion[region]?[b] ?? Decimal.zero)
+          .compareTo(typeNetWorthByRegion[region]?[a] ?? Decimal.zero);
       if (valueCmp != 0) return valueCmp;
       return a.labelZh.compareTo(b.labelZh);
     });
     return types;
   }
-
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -342,7 +338,10 @@ class _DraggableRegionSection extends StatelessWidget {
           decoration: BoxDecoration(
             border: active
                 ? Border(
-                    top: BorderSide(color: GwpColors.actionPrimary, width: 2),
+                    top: BorderSide(
+                      color: CofferColors.actionPrimary,
+                      width: 2,
+                    ),
                   )
                 : null,
           ),
@@ -355,18 +354,26 @@ class _DraggableRegionSection extends StatelessWidget {
                 feedback: Material(
                   color: Colors.transparent,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: GwpColors.surface1,
+                      color: CofferColors.surface1,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: GwpColors.border, width: 0.5),
+                      border: Border.all(
+                        color: CofferColors.border,
+                        width: 0.5,
+                      ),
                     ),
                     child: Text(
-                      header is _RegionHeader ? (header as _RegionHeader).labelText : region,
+                      header is _RegionHeader
+                          ? (header as _RegionHeader).labelText
+                          : region,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                   ),
@@ -419,23 +426,23 @@ class _HeroCard extends StatelessWidget {
     final isUp = totalGain >= Decimal.zero;
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        GwpSpacing.base,
-        GwpSpacing.sm,
-        GwpSpacing.base,
-        GwpSpacing.sm,
+        CofferSpacing.base,
+        CofferSpacing.sm,
+        CofferSpacing.base,
+        CofferSpacing.sm,
       ),
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            GwpColors.actionPrimary.withValues(alpha: 0.12),
-            GwpColors.surface2,
+            CofferColors.actionPrimary.withValues(alpha: 0.12),
+            CofferColors.surface2,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +450,7 @@ class _HeroCard extends StatelessWidget {
           // Net worth headline
           const Text(
             '账户总净值',
-            style: TextStyle(fontSize: 11, color: GwpColors.textMuted),
+            style: TextStyle(fontSize: 11, color: CofferColors.textMuted),
           ),
           const SizedBox(height: 4),
           Text(
@@ -451,11 +458,11 @@ class _HeroCard extends StatelessWidget {
                 ? Money.format(totalNetWorth, currency: valuationCurrency)
                 : '—',
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
           // Gain / loss row
@@ -463,32 +470,39 @@ class _HeroCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                GwpNumberText(
+                CofferNumberText(
                   value:
                       '${isUp ? '+' : ''}${Money.format(totalGain, currency: valuationCurrency)}',
                   sign: totalGain > Decimal.zero
                       ? ValueSign.positive
                       : (totalGain < Decimal.zero
-                          ? ValueSign.negative
-                          : ValueSign.neutral),
+                            ? ValueSign.negative
+                            : ValueSign.neutral),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   showIcon: true,
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
-                    color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+                    color: isUp
+                        ? CofferColors.positiveBg
+                        : CofferColors.negativeBg,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${isUp ? '+' : ''}${gainPct.toStringAsFixed(2)}%',
                     style: TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: isUp ? GwpColors.positive : GwpColors.negative,
+                      color: isUp
+                          ? CofferColors.positive
+                          : CofferColors.negative,
                     ),
                   ),
                 ),
@@ -499,10 +513,10 @@ class _HeroCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               '$missingCount 项缺失汇率，未计入统计',
-              style: const TextStyle(fontSize: 10, color: GwpColors.warning),
+              style: const TextStyle(fontSize: 10, color: CofferColors.warning),
             ),
           ],
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // KPI row
           Row(
             children: [
@@ -515,7 +529,7 @@ class _HeroCard extends StatelessWidget {
           ),
           // Mini donut charts row
           if (typeValue.isNotEmpty || regionValue.isNotEmpty) ...[
-            const SizedBox(height: GwpSpacing.md),
+            const SizedBox(height: CofferSpacing.md),
             Row(
               children: [
                 if (typeValue.isNotEmpty)
@@ -527,14 +541,16 @@ class _HeroCard extends StatelessWidget {
                             (e) => _DonutSlice(
                               label: e.key.labelZh,
                               value: e.value,
-                              color: _typeColors[e.key] ?? GwpColors.actionPrimary,
+                              color:
+                                  _typeColors[e.key] ??
+                                  CofferColors.actionPrimary,
                             ),
                           )
                           .toList(),
                     ),
                   ),
                 if (typeValue.isNotEmpty && regionValue.isNotEmpty)
-                  const SizedBox(width: GwpSpacing.base),
+                  const SizedBox(width: CofferSpacing.base),
                 if (regionValue.isNotEmpty)
                   Expanded(
                     child: _MiniDonut(
@@ -561,8 +577,8 @@ class _HeroCard extends StatelessWidget {
   static Widget _vertDiv() => Container(
     width: 1,
     height: 28,
-    margin: const EdgeInsets.symmetric(horizontal: GwpSpacing.md),
-    color: GwpColors.border,
+    margin: const EdgeInsets.symmetric(horizontal: CofferSpacing.md),
+    color: CofferColors.border,
   );
 }
 
@@ -598,10 +614,10 @@ class _MiniDonut extends StatelessWidget {
           style: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: GwpColors.textMuted,
+            color: CofferColors.textMuted,
           ),
         ),
-        const SizedBox(height: GwpSpacing.sm),
+        const SizedBox(height: CofferSpacing.sm),
         Row(
           children: [
             SizedBox(
@@ -622,7 +638,7 @@ class _MiniDonut extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: GwpSpacing.sm),
+            const SizedBox(width: CofferSpacing.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,7 +649,7 @@ class _MiniDonut extends StatelessWidget {
                       '+${sorted.length - 3} 更多',
                       style: const TextStyle(
                         fontSize: 9,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                 ],
@@ -667,7 +683,7 @@ class _MiniDonut extends StatelessWidget {
               s.label,
               style: const TextStyle(
                 fontSize: 9,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -680,10 +696,10 @@ class _MiniDonut extends StatelessWidget {
               pct,
               textAlign: TextAlign.right,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
+                fontFamily: CofferTypo.monoFont,
                 fontSize: 9,
                 fontWeight: FontWeight.w500,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -708,17 +724,17 @@ class _MiniStat extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: GwpColors.textMuted),
+            style: const TextStyle(fontSize: 11, color: CofferColors.textMuted),
           ),
         ],
       ),
@@ -729,8 +745,6 @@ class _MiniStat extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 // Region group header (with proportion bar)
 // ──────────────────────────────────────────────────────────────
-
-
 
 class _RegionHeader extends StatelessWidget {
   const _RegionHeader({
@@ -767,10 +781,10 @@ class _RegionHeader extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          GwpSpacing.base,
-          GwpSpacing.base,
-          GwpSpacing.base,
-          GwpSpacing.xs,
+          CofferSpacing.base,
+          CofferSpacing.base,
+          CofferSpacing.base,
+          CofferSpacing.xs,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,13 +799,13 @@ class _RegionHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Text(
                   '$label ($accountCount)',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.textSecondary,
+                    color: CofferColors.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -801,7 +815,7 @@ class _RegionHeader extends StatelessWidget {
                   child: const Icon(
                     Icons.chevron_right,
                     size: 16,
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                   ),
                 ),
                 if (dragHandle != null) ...[
@@ -813,11 +827,11 @@ class _RegionHeader extends StatelessWidget {
                   Text(
                     _compactValue(netWorth),
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
+                      fontFamily: CofferTypo.monoFont,
+                      fontFeatures: CofferTypo.tabularFigures,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                   if (pct != null) ...[
@@ -828,13 +842,16 @@ class _RegionHeader extends StatelessWidget {
                         vertical: 1,
                       ),
                       decoration: BoxDecoration(
-                        color: regionColor(regionIndex, region).withValues(alpha: 0.15),
+                        color: regionColor(
+                          regionIndex,
+                          region,
+                        ).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         pct,
                         style: TextStyle(
-                          fontFamily: GwpTypo.monoFont,
+                          fontFamily: CofferTypo.monoFont,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: regionColor(regionIndex, region),
@@ -852,7 +869,7 @@ class _RegionHeader extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: (netWorth.toDouble() / totalNetWorth).clamp(0.0, 1.0),
                   minHeight: 3,
-                  backgroundColor: GwpColors.surface2,
+                  backgroundColor: CofferColors.surface2,
                   valueColor: AlwaysStoppedAnimation(
                     regionColor(regionIndex, region).withValues(alpha: 0.5),
                   ),
@@ -881,14 +898,14 @@ class _AccountTypeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typeColor = _typeColors[accountType] ?? GwpColors.actionPrimary;
+    final typeColor = _typeColors[accountType] ?? CofferColors.actionPrimary;
     final typeIcon = _typeIcons[accountType] ?? Icons.account_balance_outlined;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        GwpSpacing.xl,
-        GwpSpacing.sm,
-        GwpSpacing.base,
-        GwpSpacing.xs,
+        CofferSpacing.xl,
+        CofferSpacing.sm,
+        CofferSpacing.base,
+        CofferSpacing.xs,
       ),
       child: Row(
         children: [
@@ -902,14 +919,14 @@ class _AccountTypeHeader extends StatelessWidget {
             alignment: Alignment.center,
             child: Icon(typeIcon, size: 12, color: typeColor),
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           Expanded(
             child: Text(
               '${accountType.labelZh} ($accountCount)',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
           ),
@@ -917,8 +934,8 @@ class _AccountTypeHeader extends StatelessWidget {
             Text(
               compactValue(netWorth.toDouble()),
               style: TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: typeColor,
@@ -989,7 +1006,7 @@ class _AccountCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final typeColor =
-        _typeColors[account.accountType] ?? GwpColors.actionPrimary;
+        _typeColors[account.accountType] ?? CofferColors.actionPrimary;
     final typeIcon = _typeIcons[account.accountType] ?? Icons.account_balance;
     final nw = netWorth ?? Decimal.zero;
     final proportion = totalNetWorth > 0
@@ -1010,18 +1027,18 @@ class _AccountCard extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.xs,
+        horizontal: CofferSpacing.base,
+        vertical: CofferSpacing.xs,
       ),
       child: Material(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('/accounts/${account.id}'),
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: GwpColors.border, width: 0.5),
+              border: Border.all(color: CofferColors.border, width: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -1044,10 +1061,10 @@ class _AccountCard extends ConsumerWidget {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(
-                            GwpSpacing.md,
-                            GwpSpacing.md,
-                            GwpSpacing.base,
-                            GwpSpacing.sm,
+                            CofferSpacing.md,
+                            CofferSpacing.md,
+                            CofferSpacing.base,
+                            CofferSpacing.sm,
                           ),
                           child: Column(
                             children: [
@@ -1067,7 +1084,7 @@ class _AccountCard extends ConsumerWidget {
                                       color: typeColor,
                                     ),
                                   ),
-                                  const SizedBox(width: GwpSpacing.md),
+                                  const SizedBox(width: CofferSpacing.md),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -1080,7 +1097,7 @@ class _AccountCard extends ConsumerWidget {
                                           style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: GwpColors.textPrimary,
+                                            color: CofferColors.textPrimary,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -1089,13 +1106,14 @@ class _AccountCard extends ConsumerWidget {
                                         Text(
                                           [
                                             account.accountType.labelZh,
-                                            if (assetCount > 0) '$assetCount 项资产',
+                                            if (assetCount > 0)
+                                              '$assetCount 项资产',
                                             if (account.accountNo != null)
                                               account.accountNo!,
                                           ].join(' · '),
                                           style: const TextStyle(
                                             fontSize: 11,
-                                            color: GwpColors.textMuted,
+                                            color: CofferColors.textMuted,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -1103,16 +1121,18 @@ class _AccountCard extends ConsumerWidget {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: GwpSpacing.sm),
+                                  const SizedBox(width: CofferSpacing.sm),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       if (nw > Decimal.zero)
-                                        GwpNumberText(
+                                        CofferNumberText(
                                           value: Money.format(
                                             nw,
-                                            currency: ref.watch(valuationCurrencyProvider),
+                                            currency: ref.watch(
+                                              valuationCurrencyProvider,
+                                            ),
                                           ),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -1122,8 +1142,8 @@ class _AccountCard extends ConsumerWidget {
                                           '—',
                                           style: TextStyle(
                                             fontSize: 13,
-                                            color: GwpColors.textMuted,
-                                            fontFamily: GwpTypo.monoFont,
+                                            color: CofferColors.textMuted,
+                                            fontFamily: CofferTypo.monoFont,
                                           ),
                                         ),
                                       const SizedBox(height: 4),
@@ -1134,7 +1154,7 @@ class _AccountCard extends ConsumerWidget {
                               ),
                               // Proportion bar
                               if (proportion > 0) ...[
-                                const SizedBox(height: GwpSpacing.sm),
+                                const SizedBox(height: CofferSpacing.sm),
                                 Row(
                                   children: [
                                     Expanded(
@@ -1143,7 +1163,8 @@ class _AccountCard extends ConsumerWidget {
                                         child: LinearProgressIndicator(
                                           value: proportion,
                                           minHeight: 3,
-                                          backgroundColor: GwpColors.surface3,
+                                          backgroundColor:
+                                              CofferColors.surface3,
                                           valueColor: AlwaysStoppedAnimation(
                                             typeColor.withValues(alpha: 0.6),
                                           ),
@@ -1154,10 +1175,10 @@ class _AccountCard extends ConsumerWidget {
                                     Text(
                                       '${(proportion * 100).toStringAsFixed(1)}%',
                                       style: const TextStyle(
-                                        fontFamily: GwpTypo.monoFont,
+                                        fontFamily: CofferTypo.monoFont,
                                         fontSize: 9,
                                         fontWeight: FontWeight.w600,
-                                        color: GwpColors.textMuted,
+                                        color: CofferColors.textMuted,
                                       ),
                                     ),
                                   ],
@@ -1165,7 +1186,7 @@ class _AccountCard extends ConsumerWidget {
                               ],
                               // Asset type breakdown chips
                               if (sortedTypes.isNotEmpty) ...[
-                                const SizedBox(height: GwpSpacing.sm),
+                                const SizedBox(height: CofferSpacing.sm),
                                 _AssetTypeBar(types: sortedTypes),
                               ],
                             ],
@@ -1190,9 +1211,8 @@ class _AccountCard extends ConsumerWidget {
       AccountStatus.dormant => ('DORMANT', StatusVariant.warning),
       AccountStatus.closed => ('CLOSED', StatusVariant.negative),
     };
-    return GwpStatusBadge(label: label, variant: variant);
+    return CofferStatusBadge(label: label, variant: variant);
   }
-
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1220,7 +1240,7 @@ class _AssetTypeBar extends StatelessWidget {
                 return Expanded(
                   flex: (frac * 1000).round().clamp(1, 1000),
                   child: Container(
-                    color: _assetTypeColors[e.key] ?? GwpColors.textMuted,
+                    color: _assetTypeColors[e.key] ?? CofferColors.textMuted,
                   ),
                 );
               }).toList(),
@@ -1241,7 +1261,7 @@ class _AssetTypeBar extends StatelessWidget {
                   width: 5,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: _assetTypeColors[e.key] ?? GwpColors.textMuted,
+                    color: _assetTypeColors[e.key] ?? CofferColors.textMuted,
                     borderRadius: BorderRadius.circular(1),
                   ),
                 ),
@@ -1250,7 +1270,7 @@ class _AssetTypeBar extends StatelessWidget {
                   '${e.key} $pct%',
                   style: const TextStyle(
                     fontSize: 8,
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                   ),
                 ),
               ],

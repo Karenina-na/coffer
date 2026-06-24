@@ -37,16 +37,16 @@ class ValuedAmountText extends StatelessWidget {
     final primaryStyle =
         valuedStyle ??
         const TextStyle(
-          fontFamily: GwpTypo.monoFont,
-          fontFeatures: GwpTypo.tabularFigures,
-          color: GwpColors.textPrimary,
+          fontFamily: CofferTypo.monoFont,
+          fontFeatures: CofferTypo.tabularFigures,
+          color: CofferColors.textPrimary,
         );
     final secondaryStyle =
         nativeStyle ??
         const TextStyle(
-          fontFamily: GwpTypo.monoFont,
-          fontFeatures: GwpTypo.tabularFigures,
-          color: GwpColors.textMuted,
+          fontFamily: CofferTypo.monoFont,
+          fontFeatures: CofferTypo.tabularFigures,
+          color: CofferColors.textMuted,
         );
 
     final valuedText = valuedAmount == null

@@ -17,6 +17,17 @@ final databaseSchemaVersionProvider = Provider<int>((ref) {
   return ref.watch(appDatabaseProvider).schemaVersion;
 });
 
+typedef DatabaseTransactionRunner =
+    Future<T> Function<T>(Future<T> Function() fn);
+
+/// 仅暴露事务执行能力，避免 presentation 层为了事务直接持有 Drift 数据库实例。
+final databaseTransactionRunnerProvider = Provider<DatabaseTransactionRunner>((
+  ref,
+) {
+  final db = ref.watch(appDatabaseProvider);
+  return <T>(fn) => db.transaction(fn);
+});
+
 final accountDaoProvider = Provider<AccountDao>((ref) {
   return ref.watch(appDatabaseProvider).accountDao;
 });

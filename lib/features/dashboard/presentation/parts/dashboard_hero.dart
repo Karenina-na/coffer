@@ -12,13 +12,13 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: GwpSpacing.sm),
+      padding: const EdgeInsets.only(left: 4, bottom: CofferSpacing.sm),
       child: Row(
         children: [
           Text(
             title,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
@@ -165,7 +165,7 @@ class _GridMapHeroState extends ConsumerState<_GridMapHero> {
         height: 210,
         child: Center(
           child: CircularProgressIndicator(
-            color: GwpColors.actionPrimary,
+            color: CofferColors.actionPrimary,
             strokeWidth: 1.5,
           ),
         ),
@@ -244,7 +244,7 @@ class _GridMapContentState extends State<_GridMapContent>
     final dataContinents = _dataContinents;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: GwpColors.surface1,
+      backgroundColor: CofferColors.surface1,
       isScrollControlled: true,
       useRootNavigator: true,
       shape: const RoundedRectangleBorder(
@@ -422,7 +422,7 @@ class _GridMapContentState extends State<_GridMapContent>
                   child: Text(
                     widget.scope == _MapScope.country ? '全球持仓分布' : '全球区域分布',
                     style: TextStyle(
-                      color: GwpColors.textMuted.withValues(alpha: 0.28),
+                      color: CofferColors.textMuted.withValues(alpha: 0.28),
                       fontSize: 8.5,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.4,
@@ -451,7 +451,7 @@ class _GridMapContentState extends State<_GridMapContent>
                                       margin: const EdgeInsets.only(right: 3),
                                       decoration: BoxDecoration(
                                         color: (kContinentColors[c] ??
-                                                GwpColors.actionPrimary)
+                                                CofferColors.actionPrimary)
                                             .withValues(alpha: 0.70),
                                         shape: BoxShape.circle,
                                       ),
@@ -459,7 +459,7 @@ class _GridMapContentState extends State<_GridMapContent>
                                     Text(
                                       c,
                                       style: TextStyle(
-                                        color: GwpColors.textMuted
+                                        color: CofferColors.textMuted
                                             .withValues(alpha: 0.42),
                                         fontSize: 7.5,
                                         letterSpacing: 0.2,
@@ -483,7 +483,7 @@ class _GridMapContentState extends State<_GridMapContent>
                         '轻触节点查看详情',
                         style: TextStyle(
                           color:
-                              GwpColors.textMuted.withValues(alpha: 0.30),
+                              CofferColors.textMuted.withValues(alpha: 0.30),
                           fontSize: 8.5,
                           letterSpacing: 0.3,
                         ),
@@ -501,14 +501,14 @@ class _GridMapContentState extends State<_GridMapContent>
                           Icon(
                             Icons.public_off_rounded,
                             size: 22,
-                            color: GwpColors.textMuted
+                            color: CofferColors.textMuted
                                 .withValues(alpha: 0.35),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             '当前筛选无持仓地区',
                             style: TextStyle(
-                              color: GwpColors.textMuted
+                              color: CofferColors.textMuted
                                   .withValues(alpha: 0.45),
                               fontSize: 11,
                             ),
@@ -529,13 +529,13 @@ class _GridMapContentState extends State<_GridMapContent>
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: filterActive
-                            ? GwpColors.actionPrimary.withValues(alpha: 0.18)
-                            : GwpColors.surface2.withValues(alpha: 0.90),
+                            ? CofferColors.actionPrimary.withValues(alpha: 0.18)
+                            : CofferColors.surface2.withValues(alpha: 0.90),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: filterActive
-                              ? GwpColors.actionPrimary.withValues(alpha: 0.55)
-                              : GwpColors.border,
+                              ? CofferColors.actionPrimary.withValues(alpha: 0.55)
+                              : CofferColors.border,
                           width: 0.5,
                         ),
                       ),
@@ -546,8 +546,8 @@ class _GridMapContentState extends State<_GridMapContent>
                             Icons.tune_rounded,
                             size: 11,
                             color: filterActive
-                                ? GwpColors.actionPrimary
-                                : GwpColors.textSecondary,
+                                ? CofferColors.actionPrimary
+                                : CofferColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -557,8 +557,8 @@ class _GridMapContentState extends State<_GridMapContent>
                             style: TextStyle(
                               fontSize: 10,
                               color: filterActive
-                                  ? GwpColors.actionPrimary
-                                  : GwpColors.textSecondary,
+                                  ? CofferColors.actionPrimary
+                                  : CofferColors.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -568,7 +568,7 @@ class _GridMapContentState extends State<_GridMapContent>
                               width: 5,
                               height: 5,
                               decoration: const BoxDecoration(
-                                color: GwpColors.actionPrimary,
+                                color: CofferColors.actionPrimary,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -603,10 +603,10 @@ class _GridMapContentState extends State<_GridMapContent>
         // ── Stats bar ─────────────────────────────────────────
         Container(
           padding: const EdgeInsets.fromLTRB(
-              GwpSpacing.base, GwpSpacing.sm, GwpSpacing.base, GwpSpacing.md),
+              CofferSpacing.base, CofferSpacing.sm, CofferSpacing.base, CofferSpacing.md),
           decoration: const BoxDecoration(
             border: Border(
-                top: BorderSide(color: GwpColors.border, width: 0.5)),
+                top: BorderSide(color: CofferColors.border, width: 0.5)),
           ),
           child: LayoutBuilder(
             builder: (context, bc) {
@@ -625,7 +625,7 @@ class _GridMapContentState extends State<_GridMapContent>
                       label: widget.scope == _MapScope.country ? '个地区' : '个区域',
                     ),
                   ),
-                  const SizedBox(width: GwpSpacing.md),
+                  const SizedBox(width: CofferSpacing.md),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 280),
                     transitionBuilder: (child, anim) =>
@@ -638,7 +638,7 @@ class _GridMapContentState extends State<_GridMapContent>
                     ),
                   ),
                   if (channelCount > 0) ...[
-                    const SizedBox(width: GwpSpacing.md),
+                    const SizedBox(width: CofferSpacing.md),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 280),
                       transitionBuilder: (child, anim) =>
@@ -659,18 +659,18 @@ class _GridMapContentState extends State<_GridMapContent>
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color:
-                              GwpColors.actionPrimary.withValues(alpha: 0.10),
+                              CofferColors.actionPrimary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: GwpColors.actionPrimary
+                              color: CofferColors.actionPrimary
                                   .withValues(alpha: 0.25),
                               width: 0.5),
                         ),
                         child: Text(
                           '主导 ${regionLabel(widget.regionIndex, topNode.regionCode)} · ${topPct.toStringAsFixed(0)}%',
                           style: const TextStyle(
-                            fontFamily: GwpTypo.monoFont,
-                            color: GwpColors.actionPrimary,
+                            fontFamily: CofferTypo.monoFont,
+                            color: CofferColors.actionPrimary,
                             fontSize: 9.5,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
@@ -685,7 +685,7 @@ class _GridMapContentState extends State<_GridMapContent>
                   const Text(
                     'GLOBAL',
                     style: TextStyle(
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                       fontSize: 9,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.2,
@@ -784,10 +784,10 @@ class _FilterSheetState extends State<_FilterSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        GwpSpacing.base,
-        GwpSpacing.base,
-        GwpSpacing.base,
-        GwpSpacing.xl + MediaQuery.of(context).viewInsets.bottom,
+        CofferSpacing.base,
+        CofferSpacing.base,
+        CofferSpacing.base,
+        CofferSpacing.xl + MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -799,12 +799,12 @@ class _FilterSheetState extends State<_FilterSheet> {
               width: 32,
               height: 3,
               decoration: BoxDecoration(
-                color: GwpColors.border,
+                color: CofferColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
 
           // Title + reset
           Row(
@@ -812,7 +812,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               const Text(
                 '地图过滤',
                 style: TextStyle(
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -831,7 +831,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 child: const Text(
                   '重置',
                   style: TextStyle(
-                    color: GwpColors.actionPrimary,
+                    color: CofferColors.actionPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -839,16 +839,16 @@ class _FilterSheetState extends State<_FilterSheet> {
               ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
 
           const Text(
             '地图粒度',
             style: TextStyle(
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           Wrap(
             spacing: 8,
             runSpacing: 6,
@@ -863,13 +863,13 @@ class _FilterSheetState extends State<_FilterSheet> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
                       color: _scope == option
-                          ? GwpColors.actionPrimary.withValues(alpha: 0.15)
-                          : GwpColors.surface2,
+                          ? CofferColors.actionPrimary.withValues(alpha: 0.15)
+                          : CofferColors.surface2,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: _scope == option
-                            ? GwpColors.actionPrimary
-                            : GwpColors.border,
+                            ? CofferColors.actionPrimary
+                            : CofferColors.border,
                         width: _scope == option ? 1.0 : 0.5,
                       ),
                     ),
@@ -877,8 +877,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                       option == _MapScope.country ? '国家视图' : '区域视图',
                       style: TextStyle(
                         color: _scope == option
-                            ? GwpColors.actionPrimary
-                            : GwpColors.textSecondary,
+                            ? CofferColors.actionPrimary
+                            : CofferColors.textSecondary,
                         fontSize: 13,
                         fontWeight:
                             _scope == option ? FontWeight.w600 : FontWeight.w400,
@@ -888,17 +888,17 @@ class _FilterSheetState extends State<_FilterSheet> {
                 ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
 
           // ── Presets ────────────────────────────────────────
           const Text(
             '预设方案',
             style: TextStyle(
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           Wrap(
             spacing: 8,
             runSpacing: 6,
@@ -911,13 +911,13 @@ class _FilterSheetState extends State<_FilterSheet> {
                       horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: selected
-                        ? GwpColors.actionPrimary.withValues(alpha: 0.15)
-                        : GwpColors.surface2,
+                        ? CofferColors.actionPrimary.withValues(alpha: 0.15)
+                        : CofferColors.surface2,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: selected
-                          ? GwpColors.actionPrimary
-                          : GwpColors.border,
+                          ? CofferColors.actionPrimary
+                          : CofferColors.border,
                       width: selected ? 1.0 : 0.5,
                     ),
                   ),
@@ -925,8 +925,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                     _kPresets[i].label,
                     style: TextStyle(
                       color: selected
-                          ? GwpColors.actionPrimary
-                          : GwpColors.textSecondary,
+                          ? CofferColors.actionPrimary
+                          : CofferColors.textSecondary,
                       fontSize: 13,
                       fontWeight:
                           selected ? FontWeight.w600 : FontWeight.w400,
@@ -936,13 +936,13 @@ class _FilterSheetState extends State<_FilterSheet> {
               );
             }),
           ),
-          const SizedBox(height: GwpSpacing.base),
+          const SizedBox(height: CofferSpacing.base),
 
           // ── Layer toggles ──────────────────────────────────
           const Text(
             '显示图层',
             style: TextStyle(
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w500),
           ),
@@ -977,15 +977,15 @@ class _FilterSheetState extends State<_FilterSheet> {
 
           // ── Continent scope (only if >1 continent in data) ─
           if (widget.availableContinents.length > 1) ...[
-            const SizedBox(height: GwpSpacing.base),
+            const SizedBox(height: CofferSpacing.base),
             const Text(
               '地区范围',
               style: TextStyle(
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w500),
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -993,7 +993,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                   .map((cont) {
                 final active = _continents.contains(cont);
                 final cColor =
-                    kContinentColors[cont] ?? GwpColors.actionPrimary;
+                    kContinentColors[cont] ?? CofferColors.actionPrimary;
                 return GestureDetector(
                   onTap: () => _toggleContinent(cont),
                   child: AnimatedContainer(
@@ -1003,10 +1003,10 @@ class _FilterSheetState extends State<_FilterSheet> {
                     decoration: BoxDecoration(
                       color: active
                           ? cColor.withValues(alpha: 0.12)
-                          : GwpColors.surface2,
+                          : CofferColors.surface2,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: active ? cColor : GwpColors.border,
+                        color: active ? cColor : CofferColors.border,
                         width: active ? 1.0 : 0.5,
                       ),
                     ),
@@ -1026,7 +1026,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                           cont,
                           style: TextStyle(
                             color:
-                                active ? cColor : GwpColors.textSecondary,
+                                active ? cColor : CofferColors.textSecondary,
                             fontSize: 12,
                             fontWeight: active
                                 ? FontWeight.w600
@@ -1041,7 +1041,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             ),
           ],
 
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
         ],
       ),
     );
@@ -1072,7 +1072,7 @@ class _LayerToggleRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: GwpColors.textSecondary),
+            Icon(icon, size: 16, color: CofferColors.textSecondary),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1081,7 +1081,7 @@ class _LayerToggleRow extends StatelessWidget {
                   Text(
                     label,
                     style: const TextStyle(
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1089,7 +1089,7 @@ class _LayerToggleRow extends StatelessWidget {
                   Text(
                     sublabel,
                     style: const TextStyle(
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                       fontSize: 10,
                     ),
                   ),
@@ -1099,7 +1099,7 @@ class _LayerToggleRow extends StatelessWidget {
             Switch(
               value: value,
               onChanged: (_) => onToggle(),
-              activeThumbColor: GwpColors.actionPrimary,
+              activeThumbColor: CofferColors.actionPrimary,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ],
@@ -1205,7 +1205,7 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
               width: popupWidth,
               padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
               decoration: BoxDecoration(
-                color: GwpColors.surface2,
+                color: CofferColors.surface2,
                 borderRadius: BorderRadius.circular(9),
                 border: Border.all(
                     color: accentColor.withValues(alpha: 0.45), width: 0.75),
@@ -1247,7 +1247,7 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
                         child: Text(
                           regionName,
                           style: const TextStyle(
-                            color: GwpColors.textMuted,
+                            color: CofferColors.textMuted,
                             fontSize: 9,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -1262,7 +1262,7 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
                         child: Icon(
                           Icons.close_rounded,
                           size: 13,
-                          color: GwpColors.textMuted
+                          color: CofferColors.textMuted
                               .withValues(alpha: 0.55),
                         ),
                       ),
@@ -1273,8 +1273,8 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
                   Text(
                     node.label,
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      color: GwpColors.textPrimary,
+                      fontFamily: CofferTypo.monoFont,
+                      color: CofferColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1286,7 +1286,7 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
                     borderRadius: BorderRadius.circular(2),
                     child: Stack(
                       children: [
-                        Container(height: 3, color: GwpColors.border),
+                        Container(height: 3, color: CofferColors.border),
                         FractionallySizedBox(
                           widthFactor: pct.clamp(0.0, 1.0),
                           child: Container(
@@ -1314,7 +1314,7 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
                         child: Text(
                           pctStr,
                           style: TextStyle(
-                            fontFamily: GwpTypo.monoFont,
+                            fontFamily: CofferTypo.monoFont,
                             color: accentColor,
                             fontSize: 9.5,
                             fontWeight: FontWeight.w600,
@@ -1323,22 +1323,22 @@ class _NodeInfoPopupState extends State<_NodeInfoPopup>
                       ),
                       const SizedBox(width: 7),
                       Icon(Icons.account_balance_rounded,
-                          size: 10, color: GwpColors.textMuted),
+                          size: 10, color: CofferColors.textMuted),
                       const SizedBox(width: 2),
                       Text(
                         '${node.accountCount}',
                         style: const TextStyle(
-                            color: GwpColors.textMuted, fontSize: 10),
+                            color: CofferColors.textMuted, fontSize: 10),
                       ),
                       if (widget.regionChannels > 0) ...[
                         const SizedBox(width: 7),
                         Icon(Icons.swap_horiz_rounded,
-                            size: 10, color: GwpColors.textMuted),
+                            size: 10, color: CofferColors.textMuted),
                         const SizedBox(width: 2),
                         Text(
                           '${widget.regionChannels}',
                           style: const TextStyle(
-                              color: GwpColors.textMuted, fontSize: 10),
+                              color: CofferColors.textMuted, fontSize: 10),
                         ),
                       ],
                     ],
@@ -1374,21 +1374,21 @@ class _MapStat extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 11, color: GwpColors.actionPrimary),
+        Icon(icon, size: 11, color: CofferColors.actionPrimary),
         const SizedBox(width: 3),
         Text(
           value,
           style: const TextStyle(
-            fontFamily: GwpTypo.monoFont,
+            fontFamily: CofferTypo.monoFont,
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: GwpColors.textPrimary,
+            color: CofferColors.textPrimary,
           ),
         ),
         const SizedBox(width: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
         ),
       ],
     );
@@ -1464,7 +1464,7 @@ class _DotWorldPainter extends CustomPainter {
     final radius = FinanceMapProjection.cryptoHubRadius(size);
     // Dot-matrix style: same color as land dots, thin dotted ring
     final paint = Paint()
-      ..color = GwpColors.borderStrong.withValues(alpha: 0.25)
+      ..color = CofferColors.borderStrong.withValues(alpha: 0.25)
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(center, radius, paint);
@@ -1500,11 +1500,11 @@ class _DotWorldPainter extends CustomPainter {
         }
 
         final landPaint = Paint()
-          ..color = GwpColors.borderStrong
+          ..color = CofferColors.borderStrong
               .withValues(alpha: 0.22 + edgeFactor * 0.24)
           ..style = PaintingStyle.fill;
         final activePaint = Paint()
-          ..color = GwpColors.actionPrimary
+          ..color = CofferColors.actionPrimary
               .withValues(alpha: 0.18 + edgeFactor * 0.26)
           ..style = PaintingStyle.fill;
 
@@ -1520,21 +1520,21 @@ class _DotWorldPainter extends CustomPainter {
       canvas,
       size,
       yNorm: 0.50,
-      color: GwpColors.border.withValues(alpha: 0.22),
+      color: CofferColors.border.withValues(alpha: 0.22),
       strokeWidth: 0.5,
     );
     _drawGuideLine(
       canvas,
       size,
       yNorm: 0.333,
-      color: GwpColors.border.withValues(alpha: 0.10),
+      color: CofferColors.border.withValues(alpha: 0.10),
       strokeWidth: 0.4,
     );
     _drawGuideLine(
       canvas,
       size,
       yNorm: 0.667,
-      color: GwpColors.border.withValues(alpha: 0.10),
+      color: CofferColors.border.withValues(alpha: 0.10),
       strokeWidth: 0.4,
     );
   }
@@ -1591,7 +1591,7 @@ class _DotWorldPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = GwpColors.actionPrimary.withValues(
+          ..color = CofferColors.actionPrimary.withValues(
               alpha: (compact ? 0.08 : 0.10) + depth * 0.10)
           ..style = PaintingStyle.stroke
           ..strokeWidth = sw + (compact ? 1.0 : 1.25)
@@ -1600,13 +1600,13 @@ class _DotWorldPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = GwpColors.actionPrimary.withValues(alpha: 0.28 + depth * 0.22)
+          ..color = CofferColors.actionPrimary.withValues(alpha: 0.28 + depth * 0.22)
           ..style = PaintingStyle.stroke
           ..strokeWidth = sw,
       );
 
       final termPaint = Paint()
-        ..color = GwpColors.actionPrimary.withValues(alpha: 0.35 + depth * 0.28)
+        ..color = CofferColors.actionPrimary.withValues(alpha: 0.35 + depth * 0.28)
         ..style = PaintingStyle.fill;
       final terminalRadius = geometry.recommendedTerminalRadius(
         strokeWidth: sw,
@@ -1675,7 +1675,7 @@ class _DotWorldPainter extends CustomPainter {
         dotR,
         Paint()
           ..color = isSel
-              ? GwpColors.textPrimary.withValues(alpha: 0.96)
+              ? CofferColors.textPrimary.withValues(alpha: 0.96)
               : nodeColor.withValues(alpha: 0.78 + depth * 0.16)
           ..style = PaintingStyle.fill,
       );
@@ -1683,7 +1683,7 @@ class _DotWorldPainter extends CustomPainter {
         center,
         dotR,
         Paint()
-          ..color = GwpColors.textPrimary
+          ..color = CofferColors.textPrimary
               .withValues(alpha: isSel ? 0.60 + depth * 0.12 : 0.18 + depth * 0.10)
           ..style = PaintingStyle.stroke
           ..strokeWidth = isSel ? 1.0 : 0.65,
@@ -1692,6 +1692,7 @@ class _DotWorldPainter extends CustomPainter {
   }
 
   // ── TOP-3 rank badges ────────────────────────────────────────
+  // ignore: unused_element
   void _drawRankBadges(Canvas canvas, Size size) {
     final badgeRects = _topBadgeRects(size);
     for (final entry in badgeRects.entries) {
@@ -1835,6 +1836,7 @@ class _DotWorldPainter extends CustomPainter {
   }
 
   // ── Edge vignette ─────────────────────────────────────────────
+  // ignore: unused_element
   void _drawVignette(Canvas canvas, Size size) {
     final focusRect = Rect.fromCenter(
       center: Offset(size.width * 0.5, size.height * 0.18),
@@ -1846,14 +1848,14 @@ class _DotWorldPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            GwpColors.actionPrimary.withValues(alpha: 0.14),
+            CofferColors.actionPrimary.withValues(alpha: 0.14),
             const Color(0x00141414),
           ],
           stops: const [0.0, 1.0],
         ).createShader(focusRect),
     );
 
-    const bg = GwpColors.surface1;
+    const bg = CofferColors.surface1;
     const bgT = Color(0x00141414);
     final sw = size.width * 0.04;
     final sh = size.height * 0.18;

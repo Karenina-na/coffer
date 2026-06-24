@@ -9,7 +9,7 @@ import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../core/ui/error_localizer.dart';
-import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/coffer_empty_state.dart';
 import '../../../core/ui/protocol_display.dart';
 import '../../../domain/entities/account.dart';
 import '../../../domain/entities/account_channel.dart';
@@ -85,7 +85,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
   TransferRoute? _hopsRoute;
   String? _errorMsg;
   bool _amountExpanded = false;
-  Map<String, double> _fxRates = const {};
+  Map<String, Decimal> _fxRates = const {};
 
   @override
   void dispose() {
@@ -118,7 +118,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     final uc = ref.read(planTransferRouteUseCaseProvider);
     final ccy = _currency.toUpperCase();
     final tgtCcy = _targetCurrency.toUpperCase();
-    final fxRates = Map<String, double>.of(_fxRates);
+    final fxRates = Map<String, Decimal>.of(_fxRates);
     if (_planMode == _PlanMode.compare) {
       final results = await Future.wait([
         uc(
@@ -201,15 +201,15 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
     };
     return accountsAsync.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+        child: CircularProgressIndicator(color: CofferColors.actionPrimary),
       ),
-      error: (e, _) => GwpEmptyState.error(
+      error: (e, _) => CofferEmptyState.error(
         message: '加载账户失败: ${errorToMessage(e)}',
         onRetry: () => ref.invalidate(accountListProvider),
       ),
       data: (accounts) {
         if (accounts.length < 2) {
-          return const GwpEmptyState(
+          return const CofferEmptyState(
             icon: Icons.swap_horiz_outlined,
             title: '至少需要两个账户',
             subtitle: '请先添加两个或以上账户才能模拟转账',
@@ -225,10 +225,9 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
           loading: () => <AccountChannel>[],
           error: (_, _) => <AccountChannel>[],
         );
-        final channels = ref.watch(channelListProvider).maybeWhen(
-              data: (list) => list,
-              orElse: () => const <Channel>[],
-            );
+        final channels = ref
+            .watch(channelListProvider)
+            .maybeWhen(data: (list) => list, orElse: () => const <Channel>[]);
 
         final netWorth = <String, Decimal>{};
         final assetCount = <String, int>{};
@@ -248,11 +247,15 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
 
         final srcAccount = _sourceId != null
             ? accounts.cast<Account?>().firstWhere(
-                (a) => a!.id == _sourceId, orElse: () => null)
+                (a) => a!.id == _sourceId,
+                orElse: () => null,
+              )
             : null;
         final tgtAccount = _targetId != null
             ? accounts.cast<Account?>().firstWhere(
-                (a) => a!.id == _targetId, orElse: () => null)
+                (a) => a!.id == _targetId,
+                orElse: () => null,
+              )
             : null;
 
         final srcChannelIds = links
@@ -273,47 +276,52 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
             : _parseAmount();
         // Ensure FX rate stream is active (used by both display and planner)
         final fxAsync = ref.watch(exchangeRateListProvider);
-        final fxList = fxAsync.maybeWhen(data: (d) => d, orElse: () => <ExchangeRate>[]);
-        final builtFx = <String, double>{};
+        final fxList = fxAsync.maybeWhen(
+          data: (d) => d,
+          orElse: () => <ExchangeRate>[],
+        );
+        final builtFx = <String, Decimal>{};
         for (final r in fxList) {
-          final d = r.rate.toDouble();
-          builtFx['${r.baseCurrency}/${r.quoteCurrency}'] = d;
-          if (d > 0) {
-            builtFx['${r.quoteCurrency}/${r.baseCurrency}'] = 1.0 / d;
+          final rate = r.rate;
+          builtFx['${r.baseCurrency}/${r.quoteCurrency}'] = rate;
+          if (rate > Decimal.zero) {
+            builtFx['${r.quoteCurrency}/${r.baseCurrency}'] =
+                (Decimal.one / rate).toDecimal(scaleOnInfinitePrecision: 18);
           }
         }
         _fxRates = builtFx;
 
         // Estimated target amount from FX rate (look up both directions)
-        String? _estimatedTarget;
+        String? estimatedTarget;
         if (amountDecimal != null && _currency != _targetCurrency) {
           final src = _currency;
           final tgt = _targetCurrency;
-          double? estRate;
+          Decimal? estRate;
           for (final r in fxList) {
             if (r.baseCurrency == src && r.quoteCurrency == tgt) {
-              estRate = r.rate.toDouble();
+              estRate = r.rate;
               break;
             }
             if (r.baseCurrency == tgt && r.quoteCurrency == src) {
-              estRate = 1.0 / r.rate.toDouble();
+              if (r.rate > Decimal.zero) {
+                estRate = (Decimal.one / r.rate).toDecimal(
+                  scaleOnInfinitePrecision: 18,
+                );
+              }
               break;
             }
           }
           if (estRate != null) {
-            final estD = amountDecimal.toDouble() * estRate;
-            _estimatedTarget = _fmtAmountText(Decimal.parse(estD.toStringAsFixed(6)));
+            estimatedTarget = _fmtAmountText(amountDecimal * estRate);
           }
         }
-        final srcNetWorth =
-            srcAccount != null ? netWorth[srcAccount.id] : null;
-        final exceedsBalance = amountDecimal != null &&
+        final srcNetWorth = srcAccount != null ? netWorth[srcAccount.id] : null;
+        final exceedsBalance =
+            amountDecimal != null &&
             srcNetWorth != null &&
             amountDecimal > srcNetWorth;
 
-        final canPlan = _sourceId != null &&
-            _targetId != null &&
-            !_loading;
+        final canPlan = _sourceId != null && _targetId != null && !_loading;
 
         final hasResult = _planMode != _PlanMode.compare
             ? _route != null
@@ -321,9 +329,9 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(
-            GwpSpacing.base,
-            GwpSpacing.md,
-            GwpSpacing.base,
+            CofferSpacing.base,
+            CofferSpacing.md,
+            CofferSpacing.base,
             112,
           ),
           children: [
@@ -334,11 +342,11 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               sharedChannels: sharedChannels,
               totalPaths: hasResult
                   ? (_planMode != _PlanMode.compare
-                      ? (1 + (_route?.alternatives.length ?? 0))
-                      : ((_feeRoute != null ? 1 : 0) +
-                          (_hopsRoute != null ? 1 : 0) +
-                          (_feeRoute?.alternatives.length ?? 0) +
-                          (_hopsRoute?.alternatives.length ?? 0)))
+                        ? (1 + (_route?.alternatives.length ?? 0))
+                        : ((_feeRoute != null ? 1 : 0) +
+                              (_hopsRoute != null ? 1 : 0) +
+                              (_feeRoute?.alternatives.length ?? 0) +
+                              (_hopsRoute?.alternatives.length ?? 0)))
                   : null,
               exceedsBalance: exceedsBalance,
               amount: amountDecimal,
@@ -354,14 +362,14 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
               onSourceChanged: (v) => setState(() => _sourceId = v),
               onTargetChanged: (v) => setState(() => _targetId = v),
             ),
-            const SizedBox(height: GwpSpacing.md),
+            const SizedBox(height: CofferSpacing.md),
 
             // ── §2 Transfer amount (expandable) ──
             Container(
               decoration: BoxDecoration(
-                color: GwpColors.surface1,
+                color: CofferColors.surface1,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: GwpColors.border, width: 0.5),
+                border: Border.all(color: CofferColors.border, width: 0.5),
               ),
               child: Column(
                 children: [
@@ -369,64 +377,99 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                     borderRadius: _amountExpanded
                         ? const BorderRadius.vertical(top: Radius.circular(8))
                         : BorderRadius.circular(8),
-                    onTap: () => setState(() => _amountExpanded = !_amountExpanded),
+                    onTap: () =>
+                        setState(() => _amountExpanded = !_amountExpanded),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
-                          const Icon(Icons.attach_money, size: 16,
-                              color: GwpColors.textMuted),
+                          const Icon(
+                            Icons.attach_money,
+                            size: 16,
+                            color: CofferColors.textMuted,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             _amountCtrl.text.isEmpty
                                 ? '1k'
                                 : _fmtAmountText(_parseAmount()),
                             style: const TextStyle(
-                              fontFamily: GwpTypo.monoFont,
+                              fontFamily: CofferTypo.monoFont,
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
-                              color: GwpColors.textPrimary,
+                              color: CofferColors.textPrimary,
                             ),
                           ),
                           const SizedBox(width: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
-                              color: GwpColors.actionPrimary.withValues(alpha: 0.1),
+                              color: CofferColors.actionPrimary.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(3),
                             ),
-                            child: Text(_currency,
-                                style: const TextStyle(
-                                    fontSize: 10, fontWeight: FontWeight.w700,
-                                    color: GwpColors.actionPrimary,
-                                    fontFamily: GwpTypo.monoFont)),
+                            child: Text(
+                              _currency,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: CofferColors.actionPrimary,
+                                fontFamily: CofferTypo.monoFont,
+                              ),
+                            ),
                           ),
                           if (_targetCurrency != _currency) ...[
-                            const Icon(Icons.arrow_forward_rounded,
-                                size: 12, color: GwpColors.textMuted),
-                            if (_estimatedTarget != null)
-                              Text(' $_estimatedTarget ',
-                                  style: const TextStyle(
-                                      fontSize: 10, fontWeight: FontWeight.w600,
-                                      color: GwpColors.textSecondary,
-                                      fontFamily: GwpTypo.monoFont)),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 12,
+                              color: CofferColors.textMuted,
+                            ),
+                            if (estimatedTarget != null)
+                              Text(
+                                ' $estimatedTarget ',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: CofferColors.textSecondary,
+                                  fontFamily: CofferTypo.monoFont,
+                                ),
+                              ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
                               decoration: BoxDecoration(
-                                color: GwpColors.warning.withValues(alpha: 0.1),
+                                color: CofferColors.warning.withValues(
+                                  alpha: 0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(3),
                               ),
-                              child: Text(_targetCurrency,
-                                  style: const TextStyle(
-                                      fontSize: 10, fontWeight: FontWeight.w700,
-                                      color: GwpColors.warning,
-                                      fontFamily: GwpTypo.monoFont)),
+                              child: Text(
+                                _targetCurrency,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: CofferColors.warning,
+                                  fontFamily: CofferTypo.monoFont,
+                                ),
+                              ),
                             ),
                           ],
                           const Spacer(),
                           Icon(
-                            _amountExpanded ? Icons.expand_less : Icons.expand_more,
-                            size: 18, color: GwpColors.textMuted,
+                            _amountExpanded
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            size: 18,
+                            color: CofferColors.textMuted,
                           ),
                         ],
                       ),
@@ -439,13 +482,14 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                       currency: _currency,
                       targetCurrency: _targetCurrency,
                       onCurrencyChanged: (v) => setState(() => _currency = v),
-                      onTargetCurrencyChanged: (v) => setState(() => _targetCurrency = v),
+                      onTargetCurrencyChanged: (v) =>
+                          setState(() => _targetCurrency = v),
                     ),
                   ],
                 ],
               ),
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
 
             // ── §3 Strategy + plan ──
             Row(
@@ -470,14 +514,15 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                       ),
                     ],
                     selected: {_planMode},
-                    onSelectionChanged: (s) => setState(() => _planMode = s.first),
+                    onSelectionChanged: (s) =>
+                        setState(() => _planMode = s.first),
                     style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 FilledButton.icon(
                   onPressed: canPlan ? _plan : null,
                   icon: _loading
@@ -485,7 +530,9 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.route_outlined, size: 18),
                   label: const Text('规划'),
@@ -495,24 +542,32 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
 
             // ── Error ──
             if (_errorMsg != null) ...[
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
               Container(
-                padding: const EdgeInsets.all(GwpSpacing.md),
+                padding: const EdgeInsets.all(CofferSpacing.md),
                 decoration: BoxDecoration(
-                  color: GwpColors.negativeBg,
+                  color: CofferColors.negativeBg,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: GwpColors.negative.withValues(alpha: 0.3)),
+                    color: CofferColors.negative.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline,
-                        size: 18, color: GwpColors.negative),
-                    const SizedBox(width: GwpSpacing.sm),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 18,
+                      color: CofferColors.negative,
+                    ),
+                    const SizedBox(width: CofferSpacing.sm),
                     Expanded(
-                      child: Text(_errorMsg!,
-                          style: const TextStyle(
-                              fontSize: 13, color: GwpColors.negative)),
+                      child: Text(
+                        _errorMsg!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: CofferColors.negative,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -521,7 +576,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
 
             // ── §3 Route result ──
             if (hasResult) ...[
-              const SizedBox(height: GwpSpacing.lg),
+              const SizedBox(height: CofferSpacing.lg),
               if (_planMode != _PlanMode.compare && _route != null)
                 _RouteFlow(
                   route: _route!,
@@ -537,7 +592,7 @@ class _TransferSimulateBodyState extends ConsumerState<TransferSimulateBody> {
                 ),
             ],
 
-            const SizedBox(height: GwpSpacing.lg),
+            const SizedBox(height: CofferSpacing.lg),
 
             // ── Channel management link ──
             TextButton.icon(
@@ -602,58 +657,70 @@ class _AccountSelectorBar extends StatelessWidget {
     final connected = sharedChannels.isNotEmpty;
     final bothSelected = source != null && target != null;
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            GwpColors.surface2,
-            GwpColors.actionPrimary.withValues(alpha: 0.08),
+            CofferColors.surface2,
+            CofferColors.actionPrimary.withValues(alpha: 0.08),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Expanded(
-                child: _endpointCard(context, source, '源', GwpColors.negative),
+                child: _endpointCard(
+                  context,
+                  source,
+                  '源',
+                  CofferColors.negative,
+                ),
               ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: GwpSpacing.sm),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CofferSpacing.sm,
+                ),
                 child: Column(
                   children: [
                     if (amount != null && amount! > Decimal.zero) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: GwpColors.actionPrimary
-                              .withValues(alpha: 0.12),
+                          color: CofferColors.actionPrimary.withValues(
+                            alpha: 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           '${_fmtAmount(amount!)} $currency',
                           style: const TextStyle(
-                            fontFamily: GwpTypo.monoFont,
-                            fontFeatures: GwpTypo.tabularFigures,
+                            fontFamily: CofferTypo.monoFont,
+                            fontFeatures: CofferTypo.tabularFigures,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: GwpColors.actionPrimary,
+                            color: CofferColors.actionPrimary,
                           ),
                         ),
                       ),
                       if (exceedsBalance) ...[
                         const SizedBox(height: 3),
-                        const Text('余额不足',
-                            style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                                color: GwpColors.negative)),
+                        const Text(
+                          '余额不足',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: CofferColors.negative,
+                          ),
+                        ),
                       ],
                     ],
                     const SizedBox(height: 6),
@@ -663,39 +730,52 @@ class _AccountSelectorBar extends StatelessWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: GwpColors.surface1,
+                          color: CofferColors.surface1,
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: GwpColors.border, width: 0.5),
+                            color: CofferColors.border,
+                            width: 0.5,
+                          ),
                         ),
-                        child: const Icon(Icons.swap_horiz_rounded,
-                            size: 20, color: GwpColors.actionPrimary),
+                        child: const Icon(
+                          Icons.swap_horiz_rounded,
+                          size: 20,
+                          color: CofferColors.actionPrimary,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: _endpointCard(context, target, '目标', GwpColors.positive),
+                child: _endpointCard(
+                  context,
+                  target,
+                  '目标',
+                  CofferColors.positive,
+                ),
               ),
             ],
           ),
           // Connectivity / Paths
           if (bothSelected) ...[
-            const SizedBox(height: GwpSpacing.md),
+            const SizedBox(height: CofferSpacing.md),
             Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: GwpSpacing.md, vertical: GwpSpacing.sm),
+                horizontal: CofferSpacing.md,
+                vertical: CofferSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: connected || (totalPaths != null && totalPaths! > 0)
-                    ? GwpColors.positiveBg
-                    : GwpColors.warningBg,
+                    ? CofferColors.positiveBg
+                    : CofferColors.warningBg,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: (connected || (totalPaths != null && totalPaths! > 0)
-                          ? GwpColors.positive
-                          : GwpColors.warning)
-                      .withValues(alpha: 0.2),
+                  color:
+                      (connected || (totalPaths != null && totalPaths! > 0)
+                              ? CofferColors.positive
+                              : CofferColors.warning)
+                          .withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -705,26 +785,27 @@ class _AccountSelectorBar extends StatelessWidget {
                     totalPaths != null
                         ? Icons.alt_route_rounded
                         : connected
-                            ? Icons.link_rounded
-                            : Icons.link_off_rounded,
+                        ? Icons.link_rounded
+                        : Icons.link_off_rounded,
                     size: 14,
                     color: connected || (totalPaths != null && totalPaths! > 0)
-                        ? GwpColors.positive
-                        : GwpColors.warning,
+                        ? CofferColors.positive
+                        : CofferColors.warning,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     totalPaths != null && totalPaths! > 0
-                        ? '${totalPaths} 条可用路径'
+                        ? '$totalPaths 条可用路径'
                         : connected
-                            ? '${sharedChannels.length} 条共享通道'
-                            : '无共享通道 — 需中间账户中转',
+                        ? '${sharedChannels.length} 条共享通道'
+                        : '无共享通道 — 需中间账户中转',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: connected || (totalPaths != null && totalPaths! > 0)
-                          ? GwpColors.positive
-                          : GwpColors.warning,
+                      color:
+                          connected || (totalPaths != null && totalPaths! > 0)
+                          ? CofferColors.positive
+                          : CofferColors.warning,
                     ),
                   ),
                   if (connected) ...[
@@ -732,21 +813,27 @@ class _AccountSelectorBar extends StatelessWidget {
                     ...sharedChannels.take(3).map((c) {
                       final protoColor =
                           _protocolColors[c.transferProtocol] ??
-                              GwpColors.actionPrimary;
+                          CofferColors.actionPrimary;
                       return Padding(
                         padding: const EdgeInsets.only(right: 3),
                         child: Container(
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                              color: protoColor, shape: BoxShape.circle),
+                            color: protoColor,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       );
                     }),
                     if (sharedChannels.length > 3)
-                      Text('+${sharedChannels.length - 3}',
-                          style: const TextStyle(
-                              fontSize: 9, color: GwpColors.textMuted)),
+                      Text(
+                        '+${sharedChannels.length - 3}',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          color: CofferColors.textMuted,
+                        ),
+                      ),
                   ],
                 ],
               ),
@@ -765,8 +852,12 @@ class _AccountSelectorBar extends StatelessWidget {
   }
 
   Future<void> _openPicker(
-      BuildContext ctx, String label, String? selectedId, String? excludedId,
-      ValueChanged<String?> onChanged) async {
+    BuildContext ctx,
+    String label,
+    String? selectedId,
+    String? excludedId,
+    ValueChanged<String?> onChanged,
+  ) async {
     final picked = await showModalBottomSheet<String>(
       context: ctx,
       useRootNavigator: true,
@@ -785,12 +876,21 @@ class _AccountSelectorBar extends StatelessWidget {
     if (picked != null) onChanged(picked);
   }
 
-  Widget _endpointCard(BuildContext ctx, Account? account, String role, Color accent) {
-    final typeColor =
-        account != null ? (_typeColors[account.accountType] ?? GwpColors.actionPrimary) : accent;
-    final typeIcon =
-        account != null ? (_typeIcons[account.accountType] ?? Icons.account_balance) : Icons.add_circle_outline;
-    final regionName = account != null ? regionLabel(regionIndex, account.sovereigntyRegion) : '';
+  Widget _endpointCard(
+    BuildContext ctx,
+    Account? account,
+    String role,
+    Color accent,
+  ) {
+    final typeColor = account != null
+        ? (_typeColors[account.accountType] ?? CofferColors.actionPrimary)
+        : accent;
+    final typeIcon = account != null
+        ? (_typeIcons[account.accountType] ?? Icons.account_balance)
+        : Icons.add_circle_outline;
+    final regionName = account != null
+        ? regionLabel(regionIndex, account.sovereigntyRegion)
+        : '';
 
     return GestureDetector(
       onTap: () => _openPicker(
@@ -801,9 +901,9 @@ class _AccountSelectorBar extends StatelessWidget {
         role == '源' ? onSourceChanged : onTargetChanged,
       ),
       child: Container(
-        padding: const EdgeInsets.all(GwpSpacing.sm),
+        padding: const EdgeInsets.all(CofferSpacing.sm),
         decoration: BoxDecoration(
-          color: GwpColors.surface1,
+          color: CofferColors.surface1,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: accent.withValues(alpha: 0.3), width: 0.5),
         ),
@@ -828,7 +928,7 @@ class _AccountSelectorBar extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -843,7 +943,10 @@ class _AccountSelectorBar extends StatelessWidget {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: regionColor(regionIndex, account.sovereigntyRegion),
+                      color: regionColor(
+                        regionIndex,
+                        account.sovereigntyRegion,
+                      ),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -852,7 +955,9 @@ class _AccountSelectorBar extends StatelessWidget {
                     child: Text(
                       '${account.accountType.labelZh} · $regionName',
                       style: const TextStyle(
-                          fontSize: 9, color: GwpColors.textMuted),
+                        fontSize: 9,
+                        color: CofferColors.textMuted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -862,8 +967,7 @@ class _AccountSelectorBar extends StatelessWidget {
             ],
             if (account == null) ...[
               const SizedBox(height: 4),
-              Text('选择$role账户',
-                  style: TextStyle(fontSize: 11, color: accent)),
+              Text('选择$role账户', style: TextStyle(fontSize: 11, color: accent)),
             ],
           ],
         ),
@@ -911,24 +1015,23 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final typeChoices = widget.accounts
-        .map((a) => a.accountType)
-        .toSet()
-        .toList()
-      ..sort((a, b) => a.code.compareTo(b.code));
-    final regionChoices = widget.accounts
-        .map((a) => a.sovereigntyRegion)
-        .toSet()
-        .toList()
-      ..sort();
+    final typeChoices =
+        widget.accounts.map((a) => a.accountType).toSet().toList()
+          ..sort((a, b) => a.code.compareTo(b.code));
+    final regionChoices =
+        widget.accounts.map((a) => a.sovereigntyRegion).toSet().toList()
+          ..sort();
 
     final filtered = widget.accounts.where((a) {
-      if (widget.excludedId != null && a.id == widget.excludedId)
+      if (widget.excludedId != null && a.id == widget.excludedId) {
         return false;
-      if (_onlyConnected && (widget.channelCount[a.id] ?? 0) <= 0)
+      }
+      if (_onlyConnected && (widget.channelCount[a.id] ?? 0) <= 0) {
         return false;
-      if (_onlyWithAssets && (widget.assetCount[a.id] ?? 0) <= 0)
+      }
+      if (_onlyWithAssets && (widget.assetCount[a.id] ?? 0) <= 0) {
         return false;
+      }
       if (_type != null && a.accountType != _type) return false;
       if (_region != null && a.sovereigntyRegion != _region) return false;
 
@@ -943,26 +1046,25 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
         a.accountType.labelBilingual,
       ].join(' ').toLowerCase();
       return haystack.contains(q);
-    }).toList()
-      ..sort((a, b) => a.institutionName.compareTo(b.institutionName));
+    }).toList()..sort((a, b) => a.institutionName.compareTo(b.institutionName));
 
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: GwpSpacing.base,
-          right: GwpSpacing.base,
-          top: GwpSpacing.base,
-          bottom:
-              MediaQuery.viewInsetsOf(context).bottom + GwpSpacing.base,
+          left: CofferSpacing.base,
+          right: CofferSpacing.base,
+          top: CofferSpacing.base,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + CofferSpacing.base,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('选择${widget.label}',
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: GwpSpacing.sm),
+            Text(
+              '选择${widget.label}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: CofferSpacing.sm),
             TextField(
               controller: _queryCtrl,
               onChanged: (v) => setState(() => _query = v),
@@ -971,7 +1073,7 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                 prefixIcon: Icon(Icons.search),
               ),
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -988,11 +1090,12 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             if (typeChoices.isNotEmpty) ...[
-              const Text('账户类型',
-                  style:
-                      TextStyle(fontSize: 11, color: GwpColors.textMuted)),
+              const Text(
+                '账户类型',
+                style: TextStyle(fontSize: 11, color: CofferColors.textMuted),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -1011,12 +1114,13 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                     ),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.sm),
+              const SizedBox(height: CofferSpacing.sm),
             ],
             if (regionChoices.isNotEmpty) ...[
-              const Text('主权地区',
-                  style:
-                      TextStyle(fontSize: 11, color: GwpColors.textMuted)),
+              const Text(
+                '主权地区',
+                style: TextStyle(fontSize: 11, color: CofferColors.textMuted),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -1035,61 +1139,56 @@ class _AccountPickerSheetState extends State<_AccountPickerSheet> {
                     ),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.sm),
+              const SizedBox(height: CofferSpacing.sm),
             ],
             Flexible(
               child: filtered.isEmpty
                   ? const Center(
                       child: Padding(
-                        padding: EdgeInsets.all(GwpSpacing.lg),
-                        child: Text('没有匹配的账户',
-                            style: TextStyle(color: GwpColors.textMuted)),
+                        padding: EdgeInsets.all(CofferSpacing.lg),
+                        child: Text(
+                          '没有匹配的账户',
+                          style: TextStyle(color: CofferColors.textMuted),
+                        ),
                       ),
                     )
                   : ListView.separated(
                       shrinkWrap: true,
                       itemCount: filtered.length,
-                      separatorBuilder: (_, _) =>
-                          const Divider(height: 1),
+                      separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final a = filtered[index];
                         final typeColor =
                             _typeColors[a.accountType] ??
-                                GwpColors.actionPrimary;
+                            CofferColors.actionPrimary;
                         final typeIcon =
-                            _typeIcons[a.accountType] ??
-                                Icons.account_balance;
-                        final ac =
-                            widget.assetCount[a.id] ?? 0;
-                        final cc =
-                            widget.channelCount[a.id] ?? 0;
-                        final isSelected =
-                            widget.selectedId == a.id;
+                            _typeIcons[a.accountType] ?? Icons.account_balance;
+                        final ac = widget.assetCount[a.id] ?? 0;
+                        final cc = widget.channelCount[a.id] ?? 0;
+                        final isSelected = widget.selectedId == a.id;
                         return ListTile(
                           selected: isSelected,
                           leading: Container(
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color:
-                                  typeColor.withValues(alpha: 0.12),
-                              borderRadius:
-                                  BorderRadius.circular(8),
+                              color: typeColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             alignment: Alignment.center,
-                            child: Icon(typeIcon,
-                                size: 16, color: typeColor),
+                            child: Icon(typeIcon, size: 16, color: typeColor),
                           ),
                           title: Text(a.institutionName),
                           subtitle: Text(
                             '${a.accountType.labelZh} · ${regionLabel(widget.regionIndex, a.sovereigntyRegion)} · $ac资产 · $cc通道',
                           ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle,
-                                  color: GwpColors.actionPrimary)
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: CofferColors.actionPrimary,
+                                )
                               : null,
-                          onTap: () =>
-                              Navigator.of(context).pop(a.id),
+                          onTap: () => Navigator.of(context).pop(a.id),
                         );
                       },
                     ),
@@ -1123,13 +1222,13 @@ class _RouteFlow extends StatelessWidget {
     final legs = route.legs;
     if (legs.isEmpty) return const SizedBox.shrink();
     final ok = route.isExecutable;
-    final statusColor = ok ? GwpColors.positive : GwpColors.negative;
-    final multiCcy = route.targetCurrency != null &&
-        route.targetCurrency != route.currency;
+    final statusColor = ok ? CofferColors.positive : CofferColors.negative;
+    final multiCcy =
+        route.targetCurrency != null && route.targetCurrency != route.currency;
 
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: statusColor.withValues(alpha: 0.25)),
       ),
@@ -1140,84 +1239,131 @@ class _RouteFlow extends StatelessWidget {
           // Header
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: GwpSpacing.base, vertical: GwpSpacing.sm),
-            color: ok ? GwpColors.positiveBg : GwpColors.negativeBg,
+              horizontal: CofferSpacing.base,
+              vertical: CofferSpacing.sm,
+            ),
+            color: ok ? CofferColors.positiveBg : CofferColors.negativeBg,
             child: Row(
               children: [
-                Icon(ok ? Icons.check_circle_outline : Icons.error_outline,
-                    size: 14, color: statusColor),
+                Icon(
+                  ok ? Icons.check_circle_outline : Icons.error_outline,
+                  size: 14,
+                  color: statusColor,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  badge ?? (route.objective == RouteObjective.minFee ? '费用最低' : '跳数最少'),
+                  badge ??
+                      (route.objective == RouteObjective.minFee
+                          ? '费用最低'
+                          : '跳数最少'),
                   style: TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
                 ),
                 const Spacer(),
                 if (multiCcy)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
-                      color: GwpColors.warning.withValues(alpha: 0.12),
+                      color: CofferColors.warning.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    child: Text('${route.currency} → ${route.targetCurrency}',
-                        style: const TextStyle(
-                            fontSize: 9, fontWeight: FontWeight.w600,
-                            color: GwpColors.warning, fontFamily: GwpTypo.monoFont)),
+                    child: Text(
+                      '${route.currency} → ${route.targetCurrency}',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: CofferColors.warning,
+                        fontFamily: CofferTypo.monoFont,
+                      ),
+                    ),
                   ),
                 const SizedBox(width: 6),
-                Text('${route.totalFee.toStringAsFixed(2)} · ${legs.length}跳',
-                    style: const TextStyle(
-                        fontSize: 11, color: GwpColors.textSecondary)),
+                Text(
+                  '${route.totalFee.toStringAsFixed(2)} · ${legs.length}跳',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: CofferColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
           // Flow body
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                GwpSpacing.base, GwpSpacing.md, GwpSpacing.base, GwpSpacing.sm),
+              CofferSpacing.base,
+              CofferSpacing.md,
+              CofferSpacing.base,
+              CofferSpacing.sm,
+            ),
             child: Column(
               children: [
                 for (var i = 0; i < legs.length; i++) ...[
-                  _flowAccountRow(legs[i].fromAccount,
-                      role: i == 0 ? '源' : '中转',
-                      currency: legs[i].fromCurrency,
-                      color: i == 0 ? GwpColors.negative : GwpColors.actionPrimary),
+                  _flowAccountRow(
+                    legs[i].fromAccount,
+                    role: i == 0 ? '源' : '中转',
+                    currency: legs[i].fromCurrency,
+                    color: i == 0
+                        ? CofferColors.negative
+                        : CofferColors.actionPrimary,
+                  ),
                   _flowChannelRow(legs[i]),
                   if (i == legs.length - 1)
-                    _flowAccountRow(legs[i].toAccount,
-                        role: '目标', currency: legs[i].toCurrency,
-                        color: GwpColors.positive),
+                    _flowAccountRow(
+                      legs[i].toAccount,
+                      role: '目标',
+                      currency: legs[i].toCurrency,
+                      color: CofferColors.positive,
+                    ),
                 ],
-                const SizedBox(height: GwpSpacing.md),
+                const SizedBox(height: CofferSpacing.md),
                 // Summary
                 Container(
-                  padding: const EdgeInsets.all(GwpSpacing.sm),
+                  padding: const EdgeInsets.all(CofferSpacing.sm),
                   decoration: BoxDecoration(
-                    color: GwpColors.surface2,
+                    color: CofferColors.surface2,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      _sumItem('扣款', '${route.totalDebit.toStringAsFixed(2)} ${route.currency}'),
-                      const SizedBox(width: GwpSpacing.md),
-                      _sumItem('到账', '${route.netCredit.toStringAsFixed(2)} ${route.targetCurrency ?? route.currency}'),
+                      _sumItem(
+                        '扣款',
+                        '${route.totalDebit.toStringAsFixed(2)} ${route.currency}',
+                      ),
+                      const SizedBox(width: CofferSpacing.md),
+                      _sumItem(
+                        '到账',
+                        '${route.netCredit.toStringAsFixed(2)} ${route.targetCurrency ?? route.currency}',
+                      ),
                       if (route.amount > Decimal.zero) ...[
-                        const SizedBox(width: GwpSpacing.md),
-                        _sumItem('费率', '${(route.totalFee.toDouble() / route.amount.toDouble() * 100).toStringAsFixed(2)}%'),
+                        const SizedBox(width: CofferSpacing.md),
+                        _sumItem(
+                          '费率',
+                          '${(route.totalFee.toDouble() / route.amount.toDouble() * 100).toStringAsFixed(2)}%',
+                        ),
                       ],
                     ],
                   ),
                 ),
                 // Violations
                 if (route.violations.isNotEmpty) ...[
-                  const SizedBox(height: GwpSpacing.md),
+                  const SizedBox(height: CofferSpacing.md),
                   for (final v in route.violations)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('• ${v.code.name} — ${v.message}',
-                          style: const TextStyle(
-                              fontSize: 11, color: GwpColors.negative)),
+                      child: Text(
+                        '• ${v.code.name} — ${v.message}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: CofferColors.negative,
+                        ),
+                      ),
                     ),
                 ],
               ],
@@ -1232,22 +1378,36 @@ class _RouteFlow extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 9, color: GwpColors.textMuted)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 9, color: CofferColors.textMuted),
+        ),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(
-            fontFamily: GwpTypo.monoFont, fontFeatures: GwpTypo.tabularFigures,
-            fontSize: 11, fontWeight: FontWeight.w600, color: GwpColors.textPrimary),
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: CofferTypo.monoFont,
+            fontFeatures: CofferTypo.tabularFigures,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: CofferColors.textPrimary,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
     ),
   );
 
-  Widget _flowAccountRow(Account account,
-      {required String role, required String currency, required Color color}) {
+  Widget _flowAccountRow(
+    Account account, {
+    required String role,
+    required String currency,
+    required Color color,
+  }) {
     final typeColor =
-        _typeColors[account.accountType] ?? GwpColors.actionPrimary;
-    final typeIcon =
-        _typeIcons[account.accountType] ?? Icons.account_balance;
+        _typeColors[account.accountType] ?? CofferColors.actionPrimary;
+    final typeIcon = _typeIcons[account.accountType] ?? Icons.account_balance;
     final regionName = regionLabel(regionIndex, account.sovereigntyRegion);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -1262,7 +1422,7 @@ class _RouteFlow extends StatelessWidget {
               border: Border.all(color: color, width: 1.5),
             ),
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           Container(
             width: 28,
             height: 28,
@@ -1273,18 +1433,28 @@ class _RouteFlow extends StatelessWidget {
             alignment: Alignment.center,
             child: Icon(typeIcon, size: 14, color: typeColor),
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(account.institutionName,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600,
-                        color: GwpColors.textPrimary),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text('$regionName · ${account.accountType.labelZh}',
-                    style: const TextStyle(fontSize: 10, color: GwpColors.textMuted)),
+                Text(
+                  account.institutionName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: CofferColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '$regionName · ${account.accountType.labelZh}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: CofferColors.textMuted,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1295,10 +1465,15 @@ class _RouteFlow extends StatelessWidget {
               borderRadius: BorderRadius.circular(3),
               border: Border.all(color: color.withValues(alpha: 0.2)),
             ),
-            child: Text(currency,
-                style: TextStyle(
-                    fontSize: 9, fontWeight: FontWeight.w700,
-                    color: color, fontFamily: GwpTypo.monoFont)),
+            child: Text(
+              currency,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: color,
+                fontFamily: CofferTypo.monoFont,
+              ),
+            ),
           ),
           const SizedBox(width: 4),
           Container(
@@ -1307,8 +1482,14 @@ class _RouteFlow extends StatelessWidget {
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(3),
             ),
-            child: Text(role,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
+            child: Text(
+              role,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
           ),
         ],
       ),
@@ -1318,9 +1499,12 @@ class _RouteFlow extends StatelessWidget {
   Widget _flowChannelRow(RouteLeg leg) {
     final isFx = leg.channel.transferProtocol == 'FX';
     final protoColor = isFx
-        ? GwpColors.warning
-        : (_protocolColors[leg.channel.transferProtocol] ?? GwpColors.actionPrimary);
-    final protoName = isFx ? '' : protocolDisplayName(protocolIndex, leg.channel.transferProtocol);
+        ? CofferColors.warning
+        : (_protocolColors[leg.channel.transferProtocol] ??
+              CofferColors.actionPrimary);
+    final protoName = isFx
+        ? ''
+        : protocolDisplayName(protocolIndex, leg.channel.transferProtocol);
     final indent = isFx ? 28.0 : 0.0; // indent FX under the account
     return Padding(
       padding: EdgeInsets.only(left: 5 + indent),
@@ -1329,7 +1513,7 @@ class _RouteFlow extends StatelessWidget {
         child: Row(
           children: [
             Container(width: 1.5, color: protoColor.withValues(alpha: 0.25)),
-            const SizedBox(width: GwpSpacing.sm + 28 + GwpSpacing.sm - 5),
+            const SizedBox(width: CofferSpacing.sm + 28 + CofferSpacing.sm - 5),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1337,35 +1521,60 @@ class _RouteFlow extends StatelessWidget {
                   color: protoColor.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(4),
                   border: isFx
-                      ? Border.all(color: protoColor.withValues(alpha: 0.2), width: 0.5)
+                      ? Border.all(
+                          color: protoColor.withValues(alpha: 0.2),
+                          width: 0.5,
+                        )
                       : null,
                 ),
                 child: Row(
                   children: [
                     if (isFx) ...[
-                      Icon(Icons.currency_exchange, size: 12, color: protoColor),
+                      Icon(
+                        Icons.currency_exchange,
+                        size: 12,
+                        color: protoColor,
+                      ),
                       const SizedBox(width: 4),
-                      Text('${leg.fromCurrency} → ${leg.toCurrency}',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
-                              color: protoColor)),
+                      Text(
+                        '${leg.fromCurrency} → ${leg.toCurrency}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: protoColor,
+                        ),
+                      ),
                       if (leg.fxRate != null) ...[
                         const SizedBox(width: 4),
-                        Text('@${leg.fxRate!.toStringAsFixed(4)}',
-                            style: const TextStyle(fontFamily: GwpTypo.monoFont,
-                                fontSize: 8, color: GwpColors.textMuted)),
+                        Text(
+                          '@${leg.fxRate!.toStringAsFixed(4)}',
+                          style: const TextStyle(
+                            fontFamily: CofferTypo.monoFont,
+                            fontSize: 8,
+                            color: CofferColors.textMuted,
+                          ),
+                        ),
                       ],
                     ] else ...[
                       Container(
-                        width: 6, height: 6,
-                        decoration: BoxDecoration(color: protoColor, shape: BoxShape.circle),
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: protoColor,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 5),
                       Expanded(
                         child: Text(
                           '${leg.channel.transferProtocol} · $protoName',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                              color: protoColor),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: protoColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (leg.channel.isBuiltin) ...[
@@ -1374,13 +1583,25 @@ class _RouteFlow extends StatelessWidget {
                       ],
                     ],
                     const Spacer(),
-                    Text(isFx ? '损耗 ${leg.fee.toStringAsFixed(2)}' : '${leg.fee.toStringAsFixed(2)}',
-                        style: TextStyle(
-                            fontFamily: GwpTypo.monoFont, fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: isFx ? GwpColors.warning : GwpColors.textSecondary)),
+                    Text(
+                      isFx
+                          ? '损耗 ${leg.fee.toStringAsFixed(2)}'
+                          : leg.fee.toStringAsFixed(2),
+                      style: TextStyle(
+                        fontFamily: CofferTypo.monoFont,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: isFx
+                            ? CofferColors.warning
+                            : CofferColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(width: 3),
-                    Icon(Icons.arrow_forward_rounded, size: 12, color: protoColor),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 12,
+                      color: protoColor,
+                    ),
                   ],
                 ),
               ),
@@ -1422,7 +1643,8 @@ class _CompareFlow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (feeRoute == null && hopsRoute == null) return const SizedBox.shrink();
-    final same = feeRoute != null &&
+    final same =
+        feeRoute != null &&
         hopsRoute != null &&
         _routesEqual(feeRoute!, hopsRoute!);
 
@@ -1444,29 +1666,35 @@ class _CompareFlow extends StatelessWidget {
         if (feeDelta != null)
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: GwpSpacing.md, vertical: GwpSpacing.sm),
+              horizontal: CofferSpacing.md,
+              vertical: CofferSpacing.sm,
+            ),
             decoration: BoxDecoration(
-              color: GwpColors.surface1,
+              color: CofferColors.surface1,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: GwpColors.border, width: 0.5),
+              border: Border.all(color: CofferColors.border, width: 0.5),
             ),
             child: Row(
               children: [
-                const Icon(Icons.compare_arrows,
-                    size: 16, color: GwpColors.info),
+                const Icon(
+                  Icons.compare_arrows,
+                  size: 16,
+                  color: CofferColors.info,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   '费用最低路线节省 ¥$feeDelta',
                   style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: GwpColors.textPrimary),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: CofferColors.textPrimary,
+                  ),
                 ),
               ],
             ),
           ),
         if (feeRoute != null) ...[
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           _RouteFlow(
             route: feeRoute!,
             regionIndex: regionIndex,
@@ -1475,7 +1703,7 @@ class _CompareFlow extends StatelessWidget {
           ),
         ],
         if (hopsRoute != null) ...[
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           _RouteFlow(
             route: hopsRoute!,
             regionIndex: regionIndex,
@@ -1513,45 +1741,52 @@ class _AmountPanel extends ConsumerWidget {
         .watch(dictEntriesProvider(DictType.currency))
         .maybeWhen(data: (d) => d, orElse: () => const []);
     return Padding(
-      padding: const EdgeInsets.all(GwpSpacing.sm),
+      padding: const EdgeInsets.all(CofferSpacing.sm),
       child: Column(
         children: [
           TextField(
             controller: amountCtrl,
             decoration: const InputDecoration(hintText: '金额', isDense: true),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             ],
           ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  initialValue:
-                      currencies.any((c) => c.code == currency) ? currency : null,
+                  initialValue: currencies.any((c) => c.code == currency)
+                      ? currency
+                      : null,
                   decoration: const InputDecoration(
                     labelText: '源币种',
                     isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 8,
+                    ),
                   ),
                   isExpanded: true,
-                  dropdownColor: GwpColors.surface2,
+                  dropdownColor: CofferColors.surface2,
                   items: currencies
-                      .map((c) => DropdownMenuItem<String>(
+                      .map(
+                        (c) => DropdownMenuItem<String>(
                           value: c.code,
-                          child: Text('${c.code} · ${c.name}',
-                              style: const TextStyle(fontSize: 12))))
+                          child: Text(
+                            '${c.code} · ${c.name}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) {
                     if (v != null) onCurrencyChanged(v);
                   },
                 ),
               ),
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: currencies.any((c) => c.code == targetCurrency)
@@ -1561,19 +1796,27 @@ class _AmountPanel extends ConsumerWidget {
                     labelText: '目标币种',
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 8),
+                      horizontal: 6,
+                      vertical: 8,
+                    ),
                     labelStyle: TextStyle(
-                        color: targetCurrency != currency
-                            ? GwpColors.warning
-                            : GwpColors.textMuted),
+                      color: targetCurrency != currency
+                          ? CofferColors.warning
+                          : CofferColors.textMuted,
+                    ),
                   ),
                   isExpanded: true,
-                  dropdownColor: GwpColors.surface2,
+                  dropdownColor: CofferColors.surface2,
                   items: currencies
-                      .map((c) => DropdownMenuItem<String>(
+                      .map(
+                        (c) => DropdownMenuItem<String>(
                           value: c.code,
-                          child: Text(c.code,
-                              style: const TextStyle(fontSize: 12))))
+                          child: Text(
+                            c.code,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) {
                     if (v != null) onTargetCurrencyChanged(v);
@@ -1587,4 +1830,3 @@ class _AmountPanel extends ConsumerWidget {
     );
   }
 }
-

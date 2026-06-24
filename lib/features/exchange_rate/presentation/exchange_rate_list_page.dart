@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/money/money.dart';
-import '../../../core/ui/app_top_bar.dart';
+import '../../../app/widgets/app_top_bar.dart';
+import '../../../core/ui/async_value_view.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/dict_picker_field.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
-import '../../../core/ui/global_search_delegate.dart';
-import '../../../core/ui/gwp_empty_state.dart';
+import '../../search/presentation/global_search_delegate.dart';
+import '../../../core/ui/coffer_empty_state.dart';
 import '../../../core/ui/format_utils.dart';
-import '../../../core/ui/gwp_number_text.dart';
+import '../../../core/ui/coffer_number_text.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/top_search_action.dart';
 import '../../../domain/entities/dict_type.dart';
@@ -53,17 +54,14 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
   }
 
   void _openSearch() {
-    openGlobalSearch(
-      context: context,
-      ref: ref,
-      current: SearchFeature.rates,
-    );
+    openGlobalSearch(context: context, ref: ref, current: SearchFeature.rates);
   }
 
   Future<void> _openPairManager() async {
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => const _WatchedPairsPage()),
-    );
+    await Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => const _WatchedPairsPage()));
   }
 
   @override
@@ -81,22 +79,16 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
           ),
         ],
       ),
-      body: pairs.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+      body: CofferAsyncValueView<List<WatchedPair>>(
+        value: pairs,
+        onRetry: () => ref.invalidate(watchedPairListProvider),
+        isEmpty: (list) => list.isEmpty,
+        empty: (_, _) => const CofferEmptyState(
+          icon: Icons.currency_exchange,
+          title: '还没有关注的币对',
+          subtitle: '点右上「管理币对」添加，再从「更多 → 数据同步」拉取最新数据',
         ),
-        error: (e, _) => GwpEmptyState.error(
-          message: '加载失败: ${errorToMessage(e)}',
-          onRetry: () => ref.invalidate(watchedPairListProvider),
-        ),
-        data: (list) {
-          if (list.isEmpty) {
-            return const GwpEmptyState(
-              icon: Icons.currency_exchange,
-              title: '还没有关注的币对',
-              subtitle: '点右上「管理币对」添加，再从「更多 → 数据同步」拉取最新数据',
-            );
-          }
+        data: (_, list) {
           return ReorderableListView(
             buildDefaultDragHandles: false,
             padding: EdgeInsets.only(
@@ -105,7 +97,7 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
             header: Column(
               children: [
                 _RatesSummaryCard(pairs: list),
-                const SizedBox(height: GwpSpacing.sm),
+                const SizedBox(height: CofferSpacing.sm),
               ],
             ),
             children: [
@@ -116,14 +108,15 @@ class _ExchangeRateListPageState extends ConsumerState<ExchangeRateListPage> {
                   child: _PairRateCard(pair: list[i]),
                 ),
             ],
-            onReorder: (oldIndex, newIndex) async {
-              if (newIndex > oldIndex) newIndex -= 1;
+            onReorderItem: (oldIndex, newIndex) async {
               final reordered = [...list];
               final moved = reordered.removeAt(oldIndex);
               reordered.insert(newIndex, moved);
               final result = await ref
                   .read(manageWatchedPairUseCaseProvider)
-                  .reorder(reordered.map((e) => e.pairKey).toList(growable: false));
+                  .reorder(
+                    reordered.map((e) => e.pairKey).toList(growable: false),
+                  );
               if (!context.mounted) return;
               result.when(
                 ok: (_) {},
@@ -180,12 +173,12 @@ class _RatesSummaryCard extends ConsumerWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        GwpSpacing.base,
-        GwpSpacing.xs,
-        GwpSpacing.base,
+        CofferSpacing.base,
+        CofferSpacing.xs,
+        CofferSpacing.base,
         0,
       ),
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       decoration: _cardDeco,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +191,7 @@ class _RatesSummaryCard extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -207,7 +200,10 @@ class _RatesSummaryCard extends ConsumerWidget {
                 latestUpdatedAt == null
                     ? '暂无数据'
                     : '更新于 ${_fmtRelativeTime(latestUpdatedAt)}',
-                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: CofferColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -215,14 +211,14 @@ class _RatesSummaryCard extends ConsumerWidget {
           Text(
             '$total 个关注币对',
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // Breadth bar
           if (total > 0)
             _BreadthBar(
@@ -232,32 +228,38 @@ class _RatesSummaryCard extends ConsumerWidget {
               noData: noDataCount,
               total: total,
             ),
-          const SizedBox(height: GwpSpacing.sm),
+          const SizedBox(height: CofferSpacing.sm),
           // Legend + max swing
           Row(
             children: [
-              _legendLabel(GwpColors.positive, '$upCount 涨'),
-              const SizedBox(width: GwpSpacing.md),
-              _legendLabel(GwpColors.negative, '$downCount 跌'),
+              _legendLabel(CofferColors.positive, '$upCount 涨'),
+              const SizedBox(width: CofferSpacing.md),
+              _legendLabel(CofferColors.negative, '$downCount 跌'),
               if (flatCount > 0) ...[
-                const SizedBox(width: GwpSpacing.md),
-                _legendLabel(GwpColors.textMuted, '$flatCount 持平'),
+                const SizedBox(width: CofferSpacing.md),
+                _legendLabel(CofferColors.textMuted, '$flatCount 持平'),
               ],
               if (noDataCount > 0) ...[
-                const SizedBox(width: GwpSpacing.md),
-                _legendLabel(GwpColors.borderStrong, '$noDataCount 无数据'),
+                const SizedBox(width: CofferSpacing.md),
+                _legendLabel(CofferColors.borderStrong, '$noDataCount 无数据'),
               ],
               const Spacer(),
-              const Icon(Icons.show_chart, size: 14, color: GwpColors.textMuted),
+              const Icon(
+                Icons.show_chart,
+                size: 14,
+                color: CofferColors.textMuted,
+              ),
               const SizedBox(width: 4),
               Text(
                 hasAnySwing ? displayPercentDouble(maxSwing) : '—',
                 style: TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: hasAnySwing ? _swingColor(maxSwing) : GwpColors.textMuted,
+                  color: hasAnySwing
+                      ? _swingColor(maxSwing)
+                      : CofferColors.textMuted,
                 ),
               ),
             ],
@@ -283,7 +285,7 @@ Widget _legendLabel(Color color, String text) {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: GwpColors.textSecondary,
+          color: CofferColors.textSecondary,
         ),
       ),
     ],
@@ -291,9 +293,9 @@ Widget _legendLabel(Color color, String text) {
 }
 
 Color _swingColor(double pct) {
-  if (pct > 1) return GwpColors.positive;
-  if (pct < -1) return GwpColors.negative;
-  return GwpColors.textSecondary;
+  if (pct > 1) return CofferColors.positive;
+  if (pct < -1) return CofferColors.negative;
+  return CofferColors.textSecondary;
 }
 
 class _BreadthBar extends StatelessWidget {
@@ -322,22 +324,22 @@ class _BreadthBar extends StatelessWidget {
             if (up > 0)
               Expanded(
                 flex: up,
-                child: Container(color: GwpColors.positive),
+                child: Container(color: CofferColors.positive),
               ),
             if (down > 0)
               Expanded(
                 flex: down,
-                child: Container(color: GwpColors.negative),
+                child: Container(color: CofferColors.negative),
               ),
             if (flat > 0)
               Expanded(
                 flex: flat,
-                child: Container(color: GwpColors.borderStrong),
+                child: Container(color: CofferColors.borderStrong),
               ),
             if (noData > 0)
               Expanded(
                 flex: noData,
-                child: Container(color: GwpColors.surface2),
+                child: Container(color: CofferColors.surface2),
               ),
           ],
         ),
@@ -358,7 +360,9 @@ class _PairSeriesSummary {
   final bool hasData;
 }
 
-_PairSeriesSummary? _pairSeriesSummaryFromAsync(AsyncValue<List<ExchangeRate>> async) {
+_PairSeriesSummary? _pairSeriesSummaryFromAsync(
+  AsyncValue<List<ExchangeRate>> async,
+) {
   return async.maybeWhen(
     data: (series) {
       if (series.isEmpty) return null;
@@ -429,10 +433,10 @@ class _PairRateCard extends ConsumerWidget {
   Widget _skeleton(BuildContext context, {String? errorText}) {
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
+        horizontal: CofferSpacing.base,
         vertical: 3,
       ),
-      padding: const EdgeInsets.all(GwpSpacing.sm),
+      padding: const EdgeInsets.all(CofferSpacing.sm),
       decoration: _cardDeco,
       child: Row(
         children: [
@@ -442,7 +446,7 @@ class _PairRateCard extends ConsumerWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
             ),
           ),
@@ -455,8 +459,7 @@ class _PairRateCard extends ConsumerWidget {
     final hasData = series.isNotEmpty;
     final latest = hasData ? series.last : null;
     final first = hasData ? series.first : null;
-    final points =
-        series.map((e) => e.rate.toDouble()).toList(growable: false);
+    final points = series.map((e) => e.rate.toDouble()).toList(growable: false);
 
     Decimal? changePct;
     if (hasData && series.length >= 2) {
@@ -473,25 +476,27 @@ class _PairRateCard extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
+        horizontal: CofferSpacing.base,
         vertical: 3,
       ),
       child: Material(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
-              builder: (_) => PairDetailPage(pairKey: pair.pairKey),
-            ));
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (_) => PairDetailPage(pairKey: pair.pairKey),
+              ),
+            );
           },
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: GwpColors.border, width: 0.5),
+              border: Border.all(color: CofferColors.border, width: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: const EdgeInsets.all(GwpSpacing.sm),
+            padding: const EdgeInsets.all(CofferSpacing.sm),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -499,7 +504,7 @@ class _PairRateCard extends ConsumerWidget {
                   base: pair.baseCurrency,
                   quote: pair.quoteCurrency,
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Expanded(
                   flex: 4,
                   child: Column(
@@ -511,7 +516,7 @@ class _PairRateCard extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: GwpColors.textPrimary,
+                          color: CofferColors.textPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -523,13 +528,13 @@ class _PairRateCard extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11,
-                          color: GwpColors.textMuted,
+                          color: CofferColors.textMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Expanded(
                   flex: 3,
                   child: SizedBox(
@@ -542,7 +547,7 @@ class _PairRateCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Expanded(
                   flex: 3,
                   child: Column(
@@ -553,14 +558,16 @@ class _PairRateCard extends ConsumerWidget {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
                         child: Text(
-                          latest == null ? '—' : _fmtRate(latest.rate.toDouble()),
+                          latest == null
+                              ? '—'
+                              : _fmtRate(latest.rate.toDouble()),
                           textAlign: TextAlign.end,
                           style: const TextStyle(
-                            fontFamily: GwpTypo.monoFont,
-                            fontFeatures: GwpTypo.tabularFigures,
+                            fontFamily: CofferTypo.monoFont,
+                            fontFeatures: CofferTypo.tabularFigures,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: GwpColors.textPrimary,
+                            color: CofferColors.textPrimary,
                           ),
                         ),
                       ),
@@ -568,7 +575,7 @@ class _PairRateCard extends ConsumerWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
-                        child: GwpNumberText(
+                        child: CofferNumberText(
                           value: changePct == null
                               ? '—'
                               : displayPercent(changePct, alwaysShowSign: true),
@@ -596,9 +603,9 @@ class _PairRateCard extends ConsumerWidget {
 }
 
 final _cardDeco = BoxDecoration(
-  color: GwpColors.surface1,
+  color: CofferColors.surface1,
   borderRadius: BorderRadius.circular(12),
-  border: Border.all(color: GwpColors.border, width: 0.5),
+  border: Border.all(color: CofferColors.border, width: 0.5),
 );
 
 String _fmtRelativeTime(DateTime t) {
@@ -640,15 +647,15 @@ class _WatchedPairsPageState extends ConsumerState<_WatchedPairsPage> {
       ),
       body: pairs.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+          child: CircularProgressIndicator(color: CofferColors.actionPrimary),
         ),
-        error: (e, _) => GwpEmptyState.error(
+        error: (e, _) => CofferEmptyState.error(
           message: '加载失败: ${errorToMessage(e)}',
           onRetry: () => ref.invalidate(watchedPairListProvider),
         ),
         data: (list) {
           if (list.isEmpty) {
-            return const GwpEmptyState(
+            return const CofferEmptyState(
               icon: Icons.currency_exchange,
               title: '还没有关注的币对',
               subtitle: '添加后，从「更多 → 数据同步」一次性拉取所有币对',
@@ -658,14 +665,15 @@ class _WatchedPairsPageState extends ConsumerState<_WatchedPairsPage> {
             padding: const EdgeInsets.only(bottom: 16),
             buildDefaultDragHandles: false,
             itemCount: list.length,
-            onReorder: (oldIndex, newIndex) async {
-              if (newIndex > oldIndex) newIndex -= 1;
+            onReorderItem: (oldIndex, newIndex) async {
               final reordered = [...list];
               final moved = reordered.removeAt(oldIndex);
               reordered.insert(newIndex, moved);
               final result = await ref
                   .read(manageWatchedPairUseCaseProvider)
-                  .reorder(reordered.map((e) => e.pairKey).toList(growable: false));
+                  .reorder(
+                    reordered.map((e) => e.pairKey).toList(growable: false),
+                  );
               if (!context.mounted) return;
               result.when(
                 ok: (_) {},
@@ -705,11 +713,11 @@ class _PairTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: GwpSpacing.base,
-        vertical: GwpSpacing.xs,
+        horizontal: CofferSpacing.base,
+        vertical: CofferSpacing.xs,
       ),
       child: Material(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -722,12 +730,12 @@ class _PairTile extends ConsumerWidget {
           },
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: GwpColors.border, width: 0.5),
+              border: Border.all(color: CofferColors.border, width: 0.5),
               borderRadius: BorderRadius.circular(10),
             ),
             padding: const EdgeInsets.symmetric(
-              horizontal: GwpSpacing.base,
-              vertical: GwpSpacing.md,
+              horizontal: CofferSpacing.base,
+              vertical: CofferSpacing.md,
             ),
             child: Row(
               children: [
@@ -735,7 +743,7 @@ class _PairTile extends ConsumerWidget {
                   base: pair.baseCurrency,
                   quote: pair.quoteCurrency,
                 ),
-                const SizedBox(width: GwpSpacing.md),
+                const SizedBox(width: CofferSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,14 +753,14 @@ class _PairTile extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: GwpColors.textPrimary,
+                          color: CofferColors.textPrimary,
                         ),
                       ),
                       Text(
                         '${pair.baseCurrency} → ${pair.quoteCurrency}',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: GwpColors.textMuted,
+                          color: CofferColors.textMuted,
                         ),
                       ),
                     ],
@@ -764,7 +772,7 @@ class _PairTile extends ConsumerWidget {
                   icon: const Icon(
                     Icons.delete_outline,
                     size: 20,
-                    color: GwpColors.negative,
+                    color: CofferColors.negative,
                   ),
                   onPressed: () async {
                     final r = await ref
@@ -783,7 +791,10 @@ class _PairTile extends ConsumerWidget {
                   index: reorderIndex,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.drag_handle, color: GwpColors.textMuted),
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: CofferColors.textMuted,
+                    ),
                   ),
                 ),
               ],
@@ -813,10 +824,9 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
       _busy = true;
       _errorMsg = null;
     });
-    final r = await ref.read(manageWatchedPairUseCaseProvider).add(
-          baseCurrency: _baseCurrency,
-          quoteCurrency: _quoteCurrency,
-        );
+    final r = await ref
+        .read(manageWatchedPairUseCaseProvider)
+        .add(baseCurrency: _baseCurrency, quoteCurrency: _quoteCurrency);
     if (!mounted) return;
     setState(() => _busy = false);
     r.when(
@@ -844,49 +854,55 @@ class _PairEditorSheetState extends ConsumerState<_PairEditorSheet> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-              child: DictPickerField(
-                key: const Key('pair-editor-base-currency-field'),
-                type: DictType.currency,
-                value: _baseCurrency,
-                label: '基准币种',
-                textStyle: const TextStyle(fontSize: 13),
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() => _baseCurrency = v);
-                },
+          Row(
+            children: [
+              Expanded(
+                child: DictPickerField(
+                  key: const Key('pair-editor-base-currency-field'),
+                  type: DictType.currency,
+                  value: _baseCurrency,
+                  label: '基准币种',
+                  textStyle: const TextStyle(fontSize: 13),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => _baseCurrency = v);
+                  },
+                ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(Icons.swap_horiz, color: GwpColors.textMuted, size: 20),
-            ),
-            Expanded(
-              child: DictPickerField(
-                key: const Key('pair-editor-quote-currency-field'),
-                type: DictType.currency,
-                value: _quoteCurrency,
-                label: '报价币种',
-                textStyle: const TextStyle(fontSize: 13),
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() => _quoteCurrency = v);
-                },
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(
+                  Icons.swap_horiz,
+                  color: CofferColors.textMuted,
+                  size: 20,
+                ),
               ),
-            ),
-          ]),
+              Expanded(
+                child: DictPickerField(
+                  key: const Key('pair-editor-quote-currency-field'),
+                  type: DictType.currency,
+                  value: _quoteCurrency,
+                  label: '报价币种',
+                  textStyle: const TextStyle(fontSize: 13),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => _quoteCurrency = v);
+                  },
+                ),
+              ),
+            ],
+          ),
           if (_errorMsg != null) ...[
             const SizedBox(height: 12),
             Text(
               _errorMsg!,
               style: const TextStyle(
                 fontSize: 13,
-                color: GwpColors.negative,
+                color: CofferColors.negative,
               ),
             ),
           ],

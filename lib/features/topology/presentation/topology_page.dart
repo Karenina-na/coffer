@@ -5,7 +5,7 @@ import 'package:graphview/GraphView.dart';
 
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/error_localizer.dart';
-import '../../../core/ui/gwp_empty_state.dart';
+import '../../../core/ui/coffer_empty_state.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../account/presentation/account_providers.dart';
 import '../../asset/presentation/asset_providers.dart';
@@ -89,7 +89,7 @@ final _topologyModelProvider = FutureProvider.autoDispose<_TopologyModel>((ref) 
       label: a.assetCode ?? a.id.substring(0, 6),
       kind: _NodeKind.asset,
       parentId: 'acc:${a.accountId}',
-      color: typeColors[a.assetType.name] ?? GwpColors.textMuted,
+      color: typeColors[a.assetType.name] ?? CofferColors.textMuted,
     ));
     edges.add(_TopoEdge(fromId: 'acc:${a.accountId}', toId: 'ast:${a.id}'));
   }
@@ -97,10 +97,10 @@ final _topologyModelProvider = FutureProvider.autoDispose<_TopologyModel>((ref) 
   // 3. Channel nodes
   for (final c in channels) {
     final statusColor = c.status.name == 'enabled'
-        ? GwpColors.actionPrimary
+        ? CofferColors.actionPrimary
         : c.status.name == 'disabled'
-            ? GwpColors.textMuted
-            : GwpColors.warning;
+            ? CofferColors.textMuted
+            : CofferColors.warning;
     nodes.add(_TopoNode(
       id: 'ch:${c.id}',
       label: c.name,
@@ -116,7 +116,7 @@ final _topologyModelProvider = FutureProvider.autoDispose<_TopologyModel>((ref) 
       label: '${c.cardOrganization} ${c.cardNoMasked.length > 4 ? c.cardNoMasked.substring(c.cardNoMasked.length - 4) : c.cardNoMasked}',
       kind: _NodeKind.card,
       parentId: 'acc:${c.accountId}',
-      color: cardColors[c.cardOrganization] ?? GwpColors.textSecondary,
+      color: cardColors[c.cardOrganization] ?? CofferColors.textSecondary,
     ));
     edges.add(_TopoEdge(fromId: 'acc:${c.accountId}', toId: 'crd:${c.id}'));
   }
@@ -199,8 +199,8 @@ final _visibleTopologyModelProvider =
 // Styles (using design token fonts)
 // ---------------------------------------------------------------------------
 
-const _kCaption = TextStyle(fontFamily: GwpTypo.uiFont, fontSize: 11, height: 1.3);
-const _kHeading = TextStyle(fontFamily: GwpTypo.uiFont, fontSize: 16, fontWeight: FontWeight.w600, height: 1.3);
+const _kCaption = TextStyle(fontFamily: CofferTypo.uiFont, fontSize: 11, height: 1.3);
+const _kHeading = TextStyle(fontFamily: CofferTypo.uiFont, fontSize: 16, fontWeight: FontWeight.w600, height: 1.3);
 
 // ---------------------------------------------------------------------------
 // Page
@@ -212,11 +212,11 @@ class TopologyPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: GwpColors.canvas,
+      backgroundColor: CofferColors.canvas,
       appBar: AppBar(
-        title: Text('全景关系图', style: _kHeading.copyWith(color: GwpColors.textPrimary)),
-        backgroundColor: GwpColors.surface1,
-        foregroundColor: GwpColors.textPrimary,
+        title: Text('全景关系图', style: _kHeading.copyWith(color: CofferColors.textPrimary)),
+        backgroundColor: CofferColors.surface1,
+        foregroundColor: CofferColors.textPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz),
@@ -249,23 +249,23 @@ class _FilterBar extends ConsumerWidget {
     final activeOnly = ref.watch(_activeOnlyProvider);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.md, vertical: GwpSpacing.sm),
-      color: GwpColors.surface1,
+      padding: const EdgeInsets.symmetric(horizontal: CofferSpacing.md, vertical: CofferSpacing.sm),
+      color: CofferColors.surface1,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             for (final f in _EntityFilter.values)
               Padding(
-                padding: const EdgeInsets.only(right: GwpSpacing.sm),
+                padding: const EdgeInsets.only(right: CofferSpacing.sm),
                 child: FilterChip(
                   label: Text(_filterLabel(f)),
                   selected: filters.contains(f),
                   onSelected: (v) => ref.read(_filtersProvider.notifier).toggle(f, v),
-                  selectedColor: GwpColors.actionPrimary.withValues(alpha: 0.2),
-                  checkmarkColor: GwpColors.actionPrimary,
-                  labelStyle: _kCaption.copyWith(color: GwpColors.textPrimary),
-                  backgroundColor: GwpColors.surface2,
+                  selectedColor: CofferColors.actionPrimary.withValues(alpha: 0.2),
+                  checkmarkColor: CofferColors.actionPrimary,
+                  labelStyle: _kCaption.copyWith(color: CofferColors.textPrimary),
+                  backgroundColor: CofferColors.surface2,
                   side: BorderSide.none,
                 ),
               ),
@@ -273,10 +273,10 @@ class _FilterBar extends ConsumerWidget {
               label: const Text('仅活跃'),
               selected: activeOnly,
               onSelected: (v) => ref.read(_activeOnlyProvider.notifier).set(v),
-              selectedColor: GwpColors.positive.withValues(alpha: 0.2),
-              checkmarkColor: GwpColors.positive,
-              labelStyle: _kCaption.copyWith(color: GwpColors.textPrimary),
-              backgroundColor: GwpColors.surface2,
+              selectedColor: CofferColors.positive.withValues(alpha: 0.2),
+              checkmarkColor: CofferColors.positive,
+              labelStyle: _kCaption.copyWith(color: CofferColors.textPrimary),
+              backgroundColor: CofferColors.surface2,
               side: BorderSide.none,
             ),
           ],
@@ -319,11 +319,11 @@ class _StatsBar extends ConsumerWidget {
           }
         }
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.md, vertical: GwpSpacing.xs),
-          color: GwpColors.surface1,
+          padding: const EdgeInsets.symmetric(horizontal: CofferSpacing.md, vertical: CofferSpacing.xs),
+          color: CofferColors.surface1,
           child: Text(
             '$acc 账户 · $ast 资产 · $ch 通道 · $crd 卡片',
-            style: _kCaption.copyWith(color: GwpColors.textMuted),
+            style: _kCaption.copyWith(color: CofferColors.textMuted),
           ),
         );
       },
@@ -347,14 +347,14 @@ class _GraphBody extends ConsumerWidget {
     final layoutMode = ref.watch(_layoutModeProvider);
 
     return modelAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: GwpColors.actionPrimary)),
-      error: (e, _) => GwpEmptyState.error(
+      loading: () => const Center(child: CircularProgressIndicator(color: CofferColors.actionPrimary)),
+      error: (e, _) => CofferEmptyState.error(
         message: '加载失败: ${errorToMessage(e)}',
         onRetry: () => ref.invalidate(_topologyModelProvider),
       ),
       data: (_) {
         if (visible == null || visible.nodes.isEmpty) {
-          return const GwpEmptyState(
+          return const CofferEmptyState(
             icon: Icons.hub_outlined,
             title: '暂无实体',
             subtitle: '按顶部筛选项调整过滤，或在账户 / 资产 / 通道 / 卡片页面新增记录',
@@ -469,7 +469,7 @@ class _TopologyGraphViewState extends State<_TopologyGraphView> {
   @override
   Widget build(BuildContext context) {
     final edgePaint = Paint()
-      ..color = GwpColors.border
+      ..color = CofferColors.border
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
@@ -535,21 +535,21 @@ class _AccountNodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.sm),
+      padding: const EdgeInsets.all(CofferSpacing.sm),
       decoration: BoxDecoration(
-        color: (node.color ?? GwpColors.actionPrimary).withValues(alpha: 0.15),
+        color: (node.color ?? CofferColors.actionPrimary).withValues(alpha: 0.15),
         shape: BoxShape.circle,
-        border: Border.all(color: node.color ?? GwpColors.actionPrimary, width: 2),
+        border: Border.all(color: node.color ?? CofferColors.actionPrimary, width: 2),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             node.label.length > 4 ? node.label.substring(0, 4) : node.label,
-            style: _kCaption.copyWith(color: GwpColors.textPrimary, fontWeight: FontWeight.w600),
+            style: _kCaption.copyWith(color: CofferColors.textPrimary, fontWeight: FontWeight.w600),
           ),
           if (node.region != null)
-            Text(node.region!, style: _kCaption.copyWith(color: GwpColors.textMuted, fontSize: 9)),
+            Text(node.region!, style: _kCaption.copyWith(color: CofferColors.textMuted, fontSize: 9)),
         ],
       ),
     );
@@ -564,16 +564,16 @@ class _SmallNodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.sm, vertical: GwpSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: CofferSpacing.sm, vertical: CofferSpacing.xs),
       decoration: BoxDecoration(
-        color: (node.color ?? GwpColors.textMuted).withValues(alpha: 0.15),
+        color: (node.color ?? CofferColors.textMuted).withValues(alpha: 0.15),
         borderRadius: shape == BoxShape.rectangle ? BorderRadius.circular(4) : null,
         shape: shape,
-        border: Border.all(color: node.color ?? GwpColors.textMuted, width: 1),
+        border: Border.all(color: node.color ?? CofferColors.textMuted, width: 1),
       ),
       child: Text(
         node.label,
-        style: _kCaption.copyWith(color: GwpColors.textPrimary, fontSize: 10),
+        style: _kCaption.copyWith(color: CofferColors.textPrimary, fontSize: 10),
         overflow: TextOverflow.ellipsis,
       ),
     );
@@ -589,17 +589,17 @@ class _ChannelNodeWidget extends StatelessWidget {
     return Transform.rotate(
       angle: 0.785398,
       child: Container(
-        padding: const EdgeInsets.all(GwpSpacing.sm),
+        padding: const EdgeInsets.all(CofferSpacing.sm),
         decoration: BoxDecoration(
-          color: (node.color ?? GwpColors.actionPrimary).withValues(alpha: 0.15),
-          border: Border.all(color: node.color ?? GwpColors.actionPrimary, width: 1.5),
+          color: (node.color ?? CofferColors.actionPrimary).withValues(alpha: 0.15),
+          border: Border.all(color: node.color ?? CofferColors.actionPrimary, width: 1.5),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Transform.rotate(
           angle: -0.785398,
           child: Text(
             node.label,
-            style: _kCaption.copyWith(color: GwpColors.textPrimary, fontSize: 10, fontWeight: FontWeight.w500),
+            style: _kCaption.copyWith(color: CofferColors.textPrimary, fontSize: 10, fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           ),
         ),
@@ -615,20 +615,20 @@ class _CardNodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: GwpSpacing.sm, vertical: GwpSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: CofferSpacing.sm, vertical: CofferSpacing.xs),
       decoration: BoxDecoration(
-        color: (node.color ?? GwpColors.textSecondary).withValues(alpha: 0.15),
+        color: (node.color ?? CofferColors.textSecondary).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: node.color ?? GwpColors.textSecondary, width: 1),
+        border: Border.all(color: node.color ?? CofferColors.textSecondary, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.credit_card, size: 12, color: node.color ?? GwpColors.textSecondary),
+          Icon(Icons.credit_card, size: 12, color: node.color ?? CofferColors.textSecondary),
           const SizedBox(width: 2),
           Text(
             node.label,
-            style: _kCaption.copyWith(color: GwpColors.textPrimary, fontSize: 10),
+            style: _kCaption.copyWith(color: CofferColors.textPrimary, fontSize: 10),
           ),
         ],
       ),

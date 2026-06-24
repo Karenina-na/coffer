@@ -8,9 +8,9 @@ import '../../../core/money/money.dart';
 import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/floating_nav_layout.dart';
 import '../../../core/ui/format_utils.dart';
-import '../../../core/ui/gwp_bar_rank.dart';
-import '../../../core/ui/gwp_number_text.dart';
-import '../../../core/ui/gwp_radar_chart.dart';
+import '../../../core/ui/coffer_bar_rank.dart';
+import '../../../core/ui/coffer_number_text.dart';
+import '../../../core/ui/coffer_radar_chart.dart';
 import '../../../core/ui/horizontal_gesture_guard.dart';
 import 'portfolio_providers.dart';
 
@@ -22,23 +22,23 @@ class PortfolioAnalysisBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        GwpSpacing.base,
-        GwpSpacing.md,
-        GwpSpacing.base,
-        FloatingNavLayout.totalFloatingHeight(context) + GwpSpacing.md,
+        CofferSpacing.base,
+        CofferSpacing.md,
+        CofferSpacing.base,
+        FloatingNavLayout.totalFloatingHeight(context) + CofferSpacing.md,
       ),
       child: const Column(
         children: [
           _SnapshotHero(),
-          SizedBox(height: GwpSpacing.base),
+          SizedBox(height: CofferSpacing.base),
           _AllocationExplorer(),
-          SizedBox(height: GwpSpacing.base),
+          SizedBox(height: CofferSpacing.base),
           _AssetRankingSection(),
-          SizedBox(height: GwpSpacing.base),
+          SizedBox(height: CofferSpacing.base),
           _CurrencyExposureSection(),
-          SizedBox(height: GwpSpacing.base),
+          SizedBox(height: CofferSpacing.base),
           _RiskOverviewSection(),
-          SizedBox(height: GwpSpacing.base),
+          SizedBox(height: CofferSpacing.base),
           _HealthRadarSection(),
         ],
       ),
@@ -84,7 +84,7 @@ class _SnapshotHero extends ConsumerWidget {
       loading: () => const _HeroShimmer(),
       error: (e, _) => _SectionCard(
         icon: Icons.analytics_outlined,
-        iconColor: GwpColors.negative,
+        iconColor: CofferColors.negative,
         title: '投资组合概览',
         child: _Error(e),
       ),
@@ -98,23 +98,23 @@ class _SnapshotHero extends ConsumerWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [GwpColors.surface3, GwpColors.surface1],
+              colors: [CofferColors.surface3, CofferColors.surface1],
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: GwpColors.borderStrong, width: 0.5),
+            border: Border.all(color: CofferColors.borderStrong, width: 0.5),
           ),
-          padding: const EdgeInsets.all(GwpSpacing.lg),
+          padding: const EdgeInsets.all(CofferSpacing.lg),
           child: Column(
             children: [
               // Total net worth
               Text(
                 heroFormat(snap.netWorth),
                 style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -122,7 +122,7 @@ class _SnapshotHero extends ConsumerWidget {
                 '总净值 · ${snap.baseCurrency}',
                 style: const TextStyle(
                   fontSize: 12,
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                 ),
               ),
               // Unrealized P&L
@@ -131,7 +131,7 @@ class _SnapshotHero extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    GwpNumberText(
+                    CofferNumberText(
                       value:
                           '${isUp ? '+' : ''}${Money.format(snap.totalGain, currency: snap.baseCurrency)}',
                       sign: snap.totalGain > Decimal.zero
@@ -147,16 +147,16 @@ class _SnapshotHero extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                       decoration: BoxDecoration(
-                        color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+                        color: isUp ? CofferColors.positiveBg : CofferColors.negativeBg,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '${isUp ? '+' : ''}${gainPct.toStringAsFixed(2)}%',
                         style: TextStyle(
-                          fontFamily: GwpTypo.monoFont,
+                          fontFamily: CofferTypo.monoFont,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isUp ? GwpColors.positive : GwpColors.negative,
+                          color: isUp ? CofferColors.positive : CofferColors.negative,
                         ),
                       ),
                     ),
@@ -169,11 +169,11 @@ class _SnapshotHero extends ConsumerWidget {
                   '${snap.missingRateCount} 项缺少汇率',
                   style: const TextStyle(
                     fontSize: 10,
-                    color: GwpColors.warning,
+                    color: CofferColors.warning,
                   ),
                 ),
               ],
-              const SizedBox(height: GwpSpacing.lg),
+              const SizedBox(height: CofferSpacing.lg),
               // Stat chips row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -221,7 +221,7 @@ class _HeroShimmer extends StatelessWidget {
     return Container(
       height: 140,
       decoration: BoxDecoration(
-        color: GwpColors.surface2,
+        color: CofferColors.surface2,
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Center(
@@ -250,22 +250,22 @@ class _StatChip extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: GwpColors.actionPrimary.withValues(alpha: 0.10),
+            color: CofferColors.actionPrimary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 14, color: GwpColors.actionPrimary),
+              Icon(icon, size: 14, color: CofferColors.actionPrimary),
               const SizedBox(height: 2),
               Text(
                 value,
                 style: const TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: GwpColors.textPrimary,
+                  color: CofferColors.textPrimary,
                 ),
               ),
             ],
@@ -276,7 +276,7 @@ class _StatChip extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 10,
-            color: GwpColors.textMuted,
+            color: CofferColors.textMuted,
           ),
         ),
       ],
@@ -318,7 +318,7 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
 
     return _SectionCard(
       icon: Icons.pie_chart_outline,
-      iconColor: GwpColors.info,
+      iconColor: CofferColors.info,
       title: '配置分布',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,25 +330,25 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _labels.length,
-                separatorBuilder: (_, _) => const SizedBox(width: GwpSpacing.sm),
+                separatorBuilder: (_, _) => const SizedBox(width: CofferSpacing.sm),
                 itemBuilder: (_, i) => ChoiceChip(
                   avatar: Icon(_icons[i], size: 14),
                   label: Text(_labels[i]),
                   selected: _selectedIndex == i,
                   onSelected: (_) => setState(() => _selectedIndex = i),
                   selectedColor:
-                      GwpColors.actionPrimary.withValues(alpha: 0.15),
-                  backgroundColor: GwpColors.surface2,
+                      CofferColors.actionPrimary.withValues(alpha: 0.15),
+                  backgroundColor: CofferColors.surface2,
                   labelStyle: TextStyle(
                     fontSize: 12,
                     color: _selectedIndex == i
-                        ? GwpColors.actionPrimary
-                        : GwpColors.textSecondary,
+                        ? CofferColors.actionPrimary
+                        : CofferColors.textSecondary,
                   ),
                   side: BorderSide(
                     color: _selectedIndex == i
-                        ? GwpColors.actionPrimary.withValues(alpha: 0.4)
-                        : GwpColors.border,
+                        ? CofferColors.actionPrimary.withValues(alpha: 0.4)
+                        : CofferColors.border,
                     width: 0.5,
                   ),
                   showCheckmark: false,
@@ -357,7 +357,7 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
               ),
             ),
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // Content
           async.when(
             loading: () => const _Loading(),
@@ -382,18 +382,18 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
                                 Text(
                                   displayPercentDouble(slices.first.percentage),
                                   style: const TextStyle(
-                                    fontFamily: GwpTypo.monoFont,
-                                    fontFeatures: GwpTypo.tabularFigures,
+                                    fontFamily: CofferTypo.monoFont,
+                                    fontFeatures: CofferTypo.tabularFigures,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    color: GwpColors.textPrimary,
+                                    color: CofferColors.textPrimary,
                                   ),
                                 ),
                                 Text(
                                   slices.first.label,
                                   style: const TextStyle(
                                     fontSize: 8,
-                                    color: GwpColors.textMuted,
+                                    color: CofferColors.textMuted,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -403,7 +403,7 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: GwpSpacing.md),
+                      const SizedBox(width: CofferSpacing.md),
                       Expanded(
                         child: Column(
                           children: [
@@ -420,7 +420,7 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
                                   '+${slices.length - 4} 项',
                                   style: const TextStyle(
                                     fontSize: 9,
-                                    color: GwpColors.textMuted,
+                                    color: CofferColors.textMuted,
                                   ),
                                 ),
                               ),
@@ -429,7 +429,7 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: GwpSpacing.md),
+                  const SizedBox(height: CofferSpacing.md),
                   // Proportion bars
                   for (var i = 0; i < slices.length; i++) ...[
                     _ProportionRow(
@@ -438,7 +438,7 @@ class _AllocationExplorerState extends ConsumerState<_AllocationExplorer> {
                       maxPct: slices.first.percentage,
                     ),
                     if (i < slices.length - 1)
-                      const SizedBox(height: GwpSpacing.sm),
+                      const SizedBox(height: CofferSpacing.sm),
                   ],
                 ],
               );
@@ -514,7 +514,7 @@ class _LegendRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 9,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -522,9 +522,9 @@ class _LegendRow extends StatelessWidget {
           Text(
             displayPercentDouble(pct),
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
+              fontFamily: CofferTypo.monoFont,
               fontSize: 9,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ],
@@ -557,7 +557,7 @@ class _ProportionRow extends StatelessWidget {
             slice.label,
             style: const TextStyle(
               fontSize: 11,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -569,7 +569,7 @@ class _ProportionRow extends StatelessWidget {
               height: 16,
               child: LinearProgressIndicator(
                 value: barFraction,
-                backgroundColor: GwpColors.surface3,
+                backgroundColor: CofferColors.surface3,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
@@ -582,10 +582,10 @@ class _ProportionRow extends StatelessWidget {
             displayPercentDouble(slice.percentage),
             textAlign: TextAlign.end,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 10,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ),
@@ -596,11 +596,11 @@ class _ProportionRow extends StatelessWidget {
             compactValueCJK(slice.value),
             textAlign: TextAlign.end,
             style: const TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: GwpColors.textPrimary,
+              color: CofferColors.textPrimary,
             ),
           ),
         ),
@@ -635,7 +635,7 @@ class _AssetRankingSection extends ConsumerWidget {
     final async = ref.watch(assetTop10Provider);
     return _SectionCard(
       icon: Icons.emoji_events_outlined,
-      iconColor: GwpColors.warning,
+      iconColor: CofferColors.warning,
       title: '资产 Top 10',
       child: async.when(
         loading: () => const _Loading(),
@@ -655,7 +655,7 @@ class _AssetRankingSection extends ConsumerWidget {
             children: [
               SizedBox(
                 height: (ranked.length * 24.0).clamp(120, 240),
-                child: GwpBarRank(
+                child: CofferBarRank(
                   items: ranked,
                   formatValue: (v) => '${total > 0 ? displayPercentDouble(v / total * 100) : '0.00%'}  ${compactValueCJK(v)}',
                 ),
@@ -663,7 +663,7 @@ class _AssetRankingSection extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 '合计 ${compactValueCJK(total)}',
-                style: const TextStyle(fontSize: 11, color: GwpColors.textMuted),
+                style: const TextStyle(fontSize: 11, color: CofferColors.textMuted),
               ),
             ],
           );
@@ -685,7 +685,7 @@ class _CurrencyExposureSection extends ConsumerWidget {
     final async = ref.watch(currencyExposureProvider);
     return _SectionCard(
       icon: Icons.grid_on_outlined,
-      iconColor: GwpColors.info,
+      iconColor: CofferColors.info,
       title: '币种敞口热力图',
       child: async.when(
         loading: () => const _Loading(),
@@ -703,7 +703,7 @@ class _CurrencyExposureSection extends ConsumerWidget {
                   child: _buildGrid(matrix),
                 ),
               ),
-              const SizedBox(height: GwpSpacing.sm),
+              const SizedBox(height: CofferSpacing.sm),
               _HeatLegend(maxValue: matrix.maxValue),
             ],
           );
@@ -718,21 +718,21 @@ class _CurrencyExposureSection extends ConsumerWidget {
     const labelW = 84.0;
     const headerStyle = TextStyle(
       fontSize: 10,
-      color: GwpColors.textSecondary,
+      color: CofferColors.textSecondary,
       fontWeight: FontWeight.w600,
     );
     const cellStyle = TextStyle(
-      fontFamily: GwpTypo.monoFont,
+      fontFamily: CofferTypo.monoFont,
       fontSize: 10,
-      color: GwpColors.textPrimary,
+      color: CofferColors.textPrimary,
     );
 
     Color heatColor(double intensity) {
-      if (intensity <= 0) return GwpColors.surface2;
+      if (intensity <= 0) return CofferColors.surface2;
       final t = intensity.clamp(0.0, 1.0);
       return Color.lerp(
-        GwpColors.actionPrimary.withValues(alpha: 0.15),
-        GwpColors.actionPrimary,
+        CofferColors.actionPrimary.withValues(alpha: 0.15),
+        CofferColors.actionPrimary,
         t,
       )!;
     }
@@ -800,7 +800,7 @@ class _CurrencyExposureSection extends ConsumerWidget {
                             style: cellStyle.copyWith(
                               color: intensity > 0.5
                                   ? Colors.white
-                                  : GwpColors.textPrimary,
+                                  : CofferColors.textPrimary,
                             ),
                           )
                         : null,
@@ -812,10 +812,10 @@ class _CurrencyExposureSection extends ConsumerWidget {
                 child: Text(
                   compactValueCJK(rowTotal[acct] ?? 0),
                   style: const TextStyle(
-                    fontFamily: GwpTypo.monoFont,
+                    fontFamily: CofferTypo.monoFont,
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
+                    color: CofferColors.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -834,9 +834,9 @@ class _CurrencyExposureSection extends ConsumerWidget {
                 child: Text(
                   compactValueCJK(colTotal[cur] ?? 0),
                   style: const TextStyle(
-                    fontFamily: GwpTypo.monoFont,
+                    fontFamily: CofferTypo.monoFont,
                     fontSize: 9,
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -858,7 +858,7 @@ class _HeatLegend extends StatelessWidget {
       children: [
         const Text(
           '0',
-          style: TextStyle(fontSize: 9, color: GwpColors.textMuted),
+          style: TextStyle(fontSize: 9, color: CofferColors.textMuted),
         ),
         const SizedBox(width: 4),
         Expanded(
@@ -868,8 +868,8 @@ class _HeatLegend extends StatelessWidget {
               borderRadius: BorderRadius.circular(3),
               gradient: LinearGradient(
                 colors: [
-                  GwpColors.actionPrimary.withValues(alpha: 0.06),
-                  GwpColors.actionPrimary.withValues(alpha: 0.78),
+                  CofferColors.actionPrimary.withValues(alpha: 0.06),
+                  CofferColors.actionPrimary.withValues(alpha: 0.78),
                 ],
               ),
             ),
@@ -879,9 +879,9 @@ class _HeatLegend extends StatelessWidget {
         Text(
           compactValueCJK(maxValue),
           style: const TextStyle(
-            fontFamily: GwpTypo.monoFont,
+            fontFamily: CofferTypo.monoFont,
             fontSize: 9,
-            color: GwpColors.textMuted,
+            color: CofferColors.textMuted,
           ),
         ),
       ],
@@ -903,7 +903,7 @@ class _RiskOverviewSection extends ConsumerWidget {
 
     return _SectionCard(
       icon: Icons.shield_outlined,
-      iconColor: GwpColors.warning,
+      iconColor: CofferColors.warning,
       title: '风险概览',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -921,7 +921,7 @@ class _RiskOverviewSection extends ConsumerWidget {
                     Expanded(child: _HhiGauge(label: '地区', value: m.regionHhi)),
                   ],
                 ),
-                const SizedBox(height: GwpSpacing.md),
+                const SizedBox(height: CofferSpacing.md),
                 _InfoRow(
                   'Top 3 占比',
                   displayPercentDouble(m.top3Share * 100),
@@ -936,8 +936,8 @@ class _RiskOverviewSection extends ConsumerWidget {
             ),
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: GwpSpacing.md),
-            child: Divider(height: 1, color: GwpColors.border),
+            padding: EdgeInsets.symmetric(vertical: CofferSpacing.md),
+            child: Divider(height: 1, color: CofferColors.border),
           ),
           const _SubTitle('流动性分层'),
           liqAsync.when(
@@ -948,25 +948,25 @@ class _RiskOverviewSection extends ConsumerWidget {
               return Column(
                 children: [
                   _LiquidityBar(profile: p),
-                  const SizedBox(height: GwpSpacing.sm),
+                  const SizedBox(height: CofferSpacing.sm),
                   Row(
                     children: [
                       _LiquidityLegend(
-                        color: GwpColors.positive,
+                        color: CofferColors.positive,
                         label: '高',
                         pct: p.highPct,
                         detail: '现金·定存',
                       ),
                       const Spacer(),
                       _LiquidityLegend(
-                        color: GwpColors.info,
+                        color: CofferColors.info,
                         label: '中',
                         pct: p.medPct,
                         detail: '股票·基金·加密',
                       ),
                       const Spacer(),
                       _LiquidityLegend(
-                        color: GwpColors.warning,
+                        color: CofferColors.warning,
                         label: '低',
                         pct: p.lowPct,
                         detail: '债券·保险·其他',
@@ -992,10 +992,10 @@ class _HhiGauge extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = (value * 100).round();
     final color = value < 0.15
-        ? GwpColors.positive
+        ? CofferColors.positive
         : value < 0.25
-            ? GwpColors.warning
-            : GwpColors.negative;
+            ? CofferColors.warning
+            : CofferColors.negative;
     final statusLabel = value < 0.15 ? '分散' : value < 0.25 ? '适中' : '集中';
 
     return Column(
@@ -1012,15 +1012,15 @@ class _HhiGauge extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: value.clamp(0, 1),
                   strokeWidth: 4,
-                  backgroundColor: GwpColors.surface3,
+                  backgroundColor: CofferColors.surface3,
                   valueColor: AlwaysStoppedAnimation(color),
                 ),
               ),
               Text(
                 '.$pct',
                 style: TextStyle(
-                  fontFamily: GwpTypo.monoFont,
-                  fontFeatures: GwpTypo.tabularFigures,
+                  fontFamily: CofferTypo.monoFont,
+                  fontFeatures: CofferTypo.tabularFigures,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: color,
@@ -1032,7 +1032,7 @@ class _HhiGauge extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 10, color: CofferColors.textMuted),
         ),
         Text(
           statusLabel,
@@ -1062,17 +1062,17 @@ class _LiquidityBar extends StatelessWidget {
             if (profile.highPct > 0)
               Expanded(
                 flex: (profile.highPct * 10).round().clamp(1, 1000),
-                child: Container(color: GwpColors.positive),
+                child: Container(color: CofferColors.positive),
               ),
             if (profile.medPct > 0)
               Expanded(
                 flex: (profile.medPct * 10).round().clamp(1, 1000),
-                child: Container(color: GwpColors.info),
+                child: Container(color: CofferColors.info),
               ),
             if (profile.lowPct > 0)
               Expanded(
                 flex: (profile.lowPct * 10).round().clamp(1, 1000),
-                child: Container(color: GwpColors.warning),
+                child: Container(color: CofferColors.warning),
               ),
           ],
         ),
@@ -1123,7 +1123,7 @@ class _LiquidityLegend extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           detail,
-          style: const TextStyle(fontSize: 9, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 9, color: CofferColors.textMuted),
         ),
       ],
     );
@@ -1142,7 +1142,7 @@ class _HealthRadarSection extends ConsumerWidget {
     final async = ref.watch(healthScoreProvider);
     return _SectionCard(
       icon: Icons.radar_outlined,
-      iconColor: GwpColors.positive,
+      iconColor: CofferColors.positive,
       title: '财务健康评分',
       child: async.when(
         loading: () => const _Loading(),
@@ -1157,17 +1157,17 @@ class _HealthRadarSection extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _OverallScoreBadge(score: overall),
-                  const SizedBox(width: GwpSpacing.md),
+                  const SizedBox(width: CofferSpacing.md),
                   Expanded(
-                    child: GwpRadarChart(dimensions: dims, size: 200),
+                    child: CofferRadarChart(dimensions: dims, size: 200),
                   ),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.lg),
+              const SizedBox(height: CofferSpacing.lg),
               for (var i = 0; i < dims.length; i++) ...[
                 _DimensionBar(label: dims[i].label, value: dims[i].value),
                 if (i < dims.length - 1)
-                  const SizedBox(height: GwpSpacing.xs),
+                  const SizedBox(height: CofferSpacing.xs),
               ],
             ],
           );
@@ -1185,10 +1185,10 @@ class _OverallScoreBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final scoreInt = (score * 100).round();
     final color = score >= 0.7
-        ? GwpColors.positive
+        ? CofferColors.positive
         : score >= 0.4
-            ? GwpColors.warning
-            : GwpColors.negative;
+            ? CofferColors.warning
+            : CofferColors.negative;
 
     return Container(
       width: 80,
@@ -1230,10 +1230,10 @@ class _DimensionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = (value * 100).round();
     final color = value >= 0.7
-        ? GwpColors.positive
+        ? CofferColors.positive
         : value >= 0.4
-            ? GwpColors.warning
-            : GwpColors.negative;
+            ? CofferColors.warning
+            : CofferColors.negative;
 
     return Row(
       children: [
@@ -1243,7 +1243,7 @@ class _DimensionBar extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
         ),
@@ -1254,7 +1254,7 @@ class _DimensionBar extends StatelessWidget {
               height: 10,
               child: LinearProgressIndicator(
                 value: value.clamp(0, 1),
-                backgroundColor: GwpColors.surface3,
+                backgroundColor: CofferColors.surface3,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
@@ -1299,16 +1299,16 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              GwpSpacing.base, GwpSpacing.md, GwpSpacing.base, GwpSpacing.sm,
+              CofferSpacing.base, CofferSpacing.md, CofferSpacing.base, CofferSpacing.sm,
             ),
             child: Row(
               children: [
@@ -1321,13 +1321,13 @@ class _SectionCard extends StatelessWidget {
                   ),
                   child: Icon(icon, size: 14, color: iconColor),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
+                    color: CofferColors.textPrimary,
                   ),
                 ),
               ],
@@ -1335,7 +1335,7 @@ class _SectionCard extends StatelessWidget {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.all(GwpSpacing.md),
+            padding: const EdgeInsets.all(CofferSpacing.md),
             child: child,
           ),
         ],
@@ -1351,13 +1351,13 @@ class _SubTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: GwpSpacing.sm),
+      padding: const EdgeInsets.only(bottom: CofferSpacing.sm),
       child: Text(
         text,
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: GwpColors.textSecondary,
+          color: CofferColors.textSecondary,
         ),
       ),
     );
@@ -1380,7 +1380,7 @@ class _InfoRow extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: GwpColors.textSecondary,
+              color: CofferColors.textSecondary,
             ),
           ),
           Flexible(
@@ -1388,11 +1388,11 @@ class _InfoRow extends StatelessWidget {
               value,
               textAlign: TextAlign.end,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -1424,10 +1424,10 @@ class _Error extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       child: Text(
         '加载失败: $error',
-        style: const TextStyle(color: GwpColors.negative, fontSize: 12),
+        style: const TextStyle(color: CofferColors.negative, fontSize: 12),
       ),
     );
   }
@@ -1443,7 +1443,7 @@ class _Empty extends StatelessWidget {
       alignment: Alignment.center,
       child: const Text(
         '暂无数据',
-        style: TextStyle(color: GwpColors.textMuted, fontSize: 12),
+        style: TextStyle(color: CofferColors.textMuted, fontSize: 12),
       ),
     );
   }

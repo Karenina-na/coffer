@@ -23,7 +23,7 @@ class RateSparkline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = isUp ? GwpColors.positive : scheme.error;
+    final color = isUp ? CofferColors.positive : scheme.error;
     return SizedBox(
       width: width,
       height: height,

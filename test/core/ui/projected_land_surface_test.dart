@@ -1,8 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/ui/finance_map_projection.dart';
-import 'package:gwp/core/ui/projected_land_surface.dart';
+import 'package:coffer/core/ui/finance_map_projection.dart';
+import 'package:coffer/core/ui/projected_land_surface.dart';
 
 void main() {
   group('containsRawLand', () {

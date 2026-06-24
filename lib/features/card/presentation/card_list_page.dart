@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/ui/app_top_bar.dart';
+import '../../../app/widgets/app_top_bar.dart';
+import '../../../core/ui/async_value_view.dart';
 import '../../../core/ui/design_tokens.dart';
-import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/floating_nav_layout.dart';
-import '../../../core/ui/global_search_delegate.dart';
-import '../../../core/ui/gwp_empty_state.dart';
+import '../../search/presentation/global_search_delegate.dart';
+import '../../../core/ui/coffer_empty_state.dart';
 import '../../../core/ui/horizontal_swipe_action.dart';
 import '../../../core/ui/region_meta.dart';
 import '../../../core/ui/top_search_action.dart';
@@ -50,11 +50,7 @@ class _CardListPageState extends ConsumerState<CardListPage> {
   }
 
   void _openSearch() {
-    openGlobalSearch(
-      context: context,
-      ref: ref,
-      current: SearchFeature.cards,
-    );
+    openGlobalSearch(context: context, ref: ref, current: SearchFeature.cards);
   }
 
   List<BankCard> _orderedCards(List<BankCard> input) => [...input];
@@ -68,81 +64,73 @@ class _CardListPageState extends ConsumerState<CardListPage> {
       for (final a in accounts.value ?? const <Account>[]) a.id: a,
     };
     return Scaffold(
-      appBar: const AppTopBar(
-        title: Text('卡片'),
-        showAppIcon: true,
-      ),
-      body: cards.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+      appBar: const AppTopBar(title: Text('卡片'), showAppIcon: true),
+      body: CofferAsyncValueView<List<BankCard>>(
+        value: cards,
+        onRetry: () => ref.invalidate(cardListProvider),
+        isEmpty: (raw) => raw.isEmpty,
+        empty: (_, _) => const CofferEmptyState(
+          icon: Icons.credit_card_outlined,
+          title: '还没有卡片',
+          subtitle: '从右上「更多 → 新建」添加第一张卡',
         ),
-        error: (e, _) => GwpEmptyState.error(
-          message: '加载失败: ${errorToMessage(e)}',
-          onRetry: () => ref.invalidate(cardListProvider),
-        ),
-        data: (raw) {
-          if (raw.isEmpty) {
-            return const GwpEmptyState(
-              icon: Icons.credit_card_outlined,
-              title: '还没有卡片',
-              subtitle: '从右上「更多 → 新建」添加第一张卡',
-            );
-          }
+        data: (_, raw) {
           final sorted = _orderedCards(raw);
           final summary = _summarize(raw);
           return ReorderableListView.builder(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                12,
-                16,
-                FloatingNavLayout.totalFloatingHeight(context) + 24,
-              ),
-              buildDefaultDragHandles: false,
-              header: summary == null
-                  ? null
-                  : Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: summary,
-                    ),
-              itemCount: sorted.length,
-              onReorder: (oldIndex, newIndex) async {
-                if (newIndex > oldIndex) newIndex -= 1;
-                final reordered = [...sorted];
-                final moved = reordered.removeAt(oldIndex);
-                reordered.insert(newIndex, moved);
-                final result = await ref
-                    .read(cardRepositoryProvider)
-                    .reorder(reordered.map((e) => e.id).toList(growable: false));
-                if (result.isErr && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('重排失败：${result.errorOrNull?.message ?? '未知错误'}'),
-                    ),
-                  );
-                }
-              },
-              itemBuilder: (_, i) {
-                final c = sorted[i];
-                final acc = byId[c.accountId];
-                return Padding(
-                  key: ValueKey('card-${c.id}'),
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: ReorderableDelayedDragStartListener(
-                    index: i,
-                    child: WalletCardTile(
-                      card: c,
-                      account: acc,
-                      regionMeta: regionMetaOf(regionIndex, acc?.sovereigntyRegion ?? ''),
-                      onTap: () => CardDetailSheet.show(
-                        context,
-                        card: c,
-                        account: acc,
-                      ),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              FloatingNavLayout.totalFloatingHeight(context) + 24,
+            ),
+            buildDefaultDragHandles: false,
+            header: summary == null
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: summary,
+                  ),
+            itemCount: sorted.length,
+            onReorderItem: (oldIndex, newIndex) async {
+              final reordered = [...sorted];
+              final moved = reordered.removeAt(oldIndex);
+              reordered.insert(newIndex, moved);
+              final result = await ref
+                  .read(cardRepositoryProvider)
+                  .reorder(reordered.map((e) => e.id).toList(growable: false));
+              if (result.isErr && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '重排失败：${result.errorOrNull?.message ?? '未知错误'}',
                     ),
                   ),
                 );
-              },
-            );
+              }
+            },
+            itemBuilder: (_, i) {
+              final c = sorted[i];
+              final acc = byId[c.accountId];
+              return Padding(
+                key: ValueKey('card-${c.id}'),
+                padding: const EdgeInsets.only(bottom: 16),
+                child: ReorderableDelayedDragStartListener(
+                  index: i,
+                  child: WalletCardTile(
+                    card: c,
+                    account: acc,
+                    regionMeta: regionMetaOf(
+                      regionIndex,
+                      acc?.sovereigntyRegion ?? '',
+                    ),
+                    onTap: () =>
+                        CardDetailSheet.show(context, card: c, account: acc),
+                  ),
+                ),
+              );
+            },
+          );
         },
       ),
     );
@@ -166,7 +154,7 @@ class _CardListPageState extends ConsumerState<CardListPage> {
     final parts = <String>[];
     if (expired > 0) parts.add('$expired 张已过期');
     if (soon > 0) parts.add('$soon 张 30 天内到期');
-    final color = expired > 0 ? GwpColors.negative : GwpColors.warning;
+    final color = expired > 0 ? CofferColors.negative : CofferColors.warning;
     return Material(
       color: color.withValues(alpha: 0.10),
       borderRadius: BorderRadius.circular(12),

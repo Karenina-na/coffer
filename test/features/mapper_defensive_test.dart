@@ -1,10 +1,10 @@
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/data/db/daos/asset_mapper.dart';
-import 'package:gwp/data/db/daos/asset_price_history_mapper.dart';
-import 'package:gwp/data/db/daos/exchange_rate_mapper.dart';
-import 'package:gwp/data/db/database.dart';
+import 'package:coffer/data/db/daos/asset_mapper.dart';
+import 'package:coffer/data/db/daos/asset_price_history_mapper.dart';
+import 'package:coffer/data/db/daos/exchange_rate_mapper.dart';
+import 'package:coffer/data/db/database.dart';
 
 void main() {
   late AppDatabase db;

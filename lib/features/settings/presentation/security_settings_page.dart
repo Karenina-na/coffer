@@ -93,7 +93,7 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
-      backgroundColor: GwpColors.surface1,
+      backgroundColor: CofferColors.surface1,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -110,18 +110,18 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('PIN 与指纹')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: GwpColors.actionPrimary))
+          ? const Center(child: CircularProgressIndicator(color: CofferColors.actionPrimary))
           : ListView(
               padding: const EdgeInsets.symmetric(
-                horizontal: GwpSpacing.base,
-                vertical: GwpSpacing.md,
+                horizontal: CofferSpacing.base,
+                vertical: CofferSpacing.md,
               ),
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: GwpColors.surface1,
+                    color: CofferColors.surface1,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: GwpColors.border, width: 0.5),
+                    border: Border.all(color: CofferColors.border, width: 0.5),
                   ),
                   child: Column(
                     children: [
@@ -129,10 +129,10 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
                         leading: const Icon(Icons.pin_outlined),
                         title: const Text('修改 PIN'),
                         subtitle: const Text('先验证当前 PIN，再设置新 PIN'),
-                        trailing: const Icon(Icons.chevron_right, size: 18, color: GwpColors.textMuted),
+                        trailing: const Icon(Icons.chevron_right, size: 18, color: CofferColors.textMuted),
                         onTap: _changePin,
                       ),
-                      const Divider(height: 1, color: GwpColors.border),
+                      const Divider(height: 1, color: CofferColors.border),
                       SwitchListTile(
                         secondary: const Icon(Icons.fingerprint),
                         title: const Text('生物识别快捷解锁'),
@@ -227,8 +227,8 @@ class _PinPromptSheetState extends ConsumerState<_PinPromptSheet> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: GwpSpacing.base,
-            vertical: GwpSpacing.lg,
+            horizontal: CofferSpacing.base,
+            vertical: CofferSpacing.lg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -238,7 +238,7 @@ class _PinPromptSheetState extends ConsumerState<_PinPromptSheet> {
                 height: 4,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: GwpColors.borderStrong,
+                    color: CofferColors.borderStrong,
                     borderRadius: BorderRadius.all(Radius.circular(2)),
                   ),
                 ),
@@ -246,11 +246,11 @@ class _PinPromptSheetState extends ConsumerState<_PinPromptSheet> {
               const SizedBox(height: 16),
               Text(widget.title,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600, color: GwpColors.textPrimary)),
+                      fontSize: 16, fontWeight: FontWeight.w600, color: CofferColors.textPrimary)),
               if (widget.subtitle.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(widget.subtitle,
-                    style: const TextStyle(fontSize: 12, color: GwpColors.textSecondary)),
+                    style: const TextStyle(fontSize: 12, color: CofferColors.textSecondary)),
               ],
               const SizedBox(height: 16),
               Row(
@@ -263,9 +263,9 @@ class _PinPromptSheetState extends ConsumerState<_PinPromptSheet> {
                     margin: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: on ? GwpColors.actionPrimary : Colors.transparent,
+                      color: on ? CofferColors.actionPrimary : Colors.transparent,
                       border: Border.all(
-                        color: on ? GwpColors.actionPrimary : GwpColors.borderStrong,
+                        color: on ? CofferColors.actionPrimary : CofferColors.borderStrong,
                         width: 1.3,
                       ),
                     ),
@@ -274,7 +274,7 @@ class _PinPromptSheetState extends ConsumerState<_PinPromptSheet> {
               ),
               const SizedBox(height: 10),
               if (_error != null)
-                Text(_error!, style: const TextStyle(fontSize: 12, color: GwpColors.negative))
+                Text(_error!, style: const TextStyle(fontSize: 12, color: CofferColors.negative))
               else
                 const SizedBox(height: 16),
               const SizedBox(height: 12),
@@ -316,8 +316,8 @@ class _CompactKeypad extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w500,
-                    color: GwpColors.textPrimary,
-                    fontFeatures: GwpTypo.tabularFigures,
+                    color: CofferColors.textPrimary,
+                    fontFeatures: CofferTypo.tabularFigures,
                   ),
                 ),
               ),
@@ -332,7 +332,7 @@ class _CompactKeypad extends StatelessWidget {
               radius: 32,
               child: const Center(
                 child: Icon(Icons.backspace_outlined,
-                    size: 20, color: GwpColors.textSecondary),
+                    size: 20, color: CofferColors.textSecondary),
               ),
             ),
           ),

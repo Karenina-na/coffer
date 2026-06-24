@@ -62,9 +62,7 @@ class SyncStatusPill extends ConsumerWidget {
                   topLeft: Radius.circular(16),
                   bottomLeft: Radius.circular(16),
                 ),
-                onTap: sync.isSyncing
-                    ? null
-                    : () => run(scope: SyncScope.all),
+                onTap: sync.isSyncing ? null : () => run(scope: SyncScope.all),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
                   child: sync.isSyncing
@@ -73,8 +71,7 @@ class SyncStatusPill extends ConsumerWidget {
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(color),
+                            valueColor: AlwaysStoppedAnimation<Color>(color),
                           ),
                         )
                       : Icon(icon, size: 16, color: color),
@@ -98,14 +95,13 @@ class SyncStatusPill extends ConsumerWidget {
                 ),
                 const Divider(height: 8),
                 MenuItemButton(
-                  leadingIcon:
-                      const Icon(Icons.trending_up_outlined, size: 18),
+                  leadingIcon: const Icon(Icons.trending_up_outlined, size: 18),
                   onPressed: sync.isSyncing
                       ? null
                       : () => run(
-                            scope: SyncScope.ratesOnly,
-                            mode: SyncMode.incremental,
-                          ),
+                          scope: SyncScope.ratesOnly,
+                          mode: SyncMode.incremental,
+                        ),
                   child: const Text('仅汇率 · 增量'),
                 ),
                 MenuItemButton(
@@ -113,9 +109,9 @@ class SyncStatusPill extends ConsumerWidget {
                   onPressed: sync.isSyncing
                       ? null
                       : () => run(
-                            scope: SyncScope.ratesOnly,
-                            mode: SyncMode.full,
-                          ),
+                          scope: SyncScope.ratesOnly,
+                          mode: SyncMode.full,
+                        ),
                   child: const Text('仅汇率 · 全量（8 日序列）'),
                 ),
                 const Divider(height: 8),

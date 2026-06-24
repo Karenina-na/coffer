@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/ui/gwp_node_map.dart';
-import 'package:gwp/core/ui/region_meta.dart';
-import 'package:gwp/features/dashboard/presentation/dashboard_page.dart';
-import 'package:gwp/features/dashboard/presentation/dashboard_providers.dart';
+import 'package:coffer/core/ui/coffer_node_map.dart';
+import 'package:coffer/core/ui/region_meta.dart';
+import 'package:coffer/features/dashboard/presentation/dashboard_page.dart';
+import 'package:coffer/features/wealth/presentation/wealth_trend_provider.dart';
 
 void main() {
   test('dashboard 刷新目标包含今日汇率预警 provider', () {
@@ -44,10 +44,7 @@ void main() {
 
     test('过滤多个大洲 → 对应节点全部可见', () {
       final result = heroFilterNodes(regionIndex, all, {'亚太', '欧洲'});
-      expect(
-        result.map((n) => n.regionCode),
-        unorderedEquals(['CN', 'GB']),
-      );
+      expect(result.map((n) => n.regionCode), unorderedEquals(['CN', 'GB']));
     });
 
     test('未知 regionCode (XX) 在过滤激活时被隐藏', () {
@@ -104,17 +101,16 @@ void main() {
     test('单端在可见集合中 → 该边被过滤掉', () {
       // CN 在集合中，US 不在 → cnUs 应被过滤
       final result = heroFilterEdges(all, {'CN', 'HK'});
-      expect(result.any((e) => e.fromRegion == 'US' || e.toRegion == 'US'),
-          isFalse);
+      expect(
+        result.any((e) => e.fromRegion == 'US' || e.toRegion == 'US'),
+        isFalse,
+      );
     });
   });
 
   group('orderedContinentLabels', () {
     test('标准分组按固定顺序，扩展分组追加在后', () {
-      expect(
-        orderedContinentLabels({'数字', '欧洲', '亚太'}),
-        ['亚太', '欧洲', '数字'],
-      );
+      expect(orderedContinentLabels({'数字', '欧洲', '亚太'}), ['亚太', '欧洲', '数字']);
     });
   });
 }

@@ -33,7 +33,7 @@ class FundNavProvider implements AssetPriceProvider {
   static const _timeout = Duration(seconds: 10);
   static const _source = 'fund';
   static const _headers = {
-    'User-Agent': 'Mozilla/5.0 (GWP)',
+    'User-Agent': 'Mozilla/5.0 (Coffer)',
     'Referer': 'https://fund.eastmoney.com/',
   };
 
@@ -294,7 +294,7 @@ class FundNavProvider implements AssetPriceProvider {
     );
     try {
       final resp = await _client
-          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (GWP)'})
+          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (Coffer)'})
           .timeout(_timeout);
       final body = resp.body;
       final contentType = resp.headers['content-type'] ?? '';
@@ -369,7 +369,7 @@ class FundNavProvider implements AssetPriceProvider {
     );
     try {
       final resp = await _client
-          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (GWP)'})
+          .get(uri, headers: const {'User-Agent': 'Mozilla/5.0 (Coffer)'})
           .timeout(_timeout);
       if (resp.statusCode != 200) {
         return Err(

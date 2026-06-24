@@ -6,32 +6,32 @@
 
 ## 1. 项目速览
 
-- Flutter 3.41.7 + Dart SDK `^3.11.5`，Android 为主要验证平台
+- Flutter 3.44.2（FVM 固定）+ Dart SDK `^3.11.5`，Android 为主要验证平台
 - **本地优先**：全量数据落 Drift + SQLCipher；不得引入需联网的后端依赖
 - 外网请求仅限：Frankfurter（汇率）、东方财富 `push2.eastmoney.com` / `push2his.eastmoney.com`、Yahoo Finance `/v8/finance/chart`、OKX API v5（加密货币现货+衍生品，免 Key）、REST Countries `restcountries.com/v3.1/name` / `v3.1/alpha`（仅用于按本地已存在国家/地区条目做定向元数据补全，不可全量导入）
 - 分层：`presentation → domain ← data`，domain 零外部依赖
 - 金额：`package:decimal` 的 `Decimal`，**永远禁止 double**
 - 敏感字段：AES-GCM，主密钥在平台 Keystore / Keychain
-- 当前 55 个测试文件 / 412 个用例
+- 当前 80 个测试文件 / 609 个用例
 
 ## 2. 常用命令
 
 ```bash
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # 改 freezed / drift 表后必跑
-flutter analyze                                            # 必须 0 issue（含 warning）
-flutter test                                               # 必须全绿
-flutter build apk --debug
-flutter build apk --release
+fvm flutter pub get
+fvm dart run build_runner build --delete-conflicting-outputs   # 改 freezed / drift 表后必跑
+fvm flutter analyze                                            # 必须 0 issue（含 warning）
+fvm flutter test                                               # 必须全绿
+fvm flutter build apk --debug
+fvm flutter build apk --release
 ```
 
 ## 3. 强制工作流
 
 > **每次代码改动完成后，必须走完整条链，不可跳过安装步骤。**
 
-1. `flutter analyze` → 0 issues
-2. `flutter test` → 全部 pass
-3. `flutter build apk --debug` + `--release`（两个都要）
+1. `fvm flutter analyze` → 0 issues
+2. `fvm flutter test` → 全部 pass
+3. `fvm flutter build apk --debug` + `--release`（两个都要）
 4. 安装到模拟器：`adb install -r build/app/outputs/flutter-apk/app-debug.apk`
    - Windows：`$env:ANDROID_HOME\platform-tools\adb` 或 `$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb`
    - 返回 `Success` 才算结束
@@ -70,7 +70,7 @@ lib/
 
 - 跨 feature 的 UI 组件 → `core/ui/`
 - 设置页 `features/settings/` 只放 App 级全局项
-- **已知债务**：`data/providers/dict_providers.dart` 被 6 个 feature 文件直接导入，这是 provider 作为 DI 配置的折中方案，不是重构遗漏
+- **已知债务**：`data/providers/dict_providers.dart` 被 22 个 presentation/core UI 文件直接导入，这是 provider 作为 DI 配置的折中方案，不是重构遗漏
 
 ## 6. 测试约定
 

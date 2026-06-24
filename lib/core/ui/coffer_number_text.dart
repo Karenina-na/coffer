@@ -10,11 +10,11 @@ enum ValueSign { positive, negative, neutral }
 ///
 /// Usage:
 /// ```dart
-/// GwpNumberText(value: '+12,345.67', sign: ValueSign.positive)
-/// GwpNumberText.dual(primary: 'CNY 12,345.67', secondary: 'USD 1,780.00')
+/// CofferNumberText(value: '+12,345.67', sign: ValueSign.positive)
+/// CofferNumberText.dual(primary: 'CNY 12,345.67', secondary: 'USD 1,780.00')
 /// ```
-class GwpNumberText extends StatelessWidget {
-  const GwpNumberText({
+class CofferNumberText extends StatelessWidget {
+  const CofferNumberText({
     super.key,
     required this.value,
     this.sign = ValueSign.neutral,
@@ -68,8 +68,8 @@ class GwpNumberText extends StatelessWidget {
             value,
             textAlign: textAlign,
             style: TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: fontSize,
               fontWeight: fontWeight,
               color: color,
@@ -111,8 +111,8 @@ class _DualNumberText extends StatelessWidget {
           primary,
           textAlign: TextAlign.end,
           style: TextStyle(
-            fontFamily: GwpTypo.monoFont,
-            fontFeatures: GwpTypo.tabularFigures,
+            fontFamily: CofferTypo.monoFont,
+            fontFeatures: CofferTypo.tabularFigures,
             fontSize: primarySize,
             fontWeight: FontWeight.w600,
             color: color,
@@ -126,11 +126,11 @@ class _DualNumberText extends StatelessWidget {
             secondary!,
             textAlign: TextAlign.end,
             style: TextStyle(
-              fontFamily: GwpTypo.monoFont,
-              fontFeatures: GwpTypo.tabularFigures,
+              fontFamily: CofferTypo.monoFont,
+              fontFeatures: CofferTypo.tabularFigures,
               fontSize: secondarySize,
               fontWeight: FontWeight.w400,
-              color: GwpColors.textMuted,
+              color: CofferColors.textMuted,
               height: 1.3,
             ),
             maxLines: 1,
@@ -142,9 +142,9 @@ class _DualNumberText extends StatelessWidget {
 }
 
 Color _signColor(ValueSign sign) => switch (sign) {
-      ValueSign.positive => GwpColors.positive,
-      ValueSign.negative => GwpColors.negative,
-      ValueSign.neutral => GwpColors.textPrimary,
+      ValueSign.positive => CofferColors.positive,
+      ValueSign.negative => CofferColors.negative,
+      ValueSign.neutral => CofferColors.textPrimary,
     };
 
 IconData? _signIcon(ValueSign sign) => switch (sign) {

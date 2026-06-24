@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/domain/entities/domain_event.dart';
-import 'package:gwp/domain/entities/event_enums.dart';
-import 'package:gwp/domain/events/event_bus.dart';
+import 'package:coffer/domain/entities/domain_event.dart';
+import 'package:coffer/domain/entities/event_enums.dart';
+import 'package:coffer/domain/events/event_bus.dart';
 
 DomainEvent _evt({
   String id = 'e1',

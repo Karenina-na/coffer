@@ -9,9 +9,9 @@ import '../../../core/ui/design_tokens.dart';
 import '../../../core/ui/enum_labels.dart';
 import '../../../core/ui/error_localizer.dart';
 import '../../../core/ui/format_utils.dart';
-import '../../../core/ui/gwp_empty_state.dart';
-import '../../../core/ui/gwp_heat_strip.dart';
-import '../../../core/ui/gwp_mini_chart.dart';
+import '../../../core/ui/coffer_empty_state.dart';
+import '../../../core/ui/coffer_heat_strip.dart';
+import '../../../core/ui/coffer_mini_chart.dart';
 import '../../../core/ui/sync_window_menu_button.dart';
 import '../../../domain/entities/exchange_rate.dart';
 import '../../../domain/entities/exchange_rate_enums.dart';
@@ -133,7 +133,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
-      backgroundColor: GwpColors.canvas,
+      backgroundColor: CofferColors.canvas,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -172,11 +172,11 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
         ref.watch(pairRateSeriesProvider(widget.pairKey));
 
     return Scaffold(
-      backgroundColor: GwpColors.canvas,
+      backgroundColor: CofferColors.canvas,
       appBar: AppBar(
         title: Text(widget.pairKey),
-        backgroundColor: GwpColors.canvas,
-        foregroundColor: GwpColors.textPrimary,
+        backgroundColor: CofferColors.canvas,
+        foregroundColor: CofferColors.textPrimary,
         elevation: 0,
         actions: [
           SyncWindowMenuButton(
@@ -189,7 +189,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: GwpColors.actionPrimary,
+                      color: CofferColors.actionPrimary,
                     ),
                   )
                 : const Icon(Icons.sync),
@@ -203,9 +203,9 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
       ),
       body: series.when(
         loading: () => const Center(
-          child: CircularProgressIndicator(color: GwpColors.actionPrimary),
+          child: CircularProgressIndicator(color: CofferColors.actionPrimary),
         ),
-        error: (e, _) => GwpEmptyState.error(
+        error: (e, _) => CofferEmptyState.error(
           message: '加载失败: ${errorToMessage(e)}',
           onRetry: () => ref.invalidate(pairSeriesByRangeProvider(query)),
         ),
@@ -225,7 +225,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                 series: list,
                 recent: recent7d,
               ),
-              const SizedBox(height: GwpSpacing.base),
+              const SizedBox(height: CofferSpacing.base),
               // ── Price Chart Section ──
               _SectionCard(
                 icon: Icons.candlestick_chart_outlined,
@@ -238,16 +238,16 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                   ),
                   if (coverage != _Coverage.ok)
                     _CoverageBanner(coverage: coverage),
-                  const SizedBox(height: GwpSpacing.sm),
+                  const SizedBox(height: CofferSpacing.sm),
                   SizedBox(
                     height: 240,
                     child: _PriceChart(series: list),
                   ),
-                  const SizedBox(height: GwpSpacing.md),
+                  const SizedBox(height: CofferSpacing.md),
                   _RangeStats(series: list),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
               // ── Volatility Heat Map ──
               _SectionCard(
                 icon: Icons.waves_outlined,
@@ -258,7 +258,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
               // ── Currency Details ──
               _SectionCard(
                 icon: Icons.info_outline,
@@ -271,7 +271,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: GwpSpacing.md),
+              const SizedBox(height: CofferSpacing.md),
               // ── Rate History Timeline ──
               _SectionCard(
                 icon: Icons.history,
@@ -284,7 +284,7 @@ class _PairDetailPageState extends ConsumerState<PairDetailPage> {
                         '暂无数据，点右上「同步」拉取',
                         style: TextStyle(
                           fontSize: 13,
-                          color: GwpColors.textMuted,
+                          color: CofferColors.textMuted,
                         ),
                       ),
                     )
@@ -320,33 +320,33 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: GwpSpacing.base),
-      padding: const EdgeInsets.all(GwpSpacing.base),
+      margin: const EdgeInsets.symmetric(horizontal: CofferSpacing.base),
+      padding: const EdgeInsets.all(CofferSpacing.base),
       decoration: BoxDecoration(
-        color: GwpColors.surface1,
+        color: CofferColors.surface1,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: GwpColors.border, width: 0.5),
+        border: Border.all(color: CofferColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: GwpColors.textSecondary),
+              Icon(icon, size: 16, color: CofferColors.textSecondary),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: GwpColors.textSecondary,
+                  color: CofferColors.textSecondary,
                 ),
               ),
             ],
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: GwpSpacing.sm),
-            child: Divider(height: 1, color: GwpColors.border),
+            padding: EdgeInsets.symmetric(vertical: CofferSpacing.sm),
+            child: Divider(height: 1, color: CofferColors.border),
           ),
           ...children,
         ],
@@ -387,13 +387,13 @@ class _PairHero extends StatelessWidget {
     }
     final isUp = (changeAbs ?? 0) >= 0;
     final changeColor = changeAbs == null
-        ? GwpColors.textMuted
-        : (isUp ? GwpColors.positive : GwpColors.negative);
+        ? CofferColors.textMuted
+        : (isUp ? CofferColors.positive : CofferColors.negative);
 
     // Accent color based on direction (neutral blue if no change).
     final accent = changeAbs == null
-        ? GwpColors.actionPrimary
-        : (isUp ? GwpColors.positive : GwpColors.negative);
+        ? CofferColors.actionPrimary
+        : (isUp ? CofferColors.positive : CofferColors.negative);
 
     // Sparkline: prefer 7-day window; fallback to last 30 points of series.
     final sparkSource = recent.isNotEmpty ? recent : series;
@@ -418,9 +418,9 @@ class _PairHero extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        GwpSpacing.base,
-        GwpSpacing.sm,
-        GwpSpacing.base,
+        CofferSpacing.base,
+        CofferSpacing.sm,
+        CofferSpacing.base,
         0,
       ),
       decoration: BoxDecoration(
@@ -430,7 +430,7 @@ class _PairHero extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             accent.withValues(alpha: 0.18),
-            GwpColors.surface1,
+            CofferColors.surface1,
           ],
         ),
         border: Border.all(
@@ -438,7 +438,7 @@ class _PairHero extends StatelessWidget {
           width: 0.5,
         ),
       ),
-      padding: const EdgeInsets.all(GwpSpacing.lg),
+      padding: const EdgeInsets.all(CofferSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -483,14 +483,14 @@ class _PairHero extends StatelessWidget {
                         fontSize: 11,
                         height: 1.1,
                         fontWeight: FontWeight.w600,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                         letterSpacing: 0.2,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: GwpSpacing.md),
+              const SizedBox(width: CofferSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,7 +500,7 @@ class _PairHero extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -508,7 +508,7 @@ class _PairHero extends StatelessWidget {
                       '1 $base = ? $quote',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                       ),
                     ),
                   ],
@@ -519,7 +519,7 @@ class _PairHero extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: GwpColors.surface2.withValues(alpha: 0.7),
+                    color: CofferColors.surface2.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -528,13 +528,13 @@ class _PairHero extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: GwpColors.textSecondary,
+                      color: CofferColors.textSecondary,
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.lg),
+          const SizedBox(height: CofferSpacing.lg),
           // Hero rate row
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -547,7 +547,7 @@ class _PairHero extends StatelessWidget {
                       '当前汇率',
                       style: TextStyle(
                         fontSize: 11,
-                        color: GwpColors.textMuted,
+                        color: CofferColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -556,18 +556,18 @@ class _PairHero extends StatelessWidget {
                           ? '—'
                           : _heroRate(latest.rate.toDouble()),
                       style: const TextStyle(
-                        fontFamily: GwpTypo.monoFont,
-                        fontFeatures: GwpTypo.tabularFigures,
+                        fontFamily: CofferTypo.monoFont,
+                        fontFeatures: CofferTypo.tabularFigures,
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
-                        color: GwpColors.textPrimary,
+                        color: CofferColors.textPrimary,
                       ),
                     ),
                     Text(
                       '$quote / $base',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: GwpColors.textSecondary,
+                        color: CofferColors.textSecondary,
                       ),
                     ),
                   ],
@@ -575,14 +575,14 @@ class _PairHero extends StatelessWidget {
               ),
               // Sparkline
               if (sparkData.length >= 2)
-                GwpMiniChart(
+                CofferMiniChart(
                   data: sparkData,
                   width: 96,
                   height: 40,
                 ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // Change row
           Row(
             children: [
@@ -595,7 +595,7 @@ class _PairHero extends StatelessWidget {
                 Text(
                   displayDouble(changeAbs, alwaysShowSign: true),
                   style: TextStyle(
-                    fontFamily: GwpTypo.monoFont,
+                    fontFamily: CofferTypo.monoFont,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: changeColor,
@@ -606,7 +606,7 @@ class _PairHero extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isUp ? GwpColors.positiveBg : GwpColors.negativeBg,
+                    color: isUp ? CofferColors.positiveBg : CofferColors.negativeBg,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -614,7 +614,7 @@ class _PairHero extends StatelessWidget {
                         ? displayPercentDouble(changePct, alwaysShowSign: true)
                         : '—',
                     style: TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: changeColor,
@@ -624,7 +624,7 @@ class _PairHero extends StatelessWidget {
               ] else
                 const Text(
                   '需要更多数据点',
-                  style: TextStyle(fontSize: 12, color: GwpColors.textMuted),
+                  style: TextStyle(fontSize: 12, color: CofferColors.textMuted),
                 ),
               const Spacer(),
               if (latest != null)
@@ -632,12 +632,12 @@ class _PairHero extends StatelessWidget {
                   _fmtDate(latest.asOfTime),
                   style: const TextStyle(
                     fontSize: 10,
-                    color: GwpColors.textMuted,
+                    color: CofferColors.textMuted,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: GwpSpacing.md),
+          const SizedBox(height: CofferSpacing.md),
           // KPI chips
           Row(
             children: [
@@ -646,13 +646,13 @@ class _PairHero extends StatelessWidget {
                 label: '区间高',
                 value: seriesHigh == null ? '—' : _fmtRate(seriesHigh),
               ),
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               _HeroChip(
                 icon: Icons.arrow_downward_outlined,
                 label: '区间低',
                 value: seriesLow == null ? '—' : _fmtRate(seriesLow),
               ),
-              const SizedBox(width: GwpSpacing.sm),
+              const SizedBox(width: CofferSpacing.sm),
               _HeroChip(
                 icon: Icons.cloud_outlined,
                 label: '数据源',
@@ -681,17 +681,17 @@ class _HeroChip extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.sm,
-          vertical: GwpSpacing.xs,
+          horizontal: CofferSpacing.sm,
+          vertical: CofferSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: GwpColors.surface2.withValues(alpha: 0.6),
+          color: CofferColors.surface2.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: GwpColors.textMuted),
+            Icon(icon, size: 12, color: CofferColors.textMuted),
             const SizedBox(width: 4),
             Expanded(
               child: Column(
@@ -701,17 +701,17 @@ class _HeroChip extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       fontSize: 9,
-                      color: GwpColors.textMuted,
+                      color: CofferColors.textMuted,
                     ),
                   ),
                   Text(
                     value,
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
-                      fontFeatures: GwpTypo.tabularFigures,
+                      fontFamily: CofferTypo.monoFont,
+                      fontFeatures: CofferTypo.tabularFigures,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: GwpColors.textPrimary,
+                      color: CofferColors.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -752,13 +752,13 @@ class _RangeSelector extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   color: r.$1 == current
-                      ? GwpColors.actionPrimary.withValues(alpha: 0.15)
+                      ? CofferColors.actionPrimary.withValues(alpha: 0.15)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                   border: r.$1 == current
                       ? Border.all(
                           color:
-                              GwpColors.actionPrimary.withValues(alpha: 0.4),
+                              CofferColors.actionPrimary.withValues(alpha: 0.4),
                           width: 0.5)
                       : null,
                 ),
@@ -770,8 +770,8 @@ class _RangeSelector extends StatelessWidget {
                     fontWeight:
                         r.$1 == current ? FontWeight.w600 : FontWeight.w400,
                     color: r.$1 == current
-                        ? GwpColors.actionPrimary
-                        : GwpColors.textSecondary,
+                        ? CofferColors.actionPrimary
+                        : CofferColors.textSecondary,
                   ),
                 ),
               ),
@@ -798,23 +798,23 @@ class _CoverageBanner extends StatelessWidget {
         ? '暂无快照数据，点击右上「同步」拉取'
         : '当前区间缺少早段数据，点击右上「同步」补齐';
     return Container(
-      margin: const EdgeInsets.only(top: GwpSpacing.sm),
+      margin: const EdgeInsets.only(top: CofferSpacing.sm),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: GwpColors.warningBg,
+        color: CofferColors.warningBg,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: GwpColors.warning.withValues(alpha: 0.3)),
+        border: Border.all(color: CofferColors.warning.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 14, color: GwpColors.warning),
+          const Icon(Icons.info_outline, size: 14, color: CofferColors.warning),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               msg,
               style: const TextStyle(
                 fontSize: 11,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
           ),
@@ -838,7 +838,7 @@ class _PriceChart extends StatelessWidget {
       return Center(
         child: Text(
           series.isEmpty ? '暂无数据，点击右上「同步」拉取' : '仅 1 个数据点，无法绘图',
-          style: const TextStyle(fontSize: 13, color: GwpColors.textMuted),
+          style: const TextStyle(fontSize: 13, color: CofferColors.textMuted),
         ),
       );
     }
@@ -847,7 +847,7 @@ class _PriceChart extends StatelessWidget {
     final maxV = values.reduce((a, b) => a > b ? a : b);
     final range = maxV - minV;
     final isUp = values.last >= values.first;
-    final lineColor = isUp ? GwpColors.positive : GwpColors.negative;
+    final lineColor = isUp ? CofferColors.positive : CofferColors.negative;
 
     final spots = <FlSpot>[
       for (var i = 0; i < values.length; i++)
@@ -859,7 +859,7 @@ class _PriceChart extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: GwpColors.surface2.withValues(alpha: 0.3),
+        color: CofferColors.surface2.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.fromLTRB(4, 12, 12, 4),
@@ -875,7 +875,7 @@ class _PriceChart extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: range > 0 ? range / 3 : 1,
                   getDrawingHorizontalLine: (_) => FlLine(
-                    color: GwpColors.border.withValues(alpha: 0.3),
+                    color: CofferColors.border.withValues(alpha: 0.3),
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -894,8 +894,8 @@ class _PriceChart extends StatelessWidget {
                             _fmtRate(value),
                             style: const TextStyle(
                               fontSize: 9,
-                              color: GwpColors.textMuted,
-                              fontFamily: GwpTypo.monoFont,
+                              color: CofferColors.textMuted,
+                              fontFamily: CofferTypo.monoFont,
                             ),
                           ),
                         );
@@ -918,7 +918,7 @@ class _PriceChart extends StatelessWidget {
                             _shortDate(series[idx].asOfTime),
                             style: const TextStyle(
                               fontSize: 8,
-                              color: GwpColors.textMuted,
+                              color: CofferColors.textMuted,
                             ),
                           ),
                         );
@@ -935,7 +935,7 @@ class _PriceChart extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => GwpColors.surface3,
+                    getTooltipColor: (_) => CofferColors.surface3,
                     tooltipRoundedRadius: 8,
                     getTooltipItems: (touchedSpots) =>
                         touchedSpots.map((s) {
@@ -944,7 +944,7 @@ class _PriceChart extends StatelessWidget {
                       return LineTooltipItem(
                         '${_fmtDate(p.asOfTime)}\n${_fmtRate(p.rate.toDouble())}',
                         TextStyle(
-                          fontFamily: GwpTypo.monoFont,
+                          fontFamily: CofferTypo.monoFont,
                           fontSize: 11,
                           color: lineColor,
                           fontWeight: FontWeight.w600,
@@ -967,7 +967,7 @@ class _PriceChart extends StatelessWidget {
                                 radius: 3,
                                 color: lineColor,
                                 strokeWidth: 2,
-                                strokeColor: GwpColors.surface1,
+                                strokeColor: CofferColors.surface1,
                               ),
                             ),
                           ))
@@ -977,7 +977,7 @@ class _PriceChart extends StatelessWidget {
                   horizontalLines: [
                     HorizontalLine(
                       y: values.first,
-                      color: GwpColors.textMuted.withValues(alpha: 0.3),
+                      color: CofferColors.textMuted.withValues(alpha: 0.3),
                       strokeWidth: 1,
                       dashArray: [4, 3],
                     ),
@@ -1017,12 +1017,12 @@ class _PriceChart extends StatelessWidget {
               Text(
                 _fmtDate(series.first.asOfTime),
                 style:
-                    const TextStyle(fontSize: 9, color: GwpColors.textMuted),
+                    const TextStyle(fontSize: 9, color: CofferColors.textMuted),
               ),
               Text(
                 _fmtDate(series.last.asOfTime),
                 style:
-                    const TextStyle(fontSize: 9, color: GwpColors.textMuted),
+                    const TextStyle(fontSize: 9, color: CofferColors.textMuted),
               ),
             ],
           ),
@@ -1066,28 +1066,28 @@ class _RangeStats extends StatelessWidget {
       children: [
         _MiniStatCard(
           icon: Icons.arrow_upward_outlined,
-          iconColor: GwpColors.positive,
+          iconColor: CofferColors.positive,
           label: '区间高',
           value: _fmtRate(high),
         ),
         const SizedBox(width: 6),
         _MiniStatCard(
           icon: Icons.arrow_downward_outlined,
-          iconColor: GwpColors.negative,
+          iconColor: CofferColors.negative,
           label: '区间低',
           value: _fmtRate(low),
         ),
         const SizedBox(width: 6),
         _MiniStatCard(
           icon: Icons.trending_flat_outlined,
-          iconColor: GwpColors.info,
+          iconColor: CofferColors.info,
           label: '均值',
           value: _fmtRate(avg),
         ),
         const SizedBox(width: 6),
         _MiniStatCard(
           icon: Icons.show_chart_outlined,
-          iconColor: GwpColors.warning,
+          iconColor: CofferColors.warning,
           label: '波动率',
           value: displayPercentDouble(vol),
         ),
@@ -1113,11 +1113,11 @@ class _MiniStatCard extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: GwpSpacing.xs,
-          vertical: GwpSpacing.sm,
+          horizontal: CofferSpacing.xs,
+          vertical: CofferSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: GwpColors.surface2.withValues(alpha: 0.5),
+          color: CofferColors.surface2.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1129,18 +1129,18 @@ class _MiniStatCard extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 9,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               value,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -1166,7 +1166,7 @@ class _VolatilityHeat extends StatelessWidget {
         padding: EdgeInsets.all(12),
         child: Text(
           '数据不足，无法计算日涨跌',
-          style: TextStyle(fontSize: 12, color: GwpColors.textMuted),
+          style: TextStyle(fontSize: 12, color: CofferColors.textMuted),
         ),
       );
     }
@@ -1186,7 +1186,7 @@ class _VolatilityHeat extends StatelessWidget {
         padding: EdgeInsets.all(12),
         child: Text(
           '数据不足，无法计算日涨跌',
-          style: TextStyle(fontSize: 12, color: GwpColors.textMuted),
+          style: TextStyle(fontSize: 12, color: CofferColors.textMuted),
         ),
       );
     }
@@ -1205,14 +1205,14 @@ class _VolatilityHeat extends StatelessWidget {
                   child: Text(
                     _shortDate(r.$1),
                     style: const TextStyle(
-                      fontFamily: GwpTypo.monoFont,
+                      fontFamily: CofferTypo.monoFont,
                       fontSize: 11,
-                      color: GwpColors.textSecondary,
+                      color: CofferColors.textSecondary,
                     ),
                   ),
                 ),
                 Expanded(
-                  child: GwpHeatStrip(
+                  child: CofferHeatStrip(
                     value: r.$2,
                     maxAbsValue: scale,
                     label: displayPercentDouble(r.$2, alwaysShowSign: true),
@@ -1266,7 +1266,7 @@ class _CurrencyDetails extends StatelessWidget {
         for (var i = 0; i < rows.length; i++) ...[
           _KvRow(k: rows[i].$1, v: rows[i].$2),
           if (i < rows.length - 1)
-            const Divider(height: 1, color: GwpColors.border),
+            const Divider(height: 1, color: CofferColors.border),
         ],
       ],
     );
@@ -1291,7 +1291,7 @@ class _KvRow extends StatelessWidget {
               k,
               style: const TextStyle(
                 fontSize: 12,
-                color: GwpColors.textMuted,
+                color: CofferColors.textMuted,
               ),
             ),
           ),
@@ -1299,9 +1299,9 @@ class _KvRow extends StatelessWidget {
             child: Text(
               v,
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
+                fontFamily: CofferTypo.monoFont,
                 fontSize: 12,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               textAlign: TextAlign.right,
             ),
@@ -1353,7 +1353,7 @@ class _HistoryTimelineState extends State<_HistoryTimeline> {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: GwpColors.actionPrimary,
+                  color: CofferColors.actionPrimary,
                 ),
               ),
             ),
@@ -1395,20 +1395,20 @@ class _HistoryRow extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isFirst
-                  ? GwpColors.actionPrimary
-                  : GwpColors.textMuted.withValues(alpha: 0.4),
+                  ? CofferColors.actionPrimary
+                  : CofferColors.textMuted.withValues(alpha: 0.4),
             ),
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           // Date
           SizedBox(
             width: 80,
             child: Text(
               _fmtDate(rate.asOfTime),
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
+                fontFamily: CofferTypo.monoFont,
                 fontSize: 11,
-                color: GwpColors.textSecondary,
+                color: CofferColors.textSecondary,
               ),
             ),
           ),
@@ -1417,16 +1417,16 @@ class _HistoryRow extends StatelessWidget {
             child: Text(
               _fmtRate(rate.rate.toDouble()),
               style: const TextStyle(
-                fontFamily: GwpTypo.monoFont,
-                fontFeatures: GwpTypo.tabularFigures,
+                fontFamily: CofferTypo.monoFont,
+                fontFeatures: CofferTypo.tabularFigures,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: GwpColors.textPrimary,
+                color: CofferColors.textPrimary,
               ),
               textAlign: TextAlign.right,
             ),
           ),
-          const SizedBox(width: GwpSpacing.sm),
+          const SizedBox(width: CofferSpacing.sm),
           // Change badge
           SizedBox(
             width: 60,
@@ -1437,20 +1437,20 @@ class _HistoryRow extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
                       color: isUp
-                          ? GwpColors.positiveBg
-                          : GwpColors.negativeBg,
+                          ? CofferColors.positiveBg
+                          : CofferColors.negativeBg,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       displayPercentDouble(changePct, alwaysShowSign: true),
                       style: TextStyle(
-                        fontFamily: GwpTypo.monoFont,
+                        fontFamily: CofferTypo.monoFont,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: isUp
-                            ? GwpColors.positive
-                            : GwpColors.negative,
+                            ? CofferColors.positive
+                            : CofferColors.negative,
                       ),
                     ),
                   ),
@@ -1549,7 +1549,7 @@ class _RateAlertEditorSheetState
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          GwpSpacing.base, GwpSpacing.base, GwpSpacing.base, viewInsets + 24),
+          CofferSpacing.base, CofferSpacing.base, CofferSpacing.base, viewInsets + 24),
       child: Form(
         key: _formKey,
         child: Column(
@@ -1559,31 +1559,31 @@ class _RateAlertEditorSheetState
             Row(
               children: [
                 const Icon(Icons.notifications_outlined,
-                    size: 18, color: GwpColors.actionPrimary),
+                    size: 18, color: CofferColors.actionPrimary),
                 const SizedBox(width: 8),
                 Text(
                   '预警设置 · ${widget.pair.pairKey}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: GwpColors.textPrimary,
+                    color: CofferColors.textPrimary,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  color: GwpColors.textSecondary,
+                  color: CofferColors.textSecondary,
                   onPressed: () => Navigator.of(context).pop(false),
                 ),
               ],
             ),
-            const SizedBox(height: GwpSpacing.xs),
+            const SizedBox(height: CofferSpacing.xs),
             const Text(
               '留空即取消该项。任何一项触发都会写入一条 RATE_ALERT 事件，'
               '每天同一币对同一类型至多一次。',
-              style: TextStyle(fontSize: 12, color: GwpColors.textSecondary),
+              style: TextStyle(fontSize: 12, color: CofferColors.textSecondary),
             ),
-            const SizedBox(height: GwpSpacing.md),
+            const SizedBox(height: CofferSpacing.md),
             _AlertField(
               controller: _highCtrl,
               label: '上沿（rate ≥ 此值触发）',
@@ -1593,7 +1593,7 @@ class _RateAlertEditorSheetState
                 return Decimal.tryParse(v.trim()) == null ? '请输入有效数字' : null;
               },
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             _AlertField(
               controller: _lowCtrl,
               label: '下沿（rate ≤ 此值触发）',
@@ -1607,7 +1607,7 @@ class _RateAlertEditorSheetState
                 return null;
               },
             ),
-            const SizedBox(height: GwpSpacing.sm),
+            const SizedBox(height: CofferSpacing.sm),
             _AlertField(
               controller: _pctCtrl,
               label: '波动幅度（日环比 %，如 3 表示 ±3%）',
@@ -1620,7 +1620,7 @@ class _RateAlertEditorSheetState
                 return null;
               },
             ),
-            const SizedBox(height: GwpSpacing.md),
+            const SizedBox(height: CofferSpacing.md),
             Row(
               children: [
                 Expanded(
@@ -1630,12 +1630,12 @@ class _RateAlertEditorSheetState
                     child: const Text('取消'),
                   ),
                 ),
-                const SizedBox(width: GwpSpacing.sm),
+                const SizedBox(width: CofferSpacing.sm),
                 Expanded(
                   child: FilledButton(
                     onPressed: _saving ? null : _save,
                     style: FilledButton.styleFrom(
-                      backgroundColor: GwpColors.actionPrimary,
+                      backgroundColor: CofferColors.actionPrimary,
                     ),
                     child: _saving
                         ? const SizedBox(
@@ -1676,13 +1676,13 @@ class _AlertField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      style: const TextStyle(fontFamily: GwpTypo.monoFont, fontSize: 14),
+      style: const TextStyle(fontFamily: CofferTypo.monoFont, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         hintStyle: const TextStyle(
-          fontFamily: GwpTypo.monoFont,
-          color: GwpColors.textMuted,
+          fontFamily: CofferTypo.monoFont,
+          color: CofferColors.textMuted,
         ),
         isDense: true,
         border: const OutlineInputBorder(),

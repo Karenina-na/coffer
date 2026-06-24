@@ -1,11 +1,11 @@
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/data/repositories/drift_channel_repository.dart';
-import 'package:gwp/domain/entities/channel.dart';
-import 'package:gwp/domain/entities/channel_enums.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/data/repositories/drift_channel_repository.dart';
+import 'package:coffer/domain/entities/channel.dart';
+import 'package:coffer/domain/entities/channel_enums.dart';
 
 void main() {
   late AppDatabase db;

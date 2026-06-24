@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/data/providers/asset/eastmoney_provider.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/data/providers/asset/eastmoney_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

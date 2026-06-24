@@ -15,8 +15,8 @@ class RadarDimension {
 }
 
 /// Five-dimension radar chart for the financial health score model.
-class GwpRadarChart extends StatelessWidget {
-  const GwpRadarChart({
+class CofferRadarChart extends StatelessWidget {
+  const CofferRadarChart({
     super.key,
     required this.dimensions,
     this.size = 200,
@@ -38,15 +38,15 @@ class GwpRadarChart extends StatelessWidget {
           child: Text(
             '暂无评分数据',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: GwpColors.textMuted,
+                  color: CofferColors.textMuted,
                 ),
           ),
         ),
       );
     }
 
-    final border = borderColor ?? GwpColors.actionPrimary;
-    final fill = fillColor ?? GwpColors.actionPrimary.withValues(alpha: 0.2);
+    final border = borderColor ?? CofferColors.actionPrimary;
+    final fill = fillColor ?? CofferColors.actionPrimary.withValues(alpha: 0.2);
 
     return SizedBox(
       height: size,
@@ -56,25 +56,25 @@ class GwpRadarChart extends StatelessWidget {
           tickCount: 4,
           ticksTextStyle: const TextStyle(
             fontSize: 8,
-            color: GwpColors.textMuted,
+            color: CofferColors.textMuted,
           ),
           tickBorderData: BorderSide(
-            color: GwpColors.border.withValues(alpha: 0.3),
+            color: CofferColors.border.withValues(alpha: 0.3),
             width: 0.5,
           ),
           gridBorderData: BorderSide(
-            color: GwpColors.border.withValues(alpha: 0.3),
+            color: CofferColors.border.withValues(alpha: 0.3),
             width: 0.5,
           ),
           radarBorderData: BorderSide(
-            color: GwpColors.border.withValues(alpha: 0.5),
+            color: CofferColors.border.withValues(alpha: 0.5),
             width: 0.5,
           ),
           titlePositionPercentageOffset: 0.2,
           titleTextStyle: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: GwpColors.textSecondary,
+            color: CofferColors.textSecondary,
           ),
           getTitle: (index, angle) {
             if (index < 0 || index >= dimensions.length) {

@@ -1,18 +1,18 @@
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gwp/core/errors.dart';
-import 'package:gwp/core/result.dart';
-import 'package:gwp/data/db/database.dart';
-import 'package:gwp/data/repositories/drift_account_repository.dart';
-import 'package:gwp/data/repositories/drift_asset_cost_history_repository.dart';
-import 'package:gwp/data/repositories/drift_asset_repository.dart';
-import 'package:gwp/data/repositories/drift_event_repository.dart';
-import 'package:gwp/domain/entities/asset.dart';
-import 'package:gwp/domain/entities/asset_enums.dart';
-import 'package:gwp/domain/events/event_bus.dart';
-import 'package:gwp/domain/repositories/asset_repository.dart';
-import 'package:gwp/domain/usecases/transfer_asset.dart';
+import 'package:coffer/core/errors.dart';
+import 'package:coffer/core/result.dart';
+import 'package:coffer/data/db/database.dart';
+import 'package:coffer/data/repositories/drift_account_repository.dart';
+import 'package:coffer/data/repositories/drift_asset_cost_history_repository.dart';
+import 'package:coffer/data/repositories/drift_asset_repository.dart';
+import 'package:coffer/data/repositories/drift_event_repository.dart';
+import 'package:coffer/domain/entities/asset.dart';
+import 'package:coffer/domain/entities/asset_enums.dart';
+import 'package:coffer/domain/events/event_bus.dart';
+import 'package:coffer/domain/repositories/asset_repository.dart';
+import 'package:coffer/domain/usecases/transfer_asset.dart';
 
 void main() {
   late AppDatabase db;

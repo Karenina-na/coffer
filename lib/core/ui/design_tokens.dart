@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// GWP design tokens derived from doc/tmp/DESIGN.md.
+/// Coffer design tokens derived from doc/tmp/DESIGN.md.
 /// Dark institutional fintech theme with high data density.
-abstract final class GwpColors {
+abstract final class CofferColors {
   // ── Core Surfaces ──────────────────────────────────────────
   static const canvas = Color(0xFF0A0A0A);
   static const surface1 = Color(0xFF141414);
@@ -38,7 +38,7 @@ abstract final class GwpColors {
 }
 
 /// Spacing scale: 4, 8, 12, 16, 20, 24, 32, 40
-abstract final class GwpSpacing {
+abstract final class CofferSpacing {
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
@@ -50,7 +50,7 @@ abstract final class GwpSpacing {
 }
 
 /// Typography constants. Number columns use monospace with tabularFigures.
-abstract final class GwpTypo {
+abstract final class CofferTypo {
   static const uiFont = 'PingFang SC';
   static const monoFont = 'Menlo';
 
